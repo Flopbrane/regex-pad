@@ -66,3 +66,28 @@ def test_help_contains_complex_and_office_samples() -> None:
     assert "全角文字のみ" in labels_by_category["文字"]
     assert "日本語の句読点を全角スペースへ" in labels_by_category["組み合わせ"]
     assert "全角アルファベットを半角へ" in labels_by_category["組み合わせ"]
+    assert "丸数字を通常の数字へ" in labels_by_category["Unicode正規化"]
+
+
+def test_unicode_normalization_help_and_readmes_explain_the_dedicated_route() -> None:
+    english_items = load_help_items(Path("resources/regex_help_en.json"))
+    japanese_items = load_help_items(Path("resources/regex_help_ja.json"))
+    english_item = next(
+        item for item in english_items if item["pattern"] == "[①-⑳]"
+    )
+    japanese_item = next(
+        item for item in japanese_items if item["pattern"] == "[①-⑳]"
+    )
+
+    assert "NFKC" in english_item["description"]
+    assert "NFKD" in english_item["description"]
+    assert "Unicode正規化置換" in japanese_item["description"]
+    assert japanese_item["replacement_result"] == "1.朝 2.昼 10.まとめ"
+
+    english_readme = Path("README.md").read_text(encoding="utf-8")
+    japanese_readme = Path("README_jp.md").read_text(encoding="utf-8")
+    for form in ("NFC", "NFD", "NFKC", "NFKD"):
+        assert form in english_readme
+        assert form in japanese_readme
+    assert "[①-⑳]" in english_readme
+    assert "[①-⑳]" in japanese_readme

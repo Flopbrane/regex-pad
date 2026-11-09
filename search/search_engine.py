@@ -5,6 +5,8 @@ from bisect import bisect_right
 from dataclasses import dataclass, replace
 from re import Match, Pattern
 
+from unicode_normalize import NormalizationForm, normalize_matched_text
+
 
 @dataclass(frozen=True)
 class SearchOptions:
@@ -14,6 +16,9 @@ class SearchOptions:
     selected_only: bool = False
     visible_only: bool = False
     exclusion_text: str = ""
+    unicode_normalize: bool = False
+    unicode_normalize_form: NormalizationForm = "NFKC"
+    append_dot_to_circled_number: bool = False
 
 
 @dataclass(frozen=True)
@@ -130,7 +135,8 @@ class SearchEngine:
         excluded_ranges = self._excluded_ranges(source_text, search_options)
         if search_options.exclusion_text:
             # Validate the replacement even if every occurrence is excluded.
-            pattern.sub(replacement_text, "")
+            if not search_options.unicode_normalize:
+                pattern.sub(replacement_text, "")
             replacement_count = 0
 
             def replace_allowed_match(match: Match[str]) -> str:
@@ -138,9 +144,23 @@ class SearchEngine:
                 if self._is_excluded(match, excluded_ranges):
                     return match.group(0)
                 replacement_count += 1
-                return match.expand(replacement_text)
+                return self._replacement_for_match(
+                    match,
+                    replacement_text,
+                    search_options,
+                )
 
             return ReplaceResult(pattern.sub(replace_allowed_match, source_text), replacement_count)
+        if search_options.unicode_normalize:
+            replaced_text, count = pattern.subn(
+                lambda match: self._replacement_for_match(
+                    match,
+                    replacement_text,
+                    search_options,
+                ),
+                source_text,
+            )
+            return ReplaceResult(replaced_text, count)
         replaced_text, count = pattern.subn(replacement_text, source_text)
         return ReplaceResult(replaced_text, count)
 
@@ -159,7 +179,18 @@ class SearchEngine:
         if self._range_is_excluded(match.start, match.end, excluded_ranges):
             return ReplaceResult(source_text, 0)
         target_text = source_text[match.start : match.end]
-        replaced_text, count = pattern.subn(replacement_text, target_text, count=1)
+        if search_options.unicode_normalize:
+            replaced_text, count = pattern.subn(
+                lambda regex_match: self._replacement_for_match(
+                    regex_match,
+                    replacement_text,
+                    search_options,
+                ),
+                target_text,
+                count=1,
+            )
+        else:
+            replaced_text, count = pattern.subn(replacement_text, target_text, count=1)
         if count == 0:
             return ReplaceResult(source_text, 0)
 
@@ -184,7 +215,18 @@ class SearchEngine:
         excluded_ranges = self._excluded_ranges(match_text, search_options)
         if self._range_is_excluded(0, len(match_text), excluded_ranges):
             return ReplaceResult(match_text, 0)
-        replaced_text, count = pattern.subn(replacement_text, match_text, count=1)
+        if search_options.unicode_normalize:
+            replaced_text, count = pattern.subn(
+                lambda regex_match: self._replacement_for_match(
+                    regex_match,
+                    replacement_text,
+                    search_options,
+                ),
+                match_text,
+                count=1,
+            )
+        else:
+            replaced_text, count = pattern.subn(replacement_text, match_text, count=1)
         return ReplaceResult(replaced_text, count)
 
     def _compile_pattern(
@@ -206,9 +248,23 @@ class SearchEngine:
         replace_text: str,
         options: SearchOptions,
     ) -> str:
-        if not options.regular_expression:
+        if options.unicode_normalize or not options.regular_expression:
             return replace_text
         return convert_dollar_replacement_references(replace_text)
+
+    @staticmethod
+    def _replacement_for_match(
+        match: Match[str],
+        replacement_text: str,
+        options: SearchOptions,
+    ) -> str:
+        if options.unicode_normalize:
+            return normalize_matched_text(
+                match.group(0),
+                options.unicode_normalize_form,
+                options.append_dot_to_circled_number,
+            )
+        return match.expand(replacement_text)
 
     def _first_non_empty_match(
         self,

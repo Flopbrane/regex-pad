@@ -4012,3 +4012,63 @@ Canonical and distribution verification:
 - Canonical packaging pytest: 9 passed; full Ruff and explicit-interpreter Pyright passed. PowerShell syntax and task-scoped diff checks passed. Copied the maintained documents with only the canonical copy function; root LICENSE and SOURCE_CODE.md are beside the existing EXE. Aligned the distribution directory's existing lowercase licenses name to LICENSES after validating its absolute path stays within dist/regex-pad; no directory contents removed.
 - Worktree, canonical and distribution each passed 98 local link/image/anchor checks with exact filename case, exact final English attribution, root GPLv3 byte equality and original Virtual Keyboard third-party notice hashes. Final intended source SHA-256 equality: 17 files (including verified unchanged provenance). Actual distribution documents/assets: 25 files matched canonical sources, including the final record. Existing GUI/cleaner EXEs, inventory ZIP and source/bundled WordPress archives retained their earlier hashes.
 - The requested local GPLv3 documentation and build-copy updates are complete. No GitHub files were changed through the connector, no commit/tag/push or Release publication was performed, and no EXE/ZIP was rebuilt. The remote still needs the source/license changes published with the actual matching binary revision; complete corresponding dependency-source and final third-party inventory work remain release tasks. These are not presented as completed by local document edits.
+
+## Step15-section34 Match-Scoped Unicode Normalization Replacement
+
+Date: 2026-11-09
+
+Request: implement `UNICODE_NORMALIZE_SCRIPTS.md` as a dedicated Unicode search/replacement route without changing unrelated features or the existing normal replacement behavior.
+
+- Added `unicode_normalize.py` as a PySide-independent pure transformation module using only Python's standard `unicodedata`. It supports NFC, NFD, NFKC and NFKD. The optional period suffix is limited to a single original circled number from `①` through `⑳` and compatibility forms NFKC/NFKD.
+- Extended `SearchOptions` with disabled-by-default Unicode replacement settings. The search engine continues to determine match and exclusion ranges; only replacement generation switches to the normalized matched text when the mode is enabled. Ordinary replacement strings and regex group references retain the existing path when the mode is off.
+- Reused the common replacement result path for single replace, replace all, preview and marked replacement. Callback-based replace-all preserves original positions while results may grow, such as `⑩` to `10.`. Empty matches remain excluded by the existing search safeguards.
+- Added Find/Replace controls for mode ON/OFF, normalization form and circled-number period suffix, with Japanese and English text. The ordinary replacement input is disabled but not cleared while Unicode mode is active, making the independent route visible; regex recipes switch back to ordinary replacement.
+- Added pure-function, search-engine, dialog and main-window tests covering `① ② ⑩ ⑳` to `1. 2. 10. 20.`, nonmatch preservation, full-width digits without a period, mode-OFF regression, single/all replacement, preview, length growth, input state and Undo.
+- Worktree focused pytest: 145 passed. Full worktree pytest: 729 passed / 16 unrelated existing failures: 11 missing Gutenberg fixture-file cases, three existing WordPress frame-style expectation differences and two existing visible-space-marker expectation differences. Full Ruff passed. Pyright with the required interpreter supplied through `--pythonpath`: 0 errors, 0 warnings, 0 informations. `git diff --check` passed.
+
+Canonical propagation and validation:
+
+- Preflight confirmed worktree and `D:\PC\Python\regex_pad_project` were both based on `265ad4fd6fd7c88ce7a4cfbdd375370f23e1341e`; canonical tracked files were clean and only the user-supplied `UNICODE_NORMALIZE_SCRIPTS.md` was untracked. That specification file was read but not modified.
+- Propagated only `unicode_normalize.py`, `search/search_engine.py`, `dialogs/find_replace_dialog.py`, both application-text JSON files, the four related test files and this record. `main.py`, normalise operations, WordPress code, settings, backups and build output were not changed.
+- Canonical focused pytest: 145 passed. Full canonical Ruff passed. Explicit-interpreter Pyright: 0 errors, 0 warnings, 0 informations. Seven Python implementation/test files matched the worktree by exact SHA-256; the two JSON resources had identical UTF-8 content after LF/CRLF normalization while retaining each checkout's existing line-ending convention.
+- Packaged EXE rebuilding and physical Windows GUI acceptance were not performed. Source behavior was validated with the existing offscreen Qt tests; the normal application source is available in the canonical project.
+
+## Step15-section35 Unicode Normalization Documentation and Form Guidance
+
+Date: 2026-11-09
+
+Request: add Unicode search/replacement guidance to both READMEs and Regex Help, and explain NFC/NFD/NFKC/NFKD in the Find/Replace interface without overcrowding the form selector.
+
+- Added bilingual README sections with the `[①-⑳]` workflow, match-only behavior, period-suffix conditions, compatibility-normalization caution and a four-row comparison of NFC, NFD, NFKC and NFKD.
+- Added matching English/Japanese Regex Help rows. Selecting the new circled-number example inserts `[①-⑳]`; the row explains which forms convert the characters and shows the `1.朝 2.昼 10.まとめ` result.
+- Kept the normalization combo entries short. Added a separate word-wrapped explanation label below the selector, enabled only with Unicode normalization replacement. Japanese and English text summarize canonical composition/decomposition and compatibility composition/decomposition, including `① → 1` for NFKC.
+- No Unicode conversion, matching, replacement, WordPress or file-handling logic changed. The follow-up touched only the two READMEs, Find/Replace presentation, four bilingual resource files, two related tests and this record.
+- Offscreen Qt layout verification at the natural Japanese dialog size produced a 533 x 643 dialog and a visible 409 x 23 word-wrapped guidance label. This checks layout calculation, not physical Windows font/DPI acceptance.
+
+Validation and canonical propagation:
+
+- Worktree focused pytest: 160 passed. Focused Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations; `git diff --check` passed.
+- Applied the same narrow changes to `D:\PC\Python\regex_pad_project`, preserving `UNICODE_NORMALIZE_SCRIPTS.md` and all unrelated files. Canonical focused pytest: 160 passed; full Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations; `git diff --check` passed apart from informational existing checkout line-ending warnings.
+- The packaged EXE was not rebuilt. Physical GUI acceptance remains separate; source and bundled-resource changes are available in the canonical project.
+
+## Step15-section36 Unicode Replacement Visual Separation
+
+Date: 2026-11-09
+
+Request: clarify whether the Unicode normalization checkbox should sit beside the regular-expression checkbox or be visually separated as a special replacement mode.
+
+- Chose a horizontal separator above Unicode normalization replacement. Placing the long bilingual checkbox beside Regular expression would crowd the row and incorrectly suggest that Unicode normalization is merely a subordinate regex option; the separator preserves the Unicode checkbox, normalization form, explanation and circled-number option as one distinct replacement group.
+- Added a three-pixel sunken `QFrame` line spanning both form columns. No labels, settings, search options or normalization behavior changed.
+- Offscreen Japanese layout verification: natural dialog size 533 x 652; visible separator 511 x 3. Worktree and canonical related pytest: 93 passed in each. Focused/worktree and full/canonical Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations; diff checks passed apart from existing canonical JSON line-ending notices.
+- Propagated only `dialogs/find_replace_dialog.py`, `tests/test_find_replace_dialog.py` and this record to `D:\PC\Python\regex_pad_project`. No EXE rebuild or physical Windows GUI acceptance was performed.
+
+## Step15-section37 README Stable 1.1.0 Label
+
+Date: 2026-11-09
+
+Request: update the English and Japanese README versions after adding Unicode normalization replacement.
+
+- Preserved the established README naming style and changed `Release: 1.0.0 (Stable)` to `Release: 1.1.0 (Stable)`; the Japanese stable label now also reads `1.1.0`.
+- Aligned the README release dates to November 9, 2026 / 2026年11月9日 and changed the documented planned tag from `v1.0.0` to `v1.1.0`. The text still states that the tag is planned and does not claim an existing EXE was built from it.
+- Changed only `README.md`, `README_jp.md` and this record in both the worktree and `D:\PC\Python\regex_pad_project`. No application/About metadata, build configuration, Git tag, commit, EXE or ZIP was changed.
+- Verified both READMEs contain `1.1.0` and `v1.1.0` with no remaining `1.0.0`. Related document pytest: 5 passed in both trees. Canonical full Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations; diff checks passed apart from informational existing JSON line-ending notices.

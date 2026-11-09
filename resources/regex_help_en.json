@@ -559,5 +559,16 @@
     "matches": "ＷｏｒｄＰｒｅｓｓ",
     "replace_with": "Use Regex Rewrite",
     "replacement_result": "WordPressを使う"
+  },
+  {
+    "category": "Unicode normalization",
+    "label": "Circled numbers to ordinary numbers",
+    "pattern": "[①-⑳]",
+    "description": "Use this pattern with Unicode normalization replacement. NFKC and NFKD convert circled numbers to ordinary numbers; NFC and NFD normally keep the circled characters.",
+    "example_text": "①Morning ②Noon ⑩Summary",
+    "usage_example": "[①-⑳]",
+    "matches": "①, ②, ⑩",
+    "replace_with": "Enable Unicode normalization: NFKC; optionally append a period",
+    "replacement_result": "1.Morning 2.Noon 10.Summary"
   }
 ]

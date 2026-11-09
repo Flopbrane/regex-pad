@@ -2,11 +2,15 @@
 """Find and Replace Dialog"""
 from __future__ import annotations
 
+from typing import cast
+
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QAction, QColor
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
+    QFrame,
     QGridLayout,
     QInputDialog,
     QLabel,
@@ -23,6 +27,7 @@ from localization.translator import Translator
 from normalise import NormaliseOperation, normalise_operations
 from search.regex_lint import RegexLint, RegexLintMessage
 from search.search_engine import SearchOptions
+from unicode_normalize import NORMALIZATION_FORMS, NormalizationForm
 
 
 class FindReplaceDialog(QDialog):
@@ -58,6 +63,23 @@ class FindReplaceDialog(QDialog):
         self.whole_word_check_box = QCheckBox("Whole word", self)
         self.selected_only_check_box = QCheckBox("Search only selected text", self)
         self.visible_only_check_box = QCheckBox("Search only visible text", self)
+        self.unicode_normalize_separator = QFrame(self)
+        self.unicode_normalize_separator.setFrameShape(QFrame.Shape.HLine)
+        self.unicode_normalize_separator.setFrameShadow(QFrame.Shadow.Sunken)
+        self.unicode_normalize_check_box = QCheckBox(
+            "Unicode normalization replacement",
+            self,
+        )
+        self.unicode_normalize_form_label = QLabel(self)
+        self.unicode_normalize_form_combo_box = QComboBox(self)
+        self.unicode_normalize_form_combo_box.addItems(NORMALIZATION_FORMS)
+        self.unicode_normalize_form_combo_box.setCurrentText("NFKC")
+        self.unicode_normalize_form_help_label = QLabel(self)
+        self.unicode_normalize_form_help_label.setWordWrap(True)
+        self.append_dot_to_circled_number_check_box = QCheckBox(
+            'Append "." after converted circled numbers',
+            self,
+        )
 
         self.find_button = QPushButton("Find", self)
         self.find_previous_button = QPushButton("↑", self)
@@ -91,6 +113,7 @@ class FindReplaceDialog(QDialog):
         self._connect_signals()
         self.apply_language()
         self._update_regex_input_colors()
+        self._update_unicode_normalize_controls()
 
     def set_find_text(self, text: str) -> None:
         """Set the text in the find input field and select all of it."""
@@ -134,6 +157,7 @@ class FindReplaceDialog(QDialog):
 
     def set_search_recipe(self, search_text: str, replace_text: str) -> None:
         """Set the find and replace text fields to the specified recipe values."""
+        self.unicode_normalize_check_box.setChecked(False)
         self.find_text_edit.setText(search_text)
         self.replace_text_edit.setText(replace_text)
         self.regular_expression_check_box.setChecked(True)
@@ -175,6 +199,21 @@ class FindReplaceDialog(QDialog):
         self.whole_word_check_box.setText(self.translator.text("find.whole_word"))
         self.selected_only_check_box.setText(self.translator.text("find.selected_only"))
         self.visible_only_check_box.setText(self.translator.text("find.visible_only"))
+        self.unicode_normalize_check_box.setText(
+            self.translator.text("find.unicode_normalize")
+        )
+        self.unicode_normalize_check_box.setToolTip(
+            self.translator.text("find.unicode_normalize_hint")
+        )
+        self.unicode_normalize_form_label.setText(
+            self.translator.text("find.unicode_normalize_form")
+        )
+        form_help_text = self.translator.text("find.unicode_normalize_form_help")
+        self.unicode_normalize_form_help_label.setText(form_help_text)
+        self.unicode_normalize_form_help_label.setToolTip(form_help_text)
+        self.append_dot_to_circled_number_check_box.setText(
+            self.translator.text("find.unicode_normalize_append_dot")
+        )
         self.find_button.setText(self.translator.text("find.find"))
         self.find_previous_button.setToolTip(self.translator.text("find.previous"))
         self.find_next_button.setToolTip(self.translator.text("find.next"))
@@ -198,6 +237,7 @@ class FindReplaceDialog(QDialog):
         )
         self._create_regex_insert_menu()
         self._create_recipe_menu()
+        self._update_unicode_normalize_controls()
         self._update_regex_lint()
 
     def _create_layout(self) -> None:
@@ -220,6 +260,12 @@ class FindReplaceDialog(QDialog):
         form_layout.addWidget(self.whole_word_check_box, 5, 1)
         form_layout.addWidget(self.selected_only_check_box, 6, 1)
         form_layout.addWidget(self.visible_only_check_box, 7, 1)
+        form_layout.addWidget(self.unicode_normalize_separator, 8, 0, 1, 2)
+        form_layout.addWidget(self.unicode_normalize_check_box, 9, 1)
+        form_layout.addWidget(self.unicode_normalize_form_label, 10, 0)
+        form_layout.addWidget(self.unicode_normalize_form_combo_box, 10, 1)
+        form_layout.addWidget(self.unicode_normalize_form_help_label, 11, 1)
+        form_layout.addWidget(self.append_dot_to_circled_number_check_box, 12, 1)
         form_layout.setRowStretch(0, 1)
         form_layout.setRowStretch(2, 1)
 
@@ -406,6 +452,15 @@ class FindReplaceDialog(QDialog):
         self.whole_word_check_box.toggled.connect(self._emit_search_parameters_changed)
         self.selected_only_check_box.toggled.connect(self._emit_search_parameters_changed)
         self.visible_only_check_box.toggled.connect(self._emit_search_parameters_changed)
+        self.unicode_normalize_check_box.toggled.connect(
+            self._handle_unicode_normalize_changed
+        )
+        self.unicode_normalize_form_combo_box.currentTextChanged.connect(
+            self._emit_search_parameters_changed
+        )
+        self.append_dot_to_circled_number_check_box.toggled.connect(
+            self._emit_search_parameters_changed
+        )
 
     def _search_options(self) -> SearchOptions:
         """Get the current search options based on the state of the checkboxes."""
@@ -416,6 +471,14 @@ class FindReplaceDialog(QDialog):
             selected_only=self.selected_only_check_box.isChecked(),
             visible_only=self.visible_only_check_box.isChecked(),
             exclusion_text=self.exclusion_text_edit.text(),
+            unicode_normalize=self.unicode_normalize_check_box.isChecked(),
+            unicode_normalize_form=cast(
+                NormalizationForm,
+                self.unicode_normalize_form_combo_box.currentText(),
+            ),
+            append_dot_to_circled_number=(
+                self.append_dot_to_circled_number_check_box.isChecked()
+            ),
         )
 
     def _update_regex_lint(self) -> None:
@@ -431,7 +494,7 @@ class FindReplaceDialog(QDialog):
         messages = self.regex_lint.lint(
             self.find_text_edit.text(),
             self.replace_text_edit.text(),
-            check_replacement=True,
+            check_replacement=not self.unicode_normalize_check_box.isChecked(),
         )
         exclusion_text = self.exclusion_text_edit.text()
         if exclusion_text:
@@ -535,6 +598,29 @@ class FindReplaceDialog(QDialog):
         self._update_regex_input_colors()
         self._update_regex_lint()
         self._emit_search_parameters_changed()
+
+    def _handle_unicode_normalize_changed(self, *_args: object) -> None:
+        """Update controls when the dedicated Unicode replacement route changes."""
+        self._update_unicode_normalize_controls()
+        self._update_regex_lint()
+        self._emit_search_parameters_changed()
+
+    def _update_unicode_normalize_controls(self) -> None:
+        """Enable only controls that participate in the active replacement route."""
+        enabled = self.unicode_normalize_check_box.isChecked()
+        self.unicode_normalize_form_label.setEnabled(enabled)
+        self.unicode_normalize_form_combo_box.setEnabled(enabled)
+        self.unicode_normalize_form_help_label.setEnabled(enabled)
+        self.append_dot_to_circled_number_check_box.setEnabled(enabled)
+        self.replace_text_label.setEnabled(not enabled)
+        self.replace_text_edit.setEnabled(not enabled)
+        self.replace_text_edit.setToolTip(
+            self.translator.text(
+                "find.unicode_normalize_replace_disabled"
+                if enabled
+                else "find.replace_text_hint"
+            )
+        )
 
     def _emit_search_parameters_changed(self, *_args: object) -> None:
         """Emit the search_parameters_changed signal with the current find text and search options."""

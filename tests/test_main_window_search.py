@@ -85,6 +85,48 @@ def test_replace_all_uses_regex_groups(app: QApplication) -> None:
     assert window.editor.toPlainText() == "01:item 20:item"
 
 
+def test_replace_all_button_uses_unicode_normalization_route(
+    app: QApplication,
+    tmp_path: Path,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json")
+    window.editor.setPlainText("① ＡＢＣ １２３ ② ⑩ ⑳")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.regular_expression_check_box.setChecked(True)
+    dialog.find_text_edit.setText("[①-⑳]")
+    dialog.replace_text_edit.setText("must not be used")
+    dialog.unicode_normalize_check_box.setChecked(True)
+    dialog.append_dot_to_circled_number_check_box.setChecked(True)
+
+    dialog.replace_all_button.click()
+    QApplication.processEvents()
+
+    assert window.editor.toPlainText() == "1. ＡＢＣ １２３ 2. 10. 20."
+    assert dialog.preview_table.rowCount() == 4
+    window.editor.undo()
+    assert window.editor.toPlainText() == "① ＡＢＣ １２３ ② ⑩ ⑳"
+
+
+def test_replace_current_uses_unicode_normalization_route(app: QApplication) -> None:
+    _ = app
+    window = MainWindow()
+    window.editor.setPlainText("⑩ follows ①")
+    options = SearchOptions(
+        regular_expression=True,
+        unicode_normalize=True,
+        append_dot_to_circled_number=True,
+    )
+
+    window.find_next("[①-⑳]", options)
+    window.replace_current("[①-⑳]", "ignored", options)
+
+    assert window.editor.toPlainText() == "10. follows ①"
+    assert window.editor.textCursor().position() == len("10.")
+
+
 def test_replace_all_returns_focus_to_find_text(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,

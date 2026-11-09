@@ -149,6 +149,68 @@ def test_replace_all_supports_literal_search_text() -> None:
     assert result.count == 1
 
 
+def test_replace_all_can_normalize_only_regex_matches() -> None:
+    result = SearchEngine().replace_all(
+        "① ＡＢＣ １２３ ② ⑩ ⑳",
+        "[①-⑳]",
+        r"ignored\2",
+        SearchOptions(
+            regular_expression=True,
+            unicode_normalize=True,
+            unicode_normalize_form="NFKC",
+            append_dot_to_circled_number=True,
+        ),
+    )
+
+    assert result.text == "1. ＡＢＣ １２３ 2. 10. 20."
+    assert result.count == 4
+
+
+def test_unicode_normalize_does_not_append_dot_to_fullwidth_digits() -> None:
+    result = SearchEngine().replace_all(
+        "１２３",
+        r"\d+",
+        "ignored",
+        SearchOptions(
+            regular_expression=True,
+            unicode_normalize=True,
+            append_dot_to_circled_number=True,
+        ),
+    )
+
+    assert result.text == "123"
+    assert result.count == 1
+
+
+def test_normal_replacement_route_is_unchanged_when_unicode_mode_is_off() -> None:
+    result = SearchEngine().replace_all(
+        "① ②",
+        "[①-⑳]",
+        "item",
+        SearchOptions(regular_expression=True),
+    )
+
+    assert result.text == "item item"
+    assert result.count == 2
+
+
+def test_replace_match_uses_unicode_normalization_route() -> None:
+    result = SearchEngine().replace_match(
+        "before ⑩ after",
+        SearchMatch(7, 8, "⑩"),
+        "ignored",
+        "[①-⑳]",
+        SearchOptions(
+            regular_expression=True,
+            unicode_normalize=True,
+            append_dot_to_circled_number=True,
+        ),
+    )
+
+    assert result.text == "before 10. after"
+    assert result.count == 1
+
+
 def test_regex_line_end_matches_each_line() -> None:
     engine = SearchEngine()
 

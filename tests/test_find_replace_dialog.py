@@ -11,6 +11,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
     QInputDialog,
     QMenu,
     QPlainTextEdit,
@@ -142,6 +143,37 @@ def test_dialog_returns_visible_only_search_option(app: QApplication) -> None:
     dialog.visible_only_check_box.setChecked(True)
 
     assert dialog.current_search_options().visible_only
+
+
+def test_unicode_normalize_controls_use_dedicated_replacement_options(
+    app: QApplication,
+) -> None:
+    _ = app
+    dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
+
+    assert not dialog.unicode_normalize_check_box.isChecked()
+    assert dialog.unicode_normalize_separator.frameShape() == QFrame.Shape.HLine
+    assert dialog.unicode_normalize_separator.frameShadow() == QFrame.Shadow.Sunken
+    assert not dialog.unicode_normalize_form_combo_box.isEnabled()
+    assert not dialog.unicode_normalize_form_help_label.isEnabled()
+    assert not dialog.append_dot_to_circled_number_check_box.isEnabled()
+    assert dialog.replace_text_edit.isEnabled()
+
+    dialog.unicode_normalize_check_box.setChecked(True)
+    dialog.unicode_normalize_form_combo_box.setCurrentText("NFKD")
+    dialog.append_dot_to_circled_number_check_box.setChecked(True)
+    options = dialog.current_search_options()
+
+    assert options.unicode_normalize
+    assert options.unicode_normalize_form == "NFKD"
+    assert options.append_dot_to_circled_number
+    assert not dialog.replace_text_edit.isEnabled()
+    assert dialog.unicode_normalize_form_help_label.isEnabled()
+    assert "NFC：標準等価文字を合成" in dialog.unicode_normalize_form_help_label.text()
+    assert "NFKC：互換文字を合成" in dialog.unicode_normalize_form_help_label.text()
+    assert dialog.unicode_normalize_form_help_label.wordWrap()
+    assert dialog.unicode_normalize_check_box.text() == "Unicode正規化置換"
+    assert "使用しません" in dialog.replace_text_edit.toolTip()
 
 
 def test_exclusion_edit_updates_options_and_clears_preview(app: QApplication) -> None:

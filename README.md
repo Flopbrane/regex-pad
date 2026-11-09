@@ -1,8 +1,8 @@
 # RegexPad
 
-**Release: 1.0.0 (Stable)**
+**Release: 1.1.0 (Stable)**
 
-Release date: October 25, 2026
+Release date: November 9, 2026
 
 [日本語](README_jp.md) · [User guide](docs/HOW_TO_USE.md) · [日本語の使い方](docs_jp/HOW_TO_USE_jp.md)
 
@@ -40,7 +40,7 @@ Separate third-party terms and copyright notices remain applicable.
 
 [Public source](https://github.com/Flopbrane/regex-mini-pad) and
 [release/source correspondence](SOURCE_CODE.md) explain how to identify the
-source for a distributed EXE. `v1.0.0` is a planned release tag, not a claim
+source for a distributed EXE. `v1.1.0` is a planned release tag, not a claim
 that an existing EXE was built from a published tag. Qt Virtual Keyboard is
 handled under the GPLv3 open-source route when included; its upstream and
 third-party notices are in [LICENSES/](LICENSES/qt-virtual-keyboard/SOURCES.md).
@@ -59,6 +59,28 @@ No commercial Qt entitlement or completed dependency-source delivery is assumed.
 | Recovery and appearance | Automatic session backups, saved-file generations, restore, ruler, wrapping, visible whitespace, colors |
 
 See the [user guide](docs/HOW_TO_USE.md) for step-by-step instructions and shortcuts.
+
+## Unicode normalization replacement
+
+Open **Search > Find / Replace** (`Ctrl+F`) to normalize only the text matched by
+the Find pattern. For example, enable **Regular expression**, enter `[①-⑳]`,
+enable **Unicode normalization replacement**, select **NFKC**, and optionally
+enable **Append "." after converted circled numbers**. **Replace** or
+**Replace All** then converts `① ② ⑩ ⑳` to `1. 2. 10. 20.`. The ordinary
+Replace text field is not used in this mode.
+
+| Form | Simple meaning | Typical effect |
+|---|---|---|
+| NFC | Compose canonically equivalent characters | Combines a base character and combining mark where a composed character exists |
+| NFD | Decompose canonically equivalent characters | Splits a composed character into its canonical components |
+| NFKC | Compose compatibility characters | Converts forms such as `①` to `1` and full-width letters/digits to ordinary forms |
+| NFKD | Decompose compatibility characters | Applies compatibility conversion and leaves the result decomposed |
+
+Normalization is applied to each actual match, not to the whole document.
+Text outside the matches remains unchanged. The period option applies only when
+the original match is one circled number from `①` through `⑳`, and only with
+NFKC or NFKD. Compatibility normalization can change visual distinctions, so
+preview the matches and use Undo if the selected form is not appropriate.
 
 ## Check article source before pasting
 

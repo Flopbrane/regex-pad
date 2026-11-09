@@ -559,5 +559,16 @@
     "matches": "ＷｏｒｄＰｒｅｓｓ",
     "replace_with": "正規表現書き換え機能を使用",
     "replacement_result": "WordPressを使う"
+  },
+  {
+    "category": "Unicode正規化",
+    "label": "丸数字を通常の数字へ",
+    "pattern": "[①-⑳]",
+    "description": "Unicode正規化置換と組み合わせて使います。NFKC・NFKDは丸数字を通常の数字へ変換し、NFC・NFDでは通常、丸数字のまま保持します。",
+    "example_text": "①朝 ②昼 ⑩まとめ",
+    "usage_example": "[①-⑳]",
+    "matches": "①、②、⑩",
+    "replace_with": "Unicode正規化置換を有効化：NFKC、必要ならピリオド付加",
+    "replacement_result": "1.朝 2.昼 10.まとめ"
   }
 ]
