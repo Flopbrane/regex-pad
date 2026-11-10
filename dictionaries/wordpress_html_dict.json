@@ -79,7 +79,7 @@
   {
     "label_key": "tag.wordpress.spacer_block",
     "hint_key": "tag.hint.wordpress.spacer_block",
-    "template": "<!-- wp:spacer {\"height\":\"25px\"} -->\n<div style=\"height:25px\" aria-hidden=\"true\" class=\"wp-block-spacer\"></div>\n<!-- /wp:spacer -->\n{cursor}"
+    "template": "<!-- wp:spacer {\"height\":\"30px\"} -->\n<div style=\"height:30px\" aria-hidden=\"true\" class=\"wp-block-spacer\"></div>\n<!-- /wp:spacer -->\n{cursor}"
   },
   {
     "label_key": "tag.wordpress.buttons_block",
@@ -94,25 +94,25 @@
   {
     "label_key": "tag.wordpress.custom_frame_block",
     "hint_key": "tag.hint.wordpress.custom_frame_block",
-    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #c79532; font-weight: bold; background-color: #D3D6FF; color: #3f3218; padding: 14px 16px; margin: 2em 0 2em 0; border-radius: 8px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
+    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #c79532; font-weight: bold; background-color: #D3D6FF; color: #3f3218; padding: 14px 16px; margin: 2em 0 2em 0; border-left: 4px solid #b87a00; border-radius: 10px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
     "default_selection": "ここに本文を入れます。"
   },
   {
     "label_key": "tag.wordpress.notice_frame_block",
     "hint_key": "tag.hint.wordpress.notice_frame_block",
-    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #e08a24; font-weight: bold;  background-color: #FAFFD3; color: #5a2f00; padding: 14px 16px; margin: 2em 0 2em 0; border-radius: 8px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
+    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #e08a24; font-weight: bold;  background-color: #f8ffc2; color: #5a2f00; padding: 14px 16px; margin: 2em 0 2em 0; border-left: 4px solid #c36d04; border-radius: 10px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
     "default_selection": "ここに本文を入れます。"
   },
   {
     "label_key": "tag.wordpress.info_frame_block",
     "hint_key": "tag.hint.wordpress.info_frame_block",
-    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #4f91c7; font-weight: bold; background-color: #eef7ff; color: #173b59; padding: 14px 16px; margin: 2em 0 2em 0; border-radius: 8px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
+    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #4d29ff; font-weight: bold; background-color: #d0e7fb; color: #0c2c46; padding: 14px 16px; margin: 2em 0 2em 0;border-left: 4px solid #2401d0; border-radius: 10px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
     "default_selection": "ここに本文を入れます。"
   },
   {
     "label_key": "tag.wordpress.important_frame_block",
     "hint_key": "tag.hint.wordpress.important_frame_block",
-    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #E069F8; font-weight: bold;  background-color: #EED7F8; color: #1f4d35; padding: 10px 12px; margin: 2em 0 2em 0; border-left: 4px solid #FF2CFF;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
+    "template": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #dc34fe; font-weight: bold;  background-color: #eec7ff; color: #103221; padding: 10px 12px; margin: 2em 0 2em 0; border-left: 4px solid #e901e9;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
     "default_selection": "ここに本文を入れます。"
   },
   {

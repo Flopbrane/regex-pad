@@ -4072,3 +4072,17 @@ Request: update the English and Japanese README versions after adding Unicode no
 - Aligned the README release dates to November 9, 2026 / 2026年11月9日 and changed the documented planned tag from `v1.0.0` to `v1.1.0`. The text still states that the tag is planned and does not claim an existing EXE was built from it.
 - Changed only `README.md`, `README_jp.md` and this record in both the worktree and `D:\PC\Python\regex_pad_project`. No application/About metadata, build configuration, Git tag, commit, EXE or ZIP was changed.
 - Verified both READMEs contain `1.1.0` and `v1.1.0` with no remaining `1.0.0`. Related document pytest: 5 passed in both trees. Canonical full Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations; diff checks passed apart from informational existing JSON line-ending notices.
+
+## Step15-section38 Full-Width HTML Syntax Linter
+
+Date: 2026-11-10
+
+Request: detect accidental full-width HTML punctuation, based on a real editing case where `＜span style="color: #65FFCD">文章</span>` could be treated as visible text and escaped by WordPress after draft saving.
+
+- Added a read-only Linter rule for tag-like text containing full-width `＜`, `＞`, `＝`, `＂`, `＇` or `／`. The Japanese diagnostic for the reported case is: `HTMLタグと思われる箇所に全角の \`＜\` があります。半角の \`<\` を使用してください。`
+- Added a separate diagnostic for U+3000 used in HTML syntax, including `<p　class="...">` inside WordPress core blocks. It identifies U+3000 and recommends U+0020 so the invisible difference remains understandable.
+- The scanner examines only HTML-like tag syntax. ASCII-quoted attribute values such as `title="日本語　文章"` remain valid, and example text inside comments, `code`, `pre`, `textarea`, `script`, `style`, `title` and `xmp` is excluded. Existing valid half-width `<span style="color: #65FFCD">文章</span>` remains clean.
+- Added Japanese and English messages plus regressions for the reported broken/fixed forms, full-width closing punctuation, WordPress paragraph-block spacing, translated output, exclusions and non-mutation. The existing unmatched `</span>` warning may also appear for the malformed opener; the new warning points directly to the full-width cause on the opening line.
+- Worktree validation: focused HTML-Linter pytest 253 passed; full pytest 740 passed / 16 existing failures (11 absent Gutenberg fixture cases, three frame-style expectations and two visible-space-marker expectations). Full Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
+- Canonical validation: focused HTML-Linter pytest 253 passed; full pytest 751 passed / five existing unrelated failures (three frame-style expectations and two visible-space-marker expectations). Full Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
+- Propagated only `search/html_typo_lint.py`, both application-text JSON resources, `tests/test_html_typo_lint.py` and this record to `D:\PC\Python\regex_pad_project`, preserving unrelated Unicode-normalization and user changes. No EXE rebuild or physical Windows/WordPress acceptance was performed.

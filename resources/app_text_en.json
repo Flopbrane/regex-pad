@@ -38,6 +38,8 @@
   "html_typo_lint.unexpected_html_tag_close_delimiter": "A standalone `>` follows a completed `<{tag}>` opening tag, with no unfinished start tag to close. Check for an extra `>` or attributes outside the opening tag.",
   "html_typo_lint.malformed_html_attribute_continuation": "The `<{tag}>` opening tag ended before attributes such as `{attribute}`, and live `<br>` tags interrupt the attribute continuation. Move the attributes into `<{tag} ...>` and remove the `<br>` tags from that declaration.",
   "html_typo_lint.unexpected_inline_closing_tag": "Unexpected `</{tag}>`: no matching `<{tag}>` opening tag was found.",
+  "html_typo_lint.full_width_html_syntax": "A full-width `{symbol}` appears in text that looks like an HTML tag. Use the half-width `{suggestion}` instead.",
+  "html_typo_lint.full_width_html_space": "A full-width space (U+3000) appears in the syntax of text that looks like an HTML tag. Use a half-width space (U+0020) instead.",
   "html_typo_lint.invalid_html_child": "`<{tag}>` cannot be placed inside `<{parent}>`. Check the paragraph boundary before this tag.",
   "html_typo_lint.invalid_html_parent": "`<{tag}>` requires a direct parent of `{parent}`.",
   "html_typo_lint.invalid_wordpress_parent": "`wp:{block}` requires `wp:{parent}` as its direct parent. Repair the block comment boundaries and parent/child structure.",

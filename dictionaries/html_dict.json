@@ -27,7 +27,7 @@
   {
     "label_key": "tag.html.strong",
     "hint_key": "tag.hint.html.strong",
-    "template": "<strong>{selection}{cursor}</strong>"
+    "template": "<strong >{selection}{cursor}</strong>"
   },
   {
     "label_key": "tag.html.emphasis",
@@ -42,7 +42,7 @@
   {
     "label_key": "tag.html.mark",
     "hint_key": "tag.hint.html.mark",
-    "template": "<mark>{selection}{cursor}</mark>"
+    "template": "<mark style=\"{cursor}\">{selection}</mark>"
   },
   {
     "label_key": "tag.html.link",
@@ -102,12 +102,12 @@
   {
     "label_key": "tag.html.div",
     "hint_key": "tag.hint.html.div",
-    "template": "<div class=\"{cursor}\">{selection}</div>"
+    "template": "<div style=\"{cursor}\">{selection}</div>"
   },
   {
     "label_key": "tag.html.span",
     "hint_key": "tag.hint.html.span",
-    "template": "<span class=\"{cursor}\">{selection}</span>"
+    "template": "<span style=\"{cursor}\">{selection}</span>"
   },
   {
     "label_key": "tag.html.details",

@@ -14,6 +14,10 @@ MALFORMED_OPENING_KEYS = {
     "html_typo_lint.unexpected_html_tag_close_delimiter",
     "html_typo_lint.malformed_html_attribute_continuation",
 }
+FULL_WIDTH_HTML_SYNTAX_KEYS = {
+    "html_typo_lint.full_width_html_syntax",
+    "html_typo_lint.full_width_html_space",
+}
 QUALIFICATION_ARTICLE_CASE = (
     Path(__file__).parent / "fixtures" / "linter_cases" / "qualification_article_20261023"
 )
@@ -173,6 +177,72 @@ def test_malformed_opening_messages_have_formattable_translations(language: str,
     assert message != key
     assert "<div>" in message
     assert "{tag}" not in message and "{attribute}" not in message
+
+
+def test_lint_reports_full_width_html_open_delimiter() -> None:
+    source = '＜span style="color: #65FFCD">文章</span>'
+    findings = [
+        message for message in lint_html_typos(source)
+        if message.message_key == "html_typo_lint.full_width_html_syntax"
+    ]
+    assert [(message.line_number, message.values) for message in findings] == [
+        (1, {"symbol": "＜", "suggestion": "<"}),
+    ]
+
+
+def test_lint_reports_full_width_html_syntax_punctuation() -> None:
+    source = "＜／span＞"
+    findings = [
+        message for message in lint_html_typos(source)
+        if message.message_key == "html_typo_lint.full_width_html_syntax"
+    ]
+    assert [message.values for message in findings] == [
+        {"symbol": "＜", "suggestion": "<"},
+        {"symbol": "／", "suggestion": "/"},
+        {"symbol": "＞", "suggestion": ">"},
+    ]
+
+
+def test_lint_reports_full_width_space_in_core_block_html_tag() -> None:
+    source = (
+        '<!-- wp:paragraph -->\n<p　class="has-text-color">文章</p>\n'
+        '<!-- /wp:paragraph -->'
+    )
+    findings = [
+        message for message in lint_html_typos(source)
+        if message.message_key == "html_typo_lint.full_width_html_space"
+    ]
+    assert [(message.line_number, message.values) for message in findings] == [(2, None)]
+
+
+@pytest.mark.parametrize("source", [
+    '<span title="日本語　文章">本文</span>',
+    '<code>＜span style＝＂color:red＂＞見本＜／span＞</code>',
+    '<pre>＜div　class＝＂sample＂＞見本＜／div＞</pre>',
+    '<!-- ＜span　style＝＂color:red＂＞コメント内の見本 -->',
+    '<span style="color: #65FFCD">文章</span>',
+])
+def test_lint_does_not_report_full_width_html_syntax_in_values_or_examples(
+    source: str,
+) -> None:
+    assert not any(
+        message.message_key in FULL_WIDTH_HTML_SYNTAX_KEYS
+        for message in lint_html_typos(source)
+    )
+
+
+@pytest.mark.parametrize("language", ["ja", "en"])
+def test_full_width_html_messages_have_formattable_translations(language: str) -> None:
+    translator = Translator(Path("resources"), language)
+    syntax_message = translator.text(
+        "html_typo_lint.full_width_html_syntax",
+        symbol="＜",
+        suggestion="<",
+    )
+    space_message = translator.text("html_typo_lint.full_width_html_space")
+    assert syntax_message != "html_typo_lint.full_width_html_syntax"
+    assert "＜" in syntax_message and "<" in syntax_message
+    assert "U+3000" in space_message and "U+0020" in space_message
 
 
 @pytest.mark.parametrize("tag", ["strong", "span", "mark", "em", "a", "b", "i", "small", "code"])

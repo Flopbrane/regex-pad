@@ -38,6 +38,8 @@
   "html_typo_lint.unexpected_html_tag_close_delimiter": "すでに閉じた `<{tag}>` の直後に、対応する未完了の開始タグがない単独の `>` があります。余分な `>` や、開始タグの外へ出た属性がないか確認してください。",
   "html_typo_lint.malformed_html_attribute_continuation": "`<{tag}>` の開始タグが、`{attribute}` などの属性を書く前に閉じられ、属性の続きに `<br>` が混入しています。属性を `<{tag} ...>` の中へ移動し、その属性記述中の `<br>` を取り除いてください。",
   "html_typo_lint.unexpected_inline_closing_tag": "予期しない `</{tag}>` があります。対応する開始タグ `<{tag}>` が見つかりません。",
+  "html_typo_lint.full_width_html_syntax": "HTMLタグと思われる箇所に全角の `{symbol}` があります。半角の `{suggestion}` を使用してください。",
+  "html_typo_lint.full_width_html_space": "HTMLタグと思われる箇所の構文部分に全角スペース（U+3000）があります。半角スペース（U+0020）を使用してください。",
   "html_typo_lint.invalid_html_child": "`<{parent}>` の中に `<{tag}>` は置けません。このタグの前で段落を閉じる必要がないか確認してください。",
   "html_typo_lint.invalid_html_parent": "`<{tag}>` の直接の親要素は `{parent}` である必要があります。",
   "html_typo_lint.invalid_wordpress_parent": "`wp:{block}` の直接の親は `wp:{parent}` である必要があります。開始・終了コメントの境界と親子構造を修正してください。",

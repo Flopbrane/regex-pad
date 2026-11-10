@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from bisect import bisect_left
 from dataclasses import dataclass
 from difflib import get_close_matches
@@ -31,6 +32,14 @@ HTML_ATTRIBUTE_ASSIGNMENT_PATTERN = re.compile(
     r'''([A-Za-z_:][A-Za-z0-9_:.-]*)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+)''',
 )
 ATTRIBUTE_EXAMPLE_TAGS = {"code", "pre", "textarea", "script", "style", "title", "xmp"}
+FULL_WIDTH_HTML_SYNTAX_SUGGESTIONS = {
+    "＜": "<",
+    "＞": ">",
+    "＝": "=",
+    "＂": '"',
+    "＇": "'",
+    "／": "/",
+}
 
 DEFAULT_WORDPRESS_CORE_BLOCKS = {
     "accordion",
@@ -471,6 +480,7 @@ def lint_html_typos(load_data: str) -> list[HtmlTypoLintMessage]:
     messages.extend(_lint_wordpress_block_typos(load_data))
     messages.extend(_lint_wordpress_block_structure(load_data, html_tokens))
     messages.extend(_lint_known_fragile_typos(load_data))
+    messages.extend(_lint_full_width_html_syntax(load_data))
     messages.extend(_lint_embedded_stylesheets(load_data))
     parser = HtmlTypoLintParser(load_data, suppressed_ranges)
     parser.feed(load_data)
@@ -810,6 +820,117 @@ def _lint_known_fragile_typos(load_data: str) -> list[HtmlTypoLintMessage]:
             )
         )
     return messages
+
+
+def _lint_full_width_html_syntax(load_data: str) -> list[HtmlTypoLintMessage]:
+    """Report full-width punctuation used as live HTML tag syntax."""
+    messages: list[HtmlTypoLintMessage] = []
+    line_starts = _line_start_positions(load_data)
+    ignored_ranges = _html_example_body_ranges(load_data)
+    ignored_ranges.extend(
+        (match.start(), match.end())
+        for match in re.finditer(r"<!--[\s\S]*?-->", load_data)
+    )
+
+    for start, end in _html_tag_like_ranges(load_data):
+        if _position_in_ranges(start, ignored_ranges):
+            continue
+        quote: str | None = None
+        reported_symbols: set[str] = set()
+        reported_space = False
+        for position in range(start, end):
+            character = load_data[position]
+            if quote is not None:
+                if character == quote:
+                    quote = None
+                continue
+            if character in {'"', "'"}:
+                quote = character
+                continue
+            if character == "　":
+                if not reported_space:
+                    messages.append(HtmlTypoLintMessage(
+                        "warning",
+                        "html_typo_lint.full_width_html_space",
+                        _line_number_at(position, line_starts),
+                    ))
+                    reported_space = True
+                continue
+            suggestion = FULL_WIDTH_HTML_SYNTAX_SUGGESTIONS.get(character)
+            if suggestion is None or character in reported_symbols:
+                continue
+            messages.append(HtmlTypoLintMessage(
+                "warning",
+                "html_typo_lint.full_width_html_syntax",
+                _line_number_at(position, line_starts),
+                {"symbol": character, "suggestion": suggestion},
+            ))
+            reported_symbols.add(character)
+    return messages
+
+
+def _html_example_body_ranges(load_data: str) -> list[tuple[int, int]]:
+    tag_names = "|".join(sorted(ATTRIBUTE_EXAMPLE_TAGS))
+    pattern = re.compile(
+        rf"<({tag_names})\b[^>]*>([\s\S]*?)</\1\s*>",
+        re.IGNORECASE,
+    )
+    return [
+        (match.start(2), match.end(2))
+        for match in pattern.finditer(load_data)
+    ]
+
+
+def _html_tag_like_ranges(load_data: str) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
+    position = 0
+    while position < len(load_data):
+        if load_data[position] not in {"<", "＜"} or not _looks_like_html_tag_start(
+            load_data,
+            position,
+        ):
+            position += 1
+            continue
+
+        start = position
+        quote: str | None = None
+        position += 1
+        scan_limit = min(len(load_data), start + 4096)
+        while position < scan_limit:
+            character = load_data[position]
+            if quote is not None:
+                if character == quote:
+                    quote = None
+                position += 1
+                continue
+            if character in {'"', "'"}:
+                quote = character
+                position += 1
+                continue
+            if character in {">", "＞"}:
+                position += 1
+                break
+            if character in {"<", "＜"}:
+                break
+            position += 1
+        ranges.append((start, position))
+        if position == start:
+            position += 1
+    return ranges
+
+
+def _looks_like_html_tag_start(load_data: str, position: int) -> bool:
+    candidate_position = position + 1
+    while candidate_position < len(load_data) and load_data[candidate_position].isspace():
+        candidate_position += 1
+    if candidate_position < len(load_data) and load_data[candidate_position] in {"/", "／"}:
+        candidate_position += 1
+        while candidate_position < len(load_data) and load_data[candidate_position].isspace():
+            candidate_position += 1
+    if candidate_position >= len(load_data):
+        return False
+    normalized_character = unicodedata.normalize("NFKC", load_data[candidate_position])
+    return len(normalized_character) == 1 and normalized_character.isascii() and normalized_character.isalpha()
 
 
 def _wordpress_block_body_ranges(
