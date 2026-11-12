@@ -61,15 +61,31 @@ def test_inline_style_detects_unclosed_quote_and_parenthesis() -> None:
     assert "css_lint.missing_closing_parenthesis" in message_keys
 
 
-def test_inline_style_detects_invalid_keyword_color_and_range() -> None:
+def test_inline_style_detects_invalid_keyword_and_range_without_color_judgment() -> None:
     message_keys = _message_keys(
         "display:blick; color:#zzzzzz; opacity:1.5; z-index:front"
     )
 
     assert "css_lint.invalid_keyword" in message_keys
-    assert "css_lint.invalid_color" in message_keys
+    assert "css_lint.invalid_color" not in message_keys
     assert "css_lint.value_out_of_range" in message_keys
     assert "css_lint.invalid_integer" in message_keys
+
+
+@pytest.mark.parametrize(
+    "style_text",
+    [
+        "{cursor}",
+        "color:{cursor}",
+        "background-color: {cursor}; padding:10px",
+    ],
+)
+def test_inline_style_accepts_editable_cursor_placeholder(style_text: str) -> None:
+    assert lint_inline_style(style_text) == []
+
+
+def test_inline_style_keeps_real_syntax_checks_around_cursor_placeholder() -> None:
+    assert "css_lint.missing_colon" in _message_keys("broken {cursor}")
 
 
 def test_inline_style_accepts_custom_properties_and_final_declaration_without_semicolon() -> None:

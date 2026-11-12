@@ -4,6 +4,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from html import escape
+from pathlib import Path
+
+from editor.tag_insert import wordpress_tag_snippet
 
 PARAGRAPH_BLOCK_PATTERN: re.Pattern[str] = re.compile(
     r"<!--\s+wp:paragraph\s+-->(.*?)<!--\s+/wp:paragraph\s+-->",
@@ -15,6 +18,7 @@ PARAGRAPH_TAG_PATTERN: re.Pattern[str] = re.compile(
 )
 LEADING_BREAK_PATTERN: re.Pattern[str] = re.compile(r"^(?:\s*<br\s*/?>\s*)+", re.IGNORECASE)
 TRAILING_BREAK_PATTERN: re.Pattern[str] = re.compile(r"(?:\s*<br\s*/?>\s*)+$", re.IGNORECASE)
+INFO_FRAME_LABEL_KEY = "tag.wordpress.info_frame_block"
 
 
 class ParagraphSplitError(ValueError):
@@ -103,21 +107,12 @@ def build_html_code_block(content: str = "") -> str:
     return block_text
 
 
-def build_decorated_block(content: str = "") -> str:
-    """Build a WordPress HTML block with the specified content, decorated."""
-    body = _decorated_text_from_paragraph_content(content)
-    if not body:
-        body = "ここに本文を入れます。"
-    return (
-        "<!-- wp:html -->\n"
-        "<div\n"
-        '    style="display:inline-block; border:1px solid #999; padding:16px; '
-        'margin:2em 0 1.5em; border-radius:8px; background-color:#f9f9f9;"\n'
-        ">\n"
-        f"{body}\n"
-        "</div>\n"
-        "<!-- /wp:html -->"
-    )
+def build_decorated_block(
+    content: str = "",
+    dictionaries_path: Path | None = None,
+) -> str:
+    """Build the WordPress info-frame block from the active tag dictionary."""
+    return _build_decorated_block(content, dictionaries_path).text
 
 
 def split_paragraph_insert_spacer(text: str, cursor_pos: int) -> ParagraphReplacement:
@@ -176,6 +171,7 @@ def wrap_selection_as_decorated_block(
     text: str,
     selection_start: int,
     selection_end: int,
+    dictionaries_path: Path | None = None,
 ) -> ParagraphReplacement:
     """Wrap the selected text as a WordPress HTML decorated block, replacing the current paragraph selection."""
     selection_start, selection_end = _expand_selection_to_content_lines(
@@ -184,14 +180,29 @@ def wrap_selection_as_decorated_block(
         selection_end,
     )
     selected_text = _selected_text(text, selection_start, selection_end)
-    decorated_block = build_decorated_block(selected_text)
-    cursor_offset = decorated_block.index("</div>")
+    decorated_block = _build_decorated_block(selected_text, dictionaries_path)
     return _replace_current_paragraph_selection(
         text,
         selection_start,
         selection_end,
-        _BuiltBlock(decorated_block, cursor_offset),
+        decorated_block,
     )
+
+
+def _build_decorated_block(
+    content: str,
+    dictionaries_path: Path | None,
+) -> _BuiltBlock:
+    """Render the dictionary-backed info frame and retain its cursor position."""
+    try:
+        snippet = wordpress_tag_snippet(INFO_FRAME_LABEL_KEY, dictionaries_path)
+    except (OSError, TypeError, ValueError) as error:
+        raise ParagraphSplitError(
+            f"枠組み指定の辞書を読み込めません: {error}"
+        ) from error
+    body = _decorated_text_from_paragraph_content(content)
+    rendered_text, cursor_offset = snippet.render(body)
+    return _BuiltBlock(rendered_text, cursor_offset)
 
 
 def _replace_current_paragraph_selection(

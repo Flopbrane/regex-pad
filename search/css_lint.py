@@ -20,9 +20,10 @@ SIMPLE_NUMBER_PATTERN = re.compile(r"^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$")
 NUMBER_WITH_UNIT_PATTERN = re.compile(
     r"(?<![\w.-])[-+]?(?:\d+(?:\.\d*)?|\.\d+)([A-Za-z]+)\b"
 )
-COLOR_HASH_PATTERN = re.compile(r"#[0-9A-Za-z]+")
 PROPERTY_LIKE_PATTERN = re.compile(r"(?:^|\s)(--?[A-Za-z][\w-]*|[A-Za-z][\w-]*)\s*:")
 AT_RULE_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9-]*)")
+CURSOR_PLACEHOLDER = "{cursor}"
+CURSOR_PLACEHOLDER_CSS_VALUE = "var(--regex-pad-cursor)"
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,7 @@ def lint_inline_style(
                 {"error": str(error)},
             )
         ]
+    style_text = _mask_cursor_placeholder(style_text)
     masked_text, messages = _mask_css_comments(style_text, start_line_number)
     messages.extend(
         _lint_inline_style_with_reference(masked_text, start_line_number, reference)
@@ -73,6 +75,7 @@ def lint_inline_style(
 
 def parse_inline_style_values(style_text: str) -> dict[str, str] | None:
     """Read declarations using the same comment/quote/parenthesis rules as lint."""
+    style_text = _mask_cursor_placeholder(style_text)
     masked_text, comment_issues = _mask_css_comments(style_text)
     declarations, syntax_issues = _split_declarations(masked_text, 1)
     if comment_issues or syntax_issues:
@@ -403,7 +406,6 @@ def _lint_declaration(
         )
 
     messages.extend(_lint_known_unit_typos(value, line_number, unit_typos))
-    messages.extend(_lint_color_hashes(value, line_number))
     messages.extend(
         _lint_property_value(
             lookup_name,
@@ -520,24 +522,11 @@ def _lint_known_unit_typos(
     return messages
 
 
-def _lint_color_hashes(value: str, line_number: int) -> list[CssLintIssue]:
-    messages: list[CssLintIssue] = []
-    for match in COLOR_HASH_PATTERN.finditer(value):
-        color = match.group(0)
-        digits = color[1:]
-        if len(digits) in {3, 4, 6, 8} and all(
-            character in "0123456789abcdefABCDEF" for character in digits
-        ):
-            continue
-        messages.append(
-            CssLintIssue(
-                "error",
-                "css_lint.invalid_color",
-                line_number,
-                {"value": color},
-            )
-        )
-    return messages
+def _mask_cursor_placeholder(style_text: str) -> str:
+    """Keep editable cursor placeholders out of CSS syntax diagnostics."""
+    if style_text.strip() == CURSOR_PLACEHOLDER:
+        return ""
+    return style_text.replace(CURSOR_PLACEHOLDER, CURSOR_PLACEHOLDER_CSS_VALUE)
 
 
 def _lint_full_width_symbols(

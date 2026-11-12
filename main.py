@@ -2198,7 +2198,14 @@ class MainWindow(QMainWindow):
 
     def wrap_paragraph_split_decorated_block(self) -> None:
         """Split the current paragraph and wrap the selection as a decorated block."""
-        self._apply_paragraph_split_operation(wrap_selection_as_decorated_block)
+        self._apply_paragraph_split_operation(
+            lambda text, start, end: wrap_selection_as_decorated_block(
+                text,
+                start,
+                end,
+                self._tag_dictionaries_path(),
+            )
+        )
 
     def _apply_paragraph_split_operation(
         self,

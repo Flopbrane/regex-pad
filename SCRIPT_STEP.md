@@ -4086,3 +4086,60 @@ Request: detect accidental full-width HTML punctuation, based on a real editing 
 - Worktree validation: focused HTML-Linter pytest 253 passed; full pytest 740 passed / 16 existing failures (11 absent Gutenberg fixture cases, three frame-style expectations and two visible-space-marker expectations). Full Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
 - Canonical validation: focused HTML-Linter pytest 253 passed; full pytest 751 passed / five existing unrelated failures (three frame-style expectations and two visible-space-marker expectations). Full Ruff passed; explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
 - Propagated only `search/html_typo_lint.py`, both application-text JSON resources, `tests/test_html_typo_lint.py` and this record to `D:\PC\Python\regex_pad_project`, preserving unrelated Unicode-normalization and user changes. No EXE rebuild or physical Windows/WordPress acceptance was performed.
+
+## Step15-section39 Dictionary-Backed Paragraph Split Frame
+
+Date: 2026-11-11
+
+Request: make `段落分割 > 枠組み指定` use `tag.wordpress.info_frame_block` from `dictionaries/wordpress_html_dict.json` instead of a separately hard-coded frame.
+
+- Added a focused WordPress-snippet lookup that uses the existing dictionary validation and `TagSnippet.render()` behavior.
+- Changed the paragraph-split decorated block to render the dictionary's `template`, `default_selection`, `{selection}` and `{cursor}` values. The current info frame therefore supplies the blue `display: grid` frame, and later edits to that dictionary item are picked up by the paragraph-split action.
+- Passed the active user dictionary folder from the main-window action when one is configured; otherwise the bundled/source dictionary remains the default.
+- Added regression coverage proving that a temporary `info_frame_block` dictionary changes the paragraph-split result and controls the resulting cursor position.
+
+Canonical validation:
+
+- Paragraph-split pytest: 12 passed. The combined paragraph-split/tag-insert run passed 76 tests and retained four pre-existing tag-insert expectation failures caused by current dictionary templates/styles differing from the older test expectations.
+- Focused Ruff passed. Focused explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
+- Full pytest: 751 passed / six existing unrelated failures: one HTML `div` dictionary expectation, three WordPress frame-style expectations and two visible-space-marker expectations.
+- The packaged EXE was not rebuilt, and physical Windows GUI/WordPress acceptance was not performed.
+
+## Step15-section40 Linter Color-Judgment Removal and Cursor Placeholders
+
+Date: 2026-11-11
+
+Request: keep Linter grammar checks, remove color judgments that can stop Regex Pad while colors are being edited, and allow editable `{cursor}` placeholders in HTML `style` and `class` attributes.
+
+- Removed the dedicated invalid hexadecimal-color diagnostic and its unused bilingual message. Intermediate or custom color values no longer produce `css_lint.invalid_color`.
+- Removed WordPress paragraph color/background consistency judgments for inline `color` / `background-color` and the `textColor` / `backgroundColor` preset classes. Typography consistency checks remain unchanged.
+- Added inline-style placeholder masking. `style="{cursor}"`, `style="color:{cursor}"` and other property values containing `{cursor}` are accepted without interpreting the placeholder braces as CSS syntax. Real surrounding syntax errors, such as a declaration missing `:`, are still reported.
+- Confirmed `class="{cursor}"` is accepted, including within a WordPress paragraph template. Structural HTML, WordPress block, CSS property, punctuation, unit, range, quote, parenthesis and tag checks remain active.
+- Added focused regressions for color-judgment removal, placeholder acceptance and preservation of surrounding grammar diagnostics.
+
+Canonical validation:
+
+- Focused CSS/HTML-Linter pytest: 275 passed. Focused Ruff passed. Focused explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
+- Both bilingual application-text JSON files passed syntax validation.
+- Full pytest: 759 passed / six existing unrelated failures (one HTML `div` dictionary expectation, three WordPress frame-style expectations and two visible-space-marker expectations). Full Ruff and Pyright passed; `git diff --check` reported only existing line-ending notices for the bilingual JSON resources.
+- The packaged EXE was not rebuilt, and physical Windows GUI acceptance was not performed.
+
+## Step15-section41 Packaging JSON Coverage and Portable Settings Transfer
+
+Date: 2026-11-11
+
+Request: verify that the PyInstaller spec and `build.ps1` include dictionaries and other JSON, confirm whether option colors are contained in `config.json`, and provide a safe way to retain an older Regex Pad environment.
+
+- Confirmed the spec recursively collects project JSON while excluding build/runtime/generated folders. Added explicit assertions that HTML, WordPress and standards dictionaries are selected.
+- Treated root `config.json` and root `color_presets.json` as user-editable portable files rather than duplicate read-only `_internal` data. `build.ps1` now places them beside `regex-pad.exe`, while bundled defaults/resources remain under `_internal`.
+- Added an explicit fresh copy of the complete `dictionaries` folder to `_internal/dictionaries`, matching the existing complete resources copy. The build now verifies SHA-256 equality for every JSON below `resources` and `dictionaries` and stops if any JSON is missing or differs.
+- When rebuilding over an existing `dist/regex-pad`, the script temporarily preserves its `config.json` and `color_presets.json` before PyInstaller refreshes the distribution and restores those user files afterward. With no previous dist settings, the project copies seed the new distribution.
+- Confirmed `config.json` already stores every Options color: editor background/text, HTML tag, WordPress block, search/current marker, whitespace markers and frame colors. The separate `color_presets.json` remains the editable insertion-color catalog and shortcut list.
+- Kept runtime migration from same-folder legacy `settings.json` when no `config.json` exists. Deliberately did not scan unrelated or sibling folders for an older installation, because selecting the wrong portable copy could silently import stale paths and settings.
+- Added English/Japanese guidance: close both versions, copy the old `config.json` beside the new EXE and overwrite it; also copy `color_presets.json` when its insertion presets were customized. Missing newly introduced keys safely use current defaults.
+
+Canonical validation:
+
+- Packaging/config/settings/color-presets pytest: 21 passed. PowerShell syntax parsing passed. Focused Ruff passed. Focused explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
+- Packaging plus user-help/static-document pytest: 30 passed. Full pytest: 760 passed / six existing unrelated failures (one HTML `div` dictionary expectation, three WordPress frame-style expectations and two visible-space-marker expectations). Full Ruff and Pyright passed; `git diff --check` reported only existing line-ending notices.
+- The packaged EXE was not rebuilt, so the actual new distribution layout and preservation behavior still require a real `build.ps1` run before release.

@@ -593,7 +593,6 @@
   "css_lint.unknown_property_with_suggestion": "未登録のCSSプロパティ `{property}` です。`{suggestion}` の可能性があります。",
   "css_lint.missing_semicolon": "CSSプロパティ `{property}` の前に `;` が不足している可能性があります。",
   "css_lint.known_unit_typo": "CSS単位 `{unit}` はTypoの可能性があります。`{suggestion}` を使用してください。",
-  "css_lint.invalid_color": "CSSの色指定 `{value}` が不正です。",
   "css_lint.invalid_keyword": "`{value}` は `{property}` で使用できる登録値ではありません。候補: {allowed_values}。",
   "css_lint.invalid_integer": "CSSプロパティ `{property}` には整数が必要ですが、`{value}` が指定されています。",
   "css_lint.value_out_of_range": "CSS値 `{value}` は `{property}` の有効範囲外です。",

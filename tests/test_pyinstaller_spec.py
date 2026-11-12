@@ -30,8 +30,10 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(monkeypatch: p
     assert ("resources/app_text_ja.json", "resources") in app_datas
     assert ("resources/color_presets.json", "resources") in app_datas
     assert ("dictionaries/standards/standard_css.json", "dictionaries/standards") in app_datas
-    assert ("config.json", ".") in app_datas
-    assert ("color_presets.json", ".") in app_datas
+    assert ("dictionaries/html_dict.json", "dictionaries") in app_datas
+    assert ("dictionaries/wordpress_html_dict.json", "dictionaries") in app_datas
+    assert ("config.json", ".") not in app_datas
+    assert ("color_presets.json", ".") not in app_datas
     assert all(not source.startswith("_internal/") for source, _target in app_datas)
     assert all(not source.startswith("runtime/") for source, _target in app_datas)
 
@@ -50,6 +52,18 @@ def test_build_script_uses_clean_build_without_codex_runtime_path() -> None:
     assert "codex-runtimes" in build_script
     assert '$PyInstallerCachePath = Join-Path $env:LOCALAPPDATA "pyinstaller"' in build_script
     assert "Remove-Item -LiteralPath $ResolvedCachePath -Recurse -Force" in build_script
+
+
+def test_build_script_copies_and_verifies_runtime_json_and_portable_settings() -> None:
+    build_script = Path("build.ps1").read_text(encoding="utf-8")
+
+    assert '$DictionarySourcePath = Join-Path $ProjectRoot "dictionaries"' in build_script
+    assert "Assert-JsonFilesCopied" in build_script
+    assert '-DestinationPath (Join-Path $InternalPath "dictionaries")' in build_script
+    assert 'Join-Path $DistAppPath "config.json"' in build_script
+    assert 'Join-Path $DistAppPath "color_presets.json"' in build_script
+    assert "$PreservedConfigPath" in build_script
+    assert "$PreservedColorPresetsPath" in build_script
 
 
 def _prepared_runtime(root: Path, monkeypatch: pytest.MonkeyPatch) -> Path:

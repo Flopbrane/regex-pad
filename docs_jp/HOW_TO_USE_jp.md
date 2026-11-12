@@ -483,6 +483,22 @@ spec直接実行で軽量版を作る場合は、`REGEXPAD_SKIP_WORDPRESS_RUNTIM
 node --test tests/wordpress_preview_theme.test.mjs tests/wordpress_preview_boot_cache.test.mjs
 ```
 
+## 新しい版へポータブル設定を移す
+
+`regex-pad.exe`の横にある`config.json`には、オプションで指定した
+エディター背景・本文・HTMLタグ・WordPressブロック・検索マーカー・
+空白/TAB/改行記号・枠の配色を含む設定が保存されます。
+`color_presets.json`は、挿入メニューの編集可能な色候補・表示名・
+ショートカット用です。
+
+旧版と同じ環境を新版へ移すには、両方のRegex Padを終了し、旧版の
+`config.json`を新版の`regex-pad.exe`と同じフォルダーへコピーして
+上書きします。色候補も変更している場合は`color_presets.json`も同様に
+コピーします。旧版が`settings.json`を使っている場合は、新版側に
+`config.json`がない状態で`settings.json`をEXEの横へコピーすると、
+初回起動時に`config.json`へ移行します。新版で追加された設定項目が
+旧ファイルにない場合は、その項目だけ既定値が使われます。
+
 リリース時の検証は[作業記録](../SCRIPT_STEP.md)へ記載し、
 自動テスト・EXE版・実画面・実サイトでの確認を区別します。
 既存の解析資料とbroken/fixedテスト素材は回帰確認の基準に使えます。

@@ -490,3 +490,17 @@ Keep release validation records in [SCRIPT_STEP.md](../SCRIPT_STEP.md), with
 automated, packaged, physical GUI, and real-site checks distinguished. Existing
 behavior reports and broken/fixed test materials are useful regression baselines;
 recovery output is observation data, not automatically a correct-source fixture.
+
+## Moving portable settings to a newer version
+
+`config.json` beside `regex-pad.exe` stores the options selected in the app,
+including editor background/text, HTML-tag, WordPress-block, search-marker,
+space/TAB/newline-marker, and frame colors. `color_presets.json` separately
+stores editable insertion-menu color choices, display names, and shortcuts.
+
+To reproduce an older Regex Pad environment, close both versions and copy the
+old `config.json` over the file beside the new `regex-pad.exe`. If insertion
+color presets were customized, copy `color_presets.json` as well. For versions
+that used `settings.json`, place it beside the new EXE while no `config.json`
+exists; the first startup migrates it to `config.json`. Settings introduced by
+a newer version use their defaults when they are absent from the older file.

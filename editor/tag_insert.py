@@ -46,6 +46,7 @@ WORDPRESS_HIGH_SECURITY_LABEL_KEYS = {
     "tag.wordpress.columns_2_text_block",
     "tag.wordpress.columns_3_text_block",
 }
+WORDPRESS_DICTIONARY_FILE_NAME = "wordpress_html_dict.json"
 
 
 @dataclass(frozen=True)
@@ -118,6 +119,23 @@ def ordered_tag_snippet_groups(
             groups,
             key=lambda group: 0 if group.label_key == preferred_label_key else 1,
         )
+    )
+
+
+def wordpress_tag_snippet(
+    label_key: str,
+    dictionaries_path: Path | None = None,
+) -> TagSnippet:
+    """Load one WordPress snippet by label key from the active dictionary."""
+    dictionaries_path = (
+        dictionaries_path or Path(__file__).resolve().parent.parent / "dictionaries"
+    )
+    load_file_path = dictionaries_path / WORDPRESS_DICTIONARY_FILE_NAME
+    for snippet in _load_snippets_from_json(load_file_path):
+        if snippet.label_key == label_key:
+            return snippet
+    raise ValueError(
+        f"WordPress dictionary item was not found: {label_key!r} ({load_file_path})"
     )
 
 

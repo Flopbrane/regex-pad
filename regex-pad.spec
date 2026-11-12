@@ -25,20 +25,16 @@ DIST_FOLDER_NAME = "regex-pad"
 ICON_FILE = PROJECT_DIR / "assets" / "icons" / "regex_pad_icon.ico"
 ICON_PATH = str(ICON_FILE) if ICON_FILE.exists() else None
 
-def _ensure_default_config() -> None:
-    config_path = PROJECT_ROOT / "config.json"
-    if not config_path.exists():
-        config_path.write_text("{}\n", encoding="utf-8")
-
-
 def _project_json_datas():
-    _ensure_default_config()
     ignored_parts = {"build", "dist", "_internal", ".git", ".vscode", "runtime", "Temp", "install_records", "logs", "cache", "modules", "data"}
     ignored_names = {"pyrightconfig.json"}
+    user_editable_root_json = {Path("config.json"), Path("color_presets.json")}
     datas = []
     for json_path in PROJECT_ROOT.rglob("*.json"):
         relative_path = json_path.relative_to(PROJECT_ROOT)
         if relative_path.name in ignored_names:
+            continue
+        if relative_path in user_editable_root_json:
             continue
         if any(part in ignored_parts for part in relative_path.parts):
             continue
@@ -50,8 +46,6 @@ def _project_json_datas():
                 else ".",
             )
         )
-    if not any(source == "config.json" for source, _target in datas):
-        datas.append(("config.json", "."))
     return datas
 
 

@@ -344,7 +344,7 @@ def test_lint_preserves_valid_html_around_reported_gaps(html: str) -> None:
         ({"style": {"typography": {"fontWeight": "700"}}}, "<p>Text</p>", True),
         ({}, '<p style="font-weight:700">Text</p>', True),
         ({}, '<p style="font-style:italic">Text</p>', True),
-        ({}, '<p style="color:#ff0000">Text</p>', True),
+        ({}, '<p style="color:#ff0000">Text</p>', False),
         ({"style": {"color": {"text": "#ff0000"}}}, '<p style="color:#ff0000">Text</p>', False),
         ({"style": {"typography": {"lineHeight": 1.5}}}, '<p style="line-height:1.5">Text</p>', False),
         (
@@ -353,7 +353,7 @@ def test_lint_preserves_valid_html_around_reported_gaps(html: str) -> None:
             False,
         ),
         ({"textColor": "primary"}, '<p class="has-primary-color has-text-color">Text</p>', False),
-        ({"textColor": "primary"}, '<p class="has-secondary-color has-text-color">Text</p>', True),
+        ({"textColor": "primary"}, '<p class="has-secondary-color has-text-color">Text</p>', False),
         ({"backgroundColor": "base"}, '<p class="has-base-background-color has-background">Text</p>', False),
         ({"fontSize": "large"}, '<p class="has-large-font-size">Text</p>', False),
         ({"fontSize": "large"}, '<p class="has-small-font-size">Text</p>', True),
@@ -1015,8 +1015,21 @@ def test_inline_style_uses_css_dictionary_lint() -> None:
 
     assert "css_lint.known_property_typo" in message_keys
     assert "css_lint.invalid_keyword" in message_keys
-    assert "css_lint.invalid_color" in message_keys
+    assert "css_lint.invalid_color" not in message_keys
     assert all(message.line_number == 1 for message in messages)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        '<div style="{cursor}">本文</div>',
+        '<div class="{cursor}">本文</div>',
+        '<div style="color:{cursor}" class="{cursor}">本文</div>',
+        '<!-- wp:paragraph --><p style="{cursor}" class="{cursor}">本文</p><!-- /wp:paragraph -->',
+    ],
+)
+def test_lint_accepts_cursor_placeholder_in_html_attributes(source: str) -> None:
+    assert lint_html_typos(source) == []
 
 
 def test_multiline_inline_style_reports_original_html_line() -> None:

@@ -183,13 +183,42 @@ def test_wrap_selection_as_decorated_block_uses_div_frame() -> None:
 
     replacement = wrap_selection_as_decorated_block(text, start, end)
 
-    assert "<div\n" in replacement.text
-    assert "margin:2em 0 1.5em;" in replacement.text
+    assert '<div style="display: grid;' in replacement.text
+    assert "border: 2px solid #4d29ff;" in replacement.text
+    assert "background-color: #d0e7fb;" in replacement.text
+    assert "border-left: 4px solid #2401d0;" in replacement.text
     assert "・行1<br>\n・行2" in replacement.text
     assert "<\\p>" not in replacement.text
     assert "2en" not in replacement.text
     assert "wp:preformatted" not in replacement.text
     assert "<!-- wp:html -->" in replacement.text
+
+
+def test_wrap_selection_as_decorated_block_reads_info_frame_dictionary(
+    tmp_path,
+) -> None:
+    (tmp_path / "wordpress_html_dict.json").write_text(
+        """[
+  {
+    \"label_key\": \"tag.wordpress.info_frame_block\",
+    \"hint_key\": \"tag.hint.wordpress.info_frame_block\",
+    \"template\": \"<!-- wp:html -->\\n<div data-source=\\\"dictionary\\\">\\n{selection}{cursor}\\n</div>\\n<!-- /wp:html -->\",
+    \"default_selection\": \"辞書の初期本文\"
+  }
+]""",
+        encoding="utf-8",
+    )
+    text = "<!-- wp:paragraph -->\n<p><br><br>\n</p>\n<!-- /wp:paragraph -->"
+    start = text.index("<br><br>")
+    end = start + len("<br><br>")
+
+    replacement = wrap_selection_as_decorated_block(text, start, end, tmp_path)
+
+    assert '<div data-source="dictionary">' in replacement.text
+    assert "辞書の初期本文" in replacement.text
+    assert replacement.cursor_position == replacement.text.index("辞書の初期本文") + len(
+        "辞書の初期本文"
+    )
 
 
 def test_wrap_selection_as_decorated_block_expands_partial_selection_to_lines() -> None:

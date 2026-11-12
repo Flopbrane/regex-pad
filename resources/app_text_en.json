@@ -593,7 +593,6 @@
   "css_lint.unknown_property_with_suggestion": "Unknown CSS property `{property}`. Did you mean `{suggestion}`?",
   "css_lint.missing_semicolon": "A semicolon may be missing before CSS property `{property}`.",
   "css_lint.known_unit_typo": "CSS unit `{unit}` may be a typo. Use `{suggestion}`.",
-  "css_lint.invalid_color": "Invalid CSS color value `{value}`.",
   "css_lint.invalid_keyword": "`{value}` is not a supported value for `{property}`. Candidates: {allowed_values}.",
   "css_lint.invalid_integer": "CSS property `{property}` requires an integer, but `{value}` was found.",
   "css_lint.value_out_of_range": "CSS value `{value}` is outside the valid range for `{property}`.",

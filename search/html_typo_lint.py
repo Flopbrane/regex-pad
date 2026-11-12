@@ -1766,6 +1766,8 @@ def _lint_wordpress_paragraph_attributes(
         return []
     html_attributes = collector.root_tags[0][1]
     style_text = html_attributes.get("style", "")
+    if "{cursor}" in style_text or "{cursor}" in html_attributes.get("class", ""):
+        return []  # Editable dictionary placeholders are intentionally incomplete.
     if any(issue.severity == "error" for issue in lint_inline_style(style_text)):
         return []  # CSS syntax diagnostics take priority over consistency guesses.
     html_style = parse_inline_style_values(style_text)
@@ -1784,7 +1786,6 @@ def _lint_wordpress_paragraph_attributes(
             "letterSpacing": "letter-spacing", "textDecoration": "text-decoration",
             "textTransform": "text-transform",
         },
-        "color": {"text": "color", "background": "background-color"},
     }
     for section, rules in style_rules.items():
         section_values = block_style.get(section, {})
@@ -1795,8 +1796,7 @@ def _lint_wordpress_paragraph_attributes(
             actual = html_style.get(css_property)
             # Preset attributes serialize through classes rather than inline CSS.
             preset_attribute = {
-                "font-size": "fontSize", "color": "textColor",
-                "background-color": "backgroundColor",
+                "font-size": "fontSize",
             }.get(css_property)
             if preset_attribute and block_attributes.get(preset_attribute):
                 continue
@@ -1815,8 +1815,6 @@ def _lint_wordpress_paragraph_attributes(
                 ))
     classes = set(html_attributes.get("class", "").split())
     for attribute, prefix, suffix in (
-        ("textColor", "has-", "-color"),
-        ("backgroundColor", "has-", "-background-color"),
         ("fontSize", "has-", "-font-size"),
     ):
         value = block_attributes.get(attribute)
