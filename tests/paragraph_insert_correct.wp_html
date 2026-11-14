@@ -1,0 +1,7 @@
+<!-- wp:paragraph -->
+<p>前の段落
+
+{cursor}
+
+後の段落</p>
+<!-- /wp:paragraph -->

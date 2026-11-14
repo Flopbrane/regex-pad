@@ -64,6 +64,7 @@ from dialogs.schema_reference_dialog import SchemaReferenceDialog
 from dialogs.tag_insert_dialog import TagInsertDialog
 from dialogs.user_help_dialog import UserHelpDialog
 from editor.editor_tab import EditorTab
+from editor.paragraph_insert_rules import load_paragraph_insert_rule_book
 from editor.paragraph_splitter import (
     ParagraphBlock,
     ParagraphReplacement,
@@ -1517,6 +1518,7 @@ class MainWindow(QMainWindow):
             return True
         try:
             tag_snippet_groups(Path(user_dictionary_folder))
+            load_paragraph_insert_rule_book(Path(user_dictionary_folder))
         except (OSError, TypeError, ValueError) as error:
             QMessageBox.critical(
                 self,
@@ -2189,12 +2191,23 @@ class MainWindow(QMainWindow):
     def insert_paragraph_split_spacer(self) -> None:
         """Split the current paragraph and insert a WordPress spacer block."""
         self._apply_paragraph_split_operation(
-            lambda text, start, _end: split_paragraph_insert_spacer(text, start)
+            lambda text, start, _end: split_paragraph_insert_spacer(
+                text,
+                start,
+                self._tag_dictionaries_path(),
+            )
         )
 
     def insert_paragraph_split_html(self) -> None:
         """Split the current paragraph and wrap the selection as an HTML code block."""
-        self._apply_paragraph_split_operation(wrap_selection_as_code_block)
+        self._apply_paragraph_split_operation(
+            lambda text, start, end: wrap_selection_as_code_block(
+                text,
+                start,
+                end,
+                self._tag_dictionaries_path(),
+            )
+        )
 
     def wrap_paragraph_split_decorated_block(self) -> None:
         """Split the current paragraph and wrap the selection as a decorated block."""
@@ -2221,7 +2234,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(
                 self,
                 self.translator.text("paragraph_split.error_title"),
-                str(error),
+                self.translator.text(error.message_key, **error.values),
             )
             return
 

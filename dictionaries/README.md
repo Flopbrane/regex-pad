@@ -56,6 +56,27 @@ Current policy for user dictionaries:
 - Direct `label` / `hint` text is not accepted yet.
 - Direct labels may be reconsidered later for plugin-like dictionaries, but that needs a separate format decision so localization behavior stays predictable.
 
+## Paragraph Insertion Dictionary
+
+`paragraph_insert_dict.json` is the single source for the right-click **Paragraph Split** insertion route. Its operation keys match the visible command-key suffixes:
+
+- `insert_spacer`
+- `insert_html`
+- `decorated_block`
+
+Every operation contains:
+
+- `search`: regular expression for text on which the insertion may run.
+- `exclude`: optional regular expression that blocks overlapping input.
+- `replacement`: exact inserted template. `{selection}` receives transformed selected text, `{cursor}` sets the final cursor, and declared parameters such as `{height}` come from `default_parameters`.
+- `content_transform`: the non-presentational transform (`none`, `code`, or `decorated`). Search and replacement strings used by these transforms are under `grammar` in the same JSON file.
+- `selection`: whether non-empty selection is allowed, whether it expands to complete lines, and the separate search/exclusion rules for an empty cursor position.
+- `error_key`: bilingual application-text key used by the insertion Linter when the operation is unavailable.
+
+The `grammar` object also supplies the WordPress paragraph-block search, `<p>` content search, paragraph replacement template, block separator, `<br>` cleanup rules, and structural diagnostic keys. Python owns range safety, cursor placement and Undo grouping; it does not own completed WordPress block text.
+
+When a selected user-dictionary folder contains `paragraph_insert_dict.json`, Paragraph Split uses it. If that optional file is absent, RegexPad uses the bundled paragraph dictionary so existing user-dictionary folders remain compatible.
+
 ## Typo Lint Reference
 
 `lint_reference.json` is not a snippet dictionary. It is loaded once at startup into a cache and is used by HTML / WordPress typo linting.

@@ -4143,3 +4143,39 @@ Canonical validation:
 - Packaging/config/settings/color-presets pytest: 21 passed. PowerShell syntax parsing passed. Focused Ruff passed. Focused explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations.
 - Packaging plus user-help/static-document pytest: 30 passed. Full pytest: 760 passed / six existing unrelated failures (one HTML `div` dictionary expectation, three WordPress frame-style expectations and two visible-space-marker expectations). Full Ruff and Pyright passed; `git diff --check` reported only existing line-ending notices.
 - The packaged EXE was not rebuilt, so the actual new distribution layout and preservation behavior still require a real `build.ps1` run before release.
+
+## Table block troubleshooting baseline
+
+Date: 2026-11-13
+
+- Analyzed the user-provided table-block incident against the bundled WordPress 7.1.3 table block metadata, save code, and stylesheet, plus the current Regex-Pad and wp-conv table builders.
+- Added `troubleshooting_table_block_errors.md` as the shared repair guideline. It separates Gutenberg block validation from front-end styling, documents the successful Custom HTML and explicit-cell-border route, and records the `has-fixed-layout` compatibility question for actual editor verification.
+- The wp-conv worktree already has uncommitted styled-table changes; they were inspected but not modified. No conversion behavior was changed in this documentation pass. Live Gutenberg save/reopen and mobile display remain to be checked before implementing and accepting both converters' fixes.
+
+## Dictionary-backed insertion and table repair policy
+
+Date: 2026-11-13
+
+- Reviewed the supplied paragraph-insertion proposal against the current Regex-Pad GUI, tag dictionaries, paragraph splitter, and both projects' table builders.
+- Added `repair_policy_dictionary_and_table.md` and linked it from the table troubleshooting guideline. The ordinary tag-insertion path already reads `html_dict.json` and `wordpress_html_dict.json`; paragraph splitting still hardcodes paragraph, spacer, and HTML code-box output. The existing WordPress dictionary is the first source to reuse; no separate paragraph dictionary is planned without evidence of a missing capability.
+- Documented the order and acceptance criteria for dictionary-backed paragraph splitting and standard versus decorated table output. No source behavior or existing wp-conv changes were altered in this policy pass.
+
+## Step15-section42 Dictionary-Backed Paragraph Insertion and Insertion Linter
+
+Date: 2026-11-14
+
+Request: begin the approved paragraph-insertion implementation, make operational grammar and completed replacement text dictionary-backed, use context-menu suffix keys such as `insert_spacer`, and make the paragraph correct/incorrect cases act as a read-only insertion Linter.
+
+- Added `dictionaries/paragraph_insert_dict.json` as the dedicated source for paragraph-block grammar, search/exclusion rules, completed paragraph/spacer/HTML/decorated replacement templates, content-transform search/replacement rules, defaults and diagnostic keys. The required operation keys are `insert_spacer`, `insert_html` and `decorated_block`.
+- Added `editor/paragraph_insert_rules.py` to resolve the active user dictionary with a bundled fallback and validate schema version, required keys, regular expressions, named groups, booleans, one `{cursor}`, and all declared replacement placeholders before insertion.
+- Reworked `editor/paragraph_splitter.py` so Python owns only structural range safety, selection expansion, escaping, cursor placement and Undo-compatible results. Completed WordPress block output and user-facing error text are no longer stored there. Search/exclusion and text-replacement rules run through the existing search engine.
+- Added a read-only `lint_paragraph_insertion()` route. The tracked `tests/paragraph_insert_correct.wp_html` and `tests/paragraph_insert_incorrect.wp_html` cases now prove that an Enter-created blank line is accepted, a nonblank line is rejected, the correct dictionary-backed message key is returned and the source text is not modified.
+- Main-window paragraph actions pass the active dictionary folder. Unsafe locations show bilingual insertion-specific messages such as “ここでは段落挿入できません”; selections crossing blocks, attributed `<p>` elements and non-simple paragraph structures are rejected before replacement. Existing user-dictionary folders without the new optional file continue to use the bundled default.
+- Updated `dictionaries/README.md` with the schema and ownership boundary. The existing recursive JSON collection in `regex-pad.spec` and complete dictionary copy in `build.ps1` already cover the new file; their focused test passed, so neither build file required a source change.
+
+Validation and canonical propagation:
+
+- Worktree focused paragraph/GUI pytest: 28 passed. Full worktree pytest: 757 passed / 16 existing unrelated failures (11 absent Gutenberg fixture cases, three frame-style expectation differences and two visible-space-marker expectation differences). Full Ruff and explicit-interpreter Pyright passed.
+- Propagated the intended source, dictionary, bilingual messages, tests and this record to `D:\PC\Python\regex_pad_project`, preserving the unrelated table-policy documents and resource differences. Eight files that should be byte-identical matched by SHA-256 after transfer.
+- Canonical focused paragraph/GUI pytest: 28 passed. Full canonical pytest: 776 passed / six existing unrelated failures (one HTML-div dictionary expectation, three frame-style expectation differences and two visible-space-marker expectation differences). Full Ruff and explicit-interpreter Pyright passed; `git diff --check` reported only the checkout's existing bilingual-JSON line-ending notices.
+- The packaged EXE was not rebuilt. Physical Windows GUI and real WordPress save/reopen acceptance were not performed; the source implementation is available in the canonical project.

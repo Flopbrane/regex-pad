@@ -1,0 +1,78 @@
+<!-- wp:table {
+"className":"is-style-regular",
+"style":{
+	"color":{
+		"gradient":"radial-gradient(rgb(6,147,227) 0%,rgb(155,81,224) 100%)"
+	},
+"spacing":{
+	"padding":{
+		"top":"var:preset|spacing|20",
+		"bottom":"var:preset|spacing|20",
+		"left":"var:preset|spacing|20",
+		"right":"var:preset|spacing|20"}},
+		"border":{"width":"2px"},
+	"elements":{
+		"link":{
+			"color":{
+				"text":"var:preset|color|base"
+			}
+		}
+	}
+},
+	"textColor":"base",
+	"fontSize":"medium"
+} -->
+
+<figure 
+class="
+	wp-block-table 
+	is-style-regular 
+	has-medium-font-size" 
+style="
+	padding-top:var(--wp--preset--spacing--20);
+	padding-right:var(--wp--preset--spacing--20);
+	padding-bottom:var(--wp--preset--spacing--20);
+	padding-left:var(--wp--preset--spacing--20)"
+>
+<table
+ class="
+	has-base-color 
+	has-text-color 
+	has-background 
+	has-link-color 
+	has-fixed-layout"
+ style="
+	background:radial-gradient(rgb(6,147,227) 0%,rgb(155,81,224) 100%);
+	border-width:2px"
+>
+
+<tbody>
+<tr>
+<td>名前</td>
+<td>担当顧客</td>
+<td>進捗状況</td>
+</tr>
+<tr>
+<td>伊藤</td>
+<td>◯✕商事</td>
+<td>商談中</td>
+</tr>
+<tr>
+<td>山田</td>
+<td>株式会社AA</td>
+<td>関係構築中</td>
+</tr>
+<tr>
+<td>佐藤</td>
+<td>株式会社AA</td>
+<td>佐藤に同行</td>
+</tr>
+<tr>
+<td>山岡</td>
+<td>株式会社BB</td>
+<td>商談中</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<!-- /wp:table -->

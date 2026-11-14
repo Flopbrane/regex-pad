@@ -412,6 +412,34 @@ def test_find_previous_selects_previous_match(app: QApplication) -> None:
     assert window.editor.textCursor().selectionStart() == 11
 
 
+def test_paragraph_insert_linter_shows_dictionary_backed_message(
+    app: QApplication,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json")
+    window.editor.setPlainText("plain text")
+    captured: dict[str, str] = {}
+
+    def capture_warning(
+        _parent: object,
+        title: str,
+        message: str,
+    ) -> QMessageBox.StandardButton:
+        captured["title"] = title
+        captured["message"] = message
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(QMessageBox, "warning", capture_warning)
+
+    window.insert_paragraph_split_spacer()
+
+    assert captured["title"] == window.translator.text("paragraph_split.error_title")
+    assert captured["message"] == window.translator.text("paragraph_split.not_available")
+    assert window.editor.toPlainText() == "plain text"
+
+
 def test_grammar_check_action_is_available_from_search_menu(
     app: QApplication,
 ) -> None:

@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "grammar": {
+    "paragraph_block": {
+      "search": "(?is)<!--\\s+wp:paragraph\\s+-->(?P<body>.*?)<!--\\s+/wp:paragraph\\s+-->",
+      "exclude": "",
+      "replacement": ""
+    },
+    "paragraph_tag": {
+      "search": "(?is)<p\\b(?P<attributes>[^>]*)>(?P<content>.*?)</p>",
+      "exclude": "",
+      "replacement": ""
+    },
+    "paragraph_replacement": "<!-- wp:paragraph -->\n<p>{selection}</p>\n<!-- /wp:paragraph -->",
+    "block_separator": "\n\n",
+    "trim_leading_breaks": {
+      "search": "(?is)\\A(?:\\s*<br\\s*/?>\\s*)+",
+      "exclude": "",
+      "replacement": ""
+    },
+    "trim_trailing_breaks": {
+      "search": "(?is)(?:\\s*<br\\s*/?>\\s*)+\\Z",
+      "exclude": "",
+      "replacement": ""
+    },
+    "break_to_newline": {
+      "search": "(?i)\\s*<br\\s*/?>\\s*",
+      "exclude": "",
+      "replacement": "\n"
+    },
+    "newline_to_break": {
+      "search": "\\r?\\n",
+      "exclude": "",
+      "replacement": "<br>\n"
+    },
+    "messages": {
+      "not_available": "paragraph_split.not_available",
+      "cross_block": "paragraph_split.cross_block",
+      "paragraph_attributes": "paragraph_split.paragraph_attributes",
+      "paragraph_structure": "paragraph_split.paragraph_structure"
+    }
+  },
+  "operations": {
+    "insert_spacer": {
+      "search": "(?s)^\\s*$",
+      "exclude": "\\S",
+      "replacement": "<!-- wp:spacer {\"height\":\"{height}px\"} -->\n<div style=\"height:{height}px\" aria-hidden=\"true\" class=\"wp-block-spacer\"></div>\n<!-- /wp:spacer -->{cursor}",
+      "content_transform": "none",
+      "selection": {
+        "allow_nonempty": false,
+        "expand_to_lines": false,
+        "empty_requires_blank_line": true,
+        "empty_search": "(?s)^\\s*$",
+        "empty_exclude": "\\S"
+      },
+      "empty_selection": "",
+      "error_key": "paragraph_split.insert_spacer_not_available",
+      "default_parameters": {
+        "height": "32"
+      }
+    },
+    "insert_html": {
+      "search": "(?s)^.*$",
+      "exclude": "",
+      "replacement": "<!-- wp:html -->\n<pre\n    class=\"wp-block-code\"\n    style=\"display:inline-block; border:1px solid #999; padding:16px; border-radius:8px; background-color:#f9f9f9;\"\n><code>{selection}{cursor}</code></pre>\n<!-- /wp:html -->",
+      "content_transform": "code",
+      "selection": {
+        "allow_nonempty": true,
+        "expand_to_lines": true,
+        "empty_requires_blank_line": true,
+        "empty_search": "(?s)^\\s*$",
+        "empty_exclude": "\\S"
+      },
+      "empty_selection": "\n",
+      "error_key": "paragraph_split.insert_html_not_available",
+      "default_parameters": {}
+    },
+    "decorated_block": {
+      "search": "(?s)^.*$",
+      "exclude": "",
+      "replacement": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #4d29ff; font-weight: bold; background-color: #d0e7fb; color: #0c2c46; padding: 14px 16px; margin: 2em 0 2em 0;border-left: 4px solid #2401d0; border-radius: 10px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
+      "content_transform": "decorated",
+      "selection": {
+        "allow_nonempty": true,
+        "expand_to_lines": true,
+        "empty_requires_blank_line": false,
+        "empty_search": "(?s)^.*$",
+        "empty_exclude": ""
+      },
+      "empty_selection": "ここに本文を入れます。",
+      "error_key": "paragraph_split.decorated_block_not_available",
+      "default_parameters": {}
+    }
+  }
+}
