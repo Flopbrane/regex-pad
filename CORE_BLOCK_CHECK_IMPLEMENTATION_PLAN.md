@@ -45,6 +45,7 @@ HTMLのstyle/classを編集
 - `core/buttons` / `core/button`
 - `core/quote` / `core/pullquote`
 - `core/accordion` / `core/accordion-item` / `core/accordion-heading` / `core/accordion-panel`
+- `core/columns` / `core/column` / `core/separator`（確認済み保存例の範囲）
 - 正解例が確認済みの `core/table` 関係
 - 今後、壊れた例と正解例がそろったコアブロック
 
@@ -54,7 +55,7 @@ HTMLのstyle/classを編集
 
 - `core/image`、`core/video`、Gallery等のメディアIDを必要とするブロック
 - 内部ID、添付ファイルID、WordPressメディアライブラリーとの紐付け
-- 正解保存データがまだないList、Columnsの自動修正
+- 正解保存データがまだないListの自動修正
 - プラグイン独自ブロック、テーマ独自ブロック
 - WordPressサイトへの自動アップロードや直接保存
 - 推測だけに基づくclass・JSON・styleの自動挿入
@@ -221,7 +222,7 @@ UIより先に、候補を表すGUI非依存のモデルを作る。
 完了条件:
 
 - 同じ入力から期待候補が一意に定義できる。
-- 未確認のList、Button、Columns、Quote、メディア規則が混入していない。
+- 未確認のListやメディア規則が混入していない。
 
 ### STEP 1: 対応表スキーマのバージョンアップ
 
@@ -469,8 +470,8 @@ UIより先に、候補を表すGUI非依存のモデルを作る。
 3. Quote / Pullquote
 4. Accordion一式
 5. 正解データがあるTable
-6. List
-7. Columns / Column
+6. Columns / Column
+7. List
 
 各ブロックは、次を満たしてから自動挿入対象へ昇格する。
 
@@ -593,7 +594,7 @@ UIより先に、候補を表すGUI非依存のモデルを作る。
 - 1回のUndo
 - 解析後に変更されたタブへの安全停止
 
-Button / Buttons、Quote / Pullquote、Accordion一式、Table以降は、初回機能が安定してから正解データ単位で追加する。
+Button / Buttons、Quote / Pullquote、Accordion一式、Columns / Column、Table以降は、初回機能が安定してから正解データ単位で追加する。
 
 ## 12. 現時点で未実装のもの
 

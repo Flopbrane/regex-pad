@@ -199,8 +199,8 @@
     "separator": {
       "include_shared_attributes": true,
       "attributes": {
-        "opacity": {"type": "string", "enum": ["css", "default", "dots"]},
-        "tagName": {"type": "string", "enum": ["hr"]}
+        "opacity": {"type": "string", "default": "alpha-channel"},
+        "tagName": {"type": "string", "enum": ["div", "hr"], "default": "hr"}
       }
     },
     "code": {

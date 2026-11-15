@@ -211,6 +211,10 @@ def test_wordpress_block_schema_matches_existing_reference_names() -> None:
     assert schema["blocks"]["media-text"]["attributes"]["mediaWidth"][
         "maximum"
     ] == 100
+    assert schema["blocks"]["separator"]["attributes"] == {
+        "opacity": {"type": "string", "default": "alpha-channel"},
+        "tagName": {"type": "string", "enum": ["div", "hr"], "default": "hr"},
+    }
 
     for block_name, block_data in schema["blocks"].items():
         assert block_name in known_blocks

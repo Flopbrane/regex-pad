@@ -65,6 +65,11 @@ def test_reference_contains_verified_table_classes_and_business_sample() -> None
     assert classes["wp-block-accordion-heading__toggle-title"]["allowed_tags"] == ["span"]
     assert classes["wp-block-accordion-heading__toggle-icon"]["allowed_tags"] == ["span"]
     assert classes["wp-block-accordion-panel"]["allowed_tags"] == ["div"]
+    assert classes["wp-block-columns"]["allowed_tags"] == ["div"]
+    assert classes["wp-block-column"]["allowed_tags"] == ["div"]
+    assert classes["wp-block-separator"]["allowed_tags"] == ["div", "hr"]
+    assert classes["has-alpha-channel-opacity"]["allowed_tags"] == ["div", "hr"]
+    assert "hr" in classes["has-alpha-channel-opacity"]["observed_html_tags"]
     assert "div" in classes["wp-block-group"]["observed_html_tags"]
     assert "div" in classes["has-accent-2-background-color"]["observed_html_tags"]
     for class_name in (
@@ -186,6 +191,21 @@ def test_serialization_reference_records_verified_accordion_rules() -> None:
     } == {"backgroundColor", "fontSize"}
     assert heading_rules["style_rules"] == [
         {"json_path": "style.border.width", "css_property": "border-width"}
+    ]
+
+
+def test_serialization_reference_records_verified_columns_rules() -> None:
+    reference = json.loads(SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
+    columns_rules = reference["blocks"]["columns"]
+    column_rules = reference["blocks"]["column"]
+    separator_rules = reference["blocks"]["separator"]
+
+    assert columns_rules["required_classes"] == ["wp-block-columns"]
+    assert column_rules["required_classes"] == ["wp-block-column"]
+    assert separator_rules["root_tags"] == ["div", "hr"]
+    assert separator_rules["required_classes"] == ["wp-block-separator"]
+    assert separator_rules["verified_default_classes"] == [
+        "has-alpha-channel-opacity"
     ]
 
 

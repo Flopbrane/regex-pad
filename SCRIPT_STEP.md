@@ -4336,3 +4336,30 @@ Worktree validation:
 - Canonical focused Linter/reference/CSS/schema/packaging pytest: 326 passed. Full canonical pytest: 803 passed / six existing unrelated failures (four current dictionary-versus-test insertion expectations and two visible-space marker expectations).
 - Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Final SHA-256 equality for all 13 intended files was verified after this record update; changed JSON parsed and `git diff --check` passed.
 - The packaged EXE was not rebuilt; the supplied WordPress results are the live acceptance evidence for these Accordion rules.
+
+## Step15-section50 Verified Columns Block with Mixed Child Blocks
+
+Date: 2026-11-15
+
+Request: register the user's WordPress-verified `core/columns` example containing three `core/column` children with Paragraph, Separator, and Buttons/Button content.
+
+- Added `tests/columns_block_mixed_content_correct.wp_html`, removing only the Markdown display escapes. It preserves the required `columns > column` parent chain and all three demonstrated child-block cases.
+- Audited the bundled WordPress 7.1.3 `columns`, `column`, and `separator` metadata plus the Separator save implementation. The no-attribute Separator example resolves to the core defaults `tagName: "hr"` and `opacity: "alpha-channel"`, producing `hr.wp-block-separator.has-alpha-channel-opacity`.
+- Added verified serialization entries for Columns, Column, and Separator. `wp-block-columns` and `wp-block-column` are required root classes; `has-alpha-channel-opacity` is recorded as the verified default-context Separator class rather than an unconditional class for every opacity setting.
+- Added strict class/tag relationships for `wp-block-columns` on `div`, `wp-block-column` on `div`, and the two Separator-specific classes on `hr` or `div`. WordPress core permits `tagName: "div"` for a purely decorative Separator, so the Linter does not incorrectly reject that core-supported form.
+- Added Columns, Column, and Separator HTML shape checks while preserving the existing dedicated Separator code-contamination diagnostic without a duplicate shape warning. Existing parent rules continue to require every Column to be directly inside Columns.
+- Corrected the Separator block schema from the older `hr`-only metadata to the bundled core definition: `tagName` accepts `hr` or `div` with default `hr`, and `opacity` is a string with default `alpha-channel`.
+- Regenerated the class/tag reference from the new fixture. It remains at 4,698 classes and now contains 19 strict and 4,679 advisory relationships. Updated the implementation plan and dictionary documentation; width, vertical alignment, gap, and other unverified Columns decoration mappings were not inferred.
+
+Worktree validation:
+
+- Focused Linter/reference/schema pytest: 299 passed. The complete Columns fixture produces zero diagnostics. Regressions detect a missing Columns root class, the Columns class on the wrong HTML tag, and preserve the existing invalid-parent case for an orphan Column.
+- Full pytest: 796 passed / 17 existing unrelated failures (11 absent Gutenberg fixture cases, four current insertion-snippet expectation mismatches, and two visible-space marker expectations).
+- Full Ruff passed. Full Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. All three changed JSON references parsed, the generated class reference was reproducible, and `git diff --check` passed.
+
+Canonical validation:
+
+- Canonical preflight found a clean `D:\PC\Python\regex_pad_project` at commit `2bca113` (`Supporting JSON for WordPress Core Blocks – Step 2`). Compared every overlapping destination and transferred only the Columns/Column/Separator delta, preserving that commit and all unrelated files.
+- Canonical focused Linter/reference/schema pytest: 299 passed. Full canonical pytest: 807 passed / six existing unrelated failures (four insertion-snippet expectation mismatches and two visible-space marker expectations). The verified Columns fixture again produced zero diagnostics.
+- Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. All changed JSON parsed, the generator reproduced the checked-in 4,698-class reference exactly, and `git diff --check` passed.
+- Final SHA-256 equality for all 12 intended source/reference/fixture/test/document files was verified after this record update. The packaged EXE was not rebuilt; the user's supplied WordPress result is the live acceptance evidence for this Columns structure.

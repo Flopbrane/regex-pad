@@ -374,10 +374,13 @@ WORDPRESS_HTML_SHAPES = {
     "accordion-panel": {"div"},
     "button": {"div"},
     "buttons": {"div"},
+    "column": {"div"},
+    "columns": {"div"},
     "group": {"article", "aside", "div", "footer", "header", "main", "section"},
     "paragraph": {"p"},
     "pullquote": {"figure"},
     "quote": {"blockquote"},
+    "separator": {"div", "hr"},
     "heading": {f"h{level}" for level in range(1, 7)},
     "list": {"ul", "ol"},
     "list-item": {"li"},
@@ -1484,7 +1487,15 @@ def _lint_wordpress_block_structure(
             if block_name == "paragraph" else body_tokens
         )
         suppress_body = not open_block.boundary_valid
-        if block_name in WORDPRESS_HTML_SHAPES and not suppress_body:
+        separator_has_code = (
+            block_name == "separator"
+            and re.search(r"</?code(?:\s|>)", own_body, re.IGNORECASE) is not None
+        )
+        if (
+            block_name in WORDPRESS_HTML_SHAPES
+            and not suppress_body
+            and not separator_has_code
+        ):
             root_collector = _BlockRootCollector()
             root_collector.feed(own_body)
             root_collector.close()

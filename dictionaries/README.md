@@ -146,6 +146,15 @@ and the demonstrated heading border width. `has-icon` and `has-icon-right` are
 recorded as observed default-context classes rather than unconditional classes:
 the core context may hide the icon or move it to the left.
 
+The verified Columns example records `columns > column` as the required parent
+chain and preserves three different child cases: Paragraph, Separator, and
+Buttons/Button. The default Separator is saved as
+`hr.wp-block-separator.has-alpha-channel-opacity`. WordPress core also permits
+the Separator's `tagName` to be `div`, so both `hr` and `div` remain valid for
+the two separator-specific classes. Width, vertical alignment, gap, and other
+Columns decoration rules are intentionally not inferred from this undecorated
+example.
+
 Regenerate the checked-in reference with the required Python interpreter:
 
 ```powershell
@@ -160,6 +169,7 @@ D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe scripts\build_wordpress_class_r
   --extra-html "tests\pullquote_block_decorated_correct.wp_html" `
   --extra-html "tests\accordion_block_background_font_correct.wp_html" `
   --extra-html "tests\accordion_block_border_correct.wp_html" `
+  --extra-html "tests\columns_block_mixed_content_correct.wp_html" `
   --source-root . `
   --output dictionaries\standards\wordpress_class_tag_reference.json
 ```

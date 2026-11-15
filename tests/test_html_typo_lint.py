@@ -416,7 +416,8 @@ def test_paragraph_style_and_preset_consistency(
             "<!-- /wp:list-item --></ul><!-- /wp:list -->"
         ),
         (
-            "<!-- wp:columns --><div><!-- wp:column --><div>"
+            '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column -->'
+            '<div class="wp-block-column">'
             "<!-- wp:paragraph --><p>Column text</p><!-- /wp:paragraph -->"
             "</div><!-- /wp:column --></div><!-- /wp:columns -->"
         ),
@@ -1663,6 +1664,40 @@ def test_lint_accepts_verified_decorated_accordion_blocks(fixture_name: str) -> 
     source = (Path(__file__).parent / fixture_name).read_text(encoding="utf-8")
 
     assert lint_html_typos(source) == []
+
+
+def test_lint_accepts_verified_columns_block_with_mixed_content() -> None:
+    source = (
+        Path(__file__).parent / "columns_block_mixed_content_correct.wp_html"
+    ).read_text(encoding="utf-8")
+
+    assert lint_html_typos(source) == []
+
+
+def test_lint_reports_verified_columns_root_class_mismatch() -> None:
+    source = (
+        Path(__file__).parent / "columns_block_mixed_content_correct.wp_html"
+    ).read_text(encoding="utf-8")
+    broken_source = source.replace('class="wp-block-columns"', 'class="columns"', 1)
+
+    assert any(
+        message.message_key
+        == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+        and message.values.get("attribute") == "class"
+        for message in lint_html_typos(broken_source)
+    )
+
+
+def test_lint_reports_columns_class_on_wrong_html_tag() -> None:
+    messages = lint_html_typos('<section class="wp-block-columns"></section>')
+
+    assert any(
+        message.message_key == "html_typo_lint.wordpress_class_tag_mismatch"
+        and message.values
+        and message.values.get("class_name") == "wp-block-columns"
+        for message in messages
+    )
 
 
 def test_lint_reports_verified_accordion_heading_class_mismatch() -> None:

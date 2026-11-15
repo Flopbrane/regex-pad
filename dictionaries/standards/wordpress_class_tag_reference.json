@@ -218,13 +218,14 @@
       "tests/quote_block_decorated_correct.wp_html",
       "tests/pullquote_block_decorated_correct.wp_html",
       "tests/accordion_block_background_font_correct.wp_html",
-      "tests/accordion_block_border_correct.wp_html"
+      "tests/accordion_block_border_correct.wp_html",
+      "tests/columns_block_mixed_content_correct.wp_html"
     ]
   },
   "summary": {
     "class_count": 4698,
-    "strict_class_count": 15,
-    "advisory_class_count": 4683
+    "strict_class_count": 19,
+    "advisory_class_count": 4679
   },
   "classes": {
     "__resizable_base__": {
@@ -45973,13 +45974,13 @@
       "selector_evidence_count": 0,
       "selector_source_count": 0,
       "selector_sources": [],
-      "html_evidence_count": 4,
-      "html_source_count": 4,
+      "html_evidence_count": 5,
+      "html_source_count": 5,
       "html_sources": [
         "tests/accordion_block_background_font_correct.wp_html",
         "tests/accordion_block_border_correct.wp_html",
-        "tests/group_block_decorated_correct.wp_html",
-        "tests/quote_block_decorated_correct.wp_html"
+        "tests/columns_block_mixed_content_correct.wp_html",
+        "tests/group_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -46050,14 +46051,19 @@
       "semantic_sources": []
     },
     "has-alpha-channel-opacity": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div",
+        "hr"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "hr"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 2,
       "selector_source_count": 2,
@@ -46065,10 +46071,15 @@
         "wordpress/wp-includes/blocks/separator/theme.css",
         "wordpress/wp-includes/css/dist/block-library/theme.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/columns_block_mixed_content_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/separator/block.json#attributes.opacity",
+        "wordpress/wp-includes/js/dist/block-library.js#core/separator-save"
+      ]
     },
     "has-atomic-cream-gradient-background": {
       "tag_scope": "advisory",
@@ -46149,8 +46160,8 @@
         "wordpress/wp-includes/blocks/button/style.css",
         "wordpress/wp-includes/blocks/calendar/style.css"
       ],
-      "html_evidence_count": 10,
-      "html_source_count": 7,
+      "html_evidence_count": 11,
+      "html_source_count": 8,
       "html_sources": [
         "docs_jp/example of the correct approach to table core control.wp_html",
         "tests/accordion_block_background_font_correct.wp_html",
@@ -89529,10 +89540,11 @@
         "wordpress/wp-includes/blocks/buttons/editor.css",
         "wordpress/wp-includes/blocks/buttons/style.css"
       ],
-      "html_evidence_count": 1,
-      "html_source_count": 1,
+      "html_evidence_count": 2,
+      "html_source_count": 2,
       "html_sources": [
-        "tests/button_block_decorated_correct.wp_html"
+        "tests/button_block_decorated_correct.wp_html",
+        "tests/columns_block_mixed_content_correct.wp_html"
       ],
       "semantic_sources": [
         "wordpress/wp-includes/blocks/button/block.json#selectors.root",
@@ -89561,10 +89573,11 @@
         "wordpress/wp-includes/blocks/buttons/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 1,
-      "html_source_count": 1,
+      "html_evidence_count": 2,
+      "html_source_count": 2,
       "html_sources": [
-        "tests/button_block_decorated_correct.wp_html"
+        "tests/button_block_decorated_correct.wp_html",
+        "tests/columns_block_mixed_content_correct.wp_html"
       ],
       "semantic_sources": [
         "wordpress/wp-includes/blocks/button/block.json#attributes.tagName",
@@ -89677,10 +89690,11 @@
         "wordpress/wp-includes/blocks/buttons/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 1,
-      "html_source_count": 1,
+      "html_evidence_count": 2,
+      "html_source_count": 2,
       "html_sources": [
-        "tests/button_block_decorated_correct.wp_html"
+        "tests/button_block_decorated_correct.wp_html",
+        "tests/columns_block_mixed_content_correct.wp_html"
       ],
       "semantic_sources": [
         "wordpress/wp-includes/blocks/buttons/block.json#allowedBlocks",
@@ -89816,14 +89830,18 @@
       "semantic_sources": []
     },
     "wp-block-column": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "div"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 31,
       "selector_source_count": 4,
@@ -89833,20 +89851,29 @@
         "wordpress/wp-includes/blocks/text-columns/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/columns_block_mixed_content_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/column/block.json#parent",
+        "wordpress/wp-includes/js/dist/block-library.js#core/column-save"
+      ]
     },
     "wp-block-columns": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "div"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 23,
       "selector_source_count": 3,
@@ -89855,10 +89882,15 @@
         "wordpress/wp-includes/blocks/columns/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/columns_block_mixed_content_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/columns/block.json#allowedBlocks",
+        "wordpress/wp-includes/js/dist/block-library.js#core/columns-save"
+      ]
     },
     "wp-block-comment-author-name": {
       "tag_scope": "advisory",
@@ -94733,14 +94765,19 @@
       "semantic_sources": []
     },
     "wp-block-separator": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div",
+        "hr"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "hr"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 20,
       "selector_source_count": 4,
@@ -94750,10 +94787,15 @@
         "wordpress/wp-includes/css/dist/block-library/style.css",
         "wordpress/wp-includes/css/dist/block-library/theme.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/columns_block_mixed_content_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/separator/block.json#attributes.tagName",
+        "wordpress/wp-includes/js/dist/block-library.js#core/separator-save"
+      ]
     },
     "wp-block-site-logo": {
       "tag_scope": "advisory",
@@ -95424,10 +95466,11 @@
         "wordpress/wp-includes/css/dist/block-library/elements.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 1,
-      "html_source_count": 1,
+      "html_evidence_count": 2,
+      "html_source_count": 2,
       "html_sources": [
-        "tests/button_block_decorated_correct.wp_html"
+        "tests/button_block_decorated_correct.wp_html",
+        "tests/columns_block_mixed_content_correct.wp_html"
       ],
       "semantic_sources": []
     },

@@ -120,6 +120,34 @@ CORE_SEMANTIC_TAG_RELATIONSHIPS: dict[str, tuple[set[str], list[str]]] = {
             "wordpress/wp-includes/blocks/accordion-panel/block.json#parent",
         ],
     ),
+    "wp-block-columns": (
+        {"div"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/columns-save",
+            "wordpress/wp-includes/blocks/columns/block.json#allowedBlocks",
+        ],
+    ),
+    "wp-block-column": (
+        {"div"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/column-save",
+            "wordpress/wp-includes/blocks/column/block.json#parent",
+        ],
+    ),
+    "wp-block-separator": (
+        {"div", "hr"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/separator-save",
+            "wordpress/wp-includes/blocks/separator/block.json#attributes.tagName",
+        ],
+    ),
+    "has-alpha-channel-opacity": (
+        {"div", "hr"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/separator-save",
+            "wordpress/wp-includes/blocks/separator/block.json#attributes.opacity",
+        ],
+    ),
 }
 
 

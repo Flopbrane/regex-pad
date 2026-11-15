@@ -241,6 +241,34 @@
       "style_rules": [],
       "verified_non_inline_paths": [],
       "forbidden_empty_root_attributes": []
+    },
+    "columns": {
+      "evidence": ["tests/columns_block_mixed_content_correct.wp_html"],
+      "root_tags": ["div"],
+      "required_classes": ["wp-block-columns"],
+      "attribute_class_rules": [],
+      "style_rules": [],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "column": {
+      "evidence": ["tests/columns_block_mixed_content_correct.wp_html"],
+      "root_tags": ["div"],
+      "required_classes": ["wp-block-column"],
+      "attribute_class_rules": [],
+      "style_rules": [],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "separator": {
+      "evidence": ["tests/columns_block_mixed_content_correct.wp_html"],
+      "root_tags": ["div", "hr"],
+      "required_classes": ["wp-block-separator"],
+      "verified_default_classes": ["has-alpha-channel-opacity"],
+      "attribute_class_rules": [],
+      "style_rules": [],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
     }
   }
 }
