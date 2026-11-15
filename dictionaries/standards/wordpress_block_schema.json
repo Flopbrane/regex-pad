@@ -149,6 +149,53 @@
         "width": {"type": ["number", "string"], "value_type": "css_length"}
       }
     },
+    "quote": {
+      "include_shared_attributes": true,
+      "attributes": {
+        "citation": {"type": "string"},
+        "textAlign": {"type": "string", "enum": ["center", "left", "right"]},
+        "value": {"type": "string"}
+      }
+    },
+    "pullquote": {
+      "include_shared_attributes": true,
+      "attributes": {
+        "citation": {"type": "string"},
+        "value": {"type": "string"}
+      }
+    },
+    "accordion": {
+      "include_shared_attributes": true,
+      "attributes": {
+        "autoclose": {"type": "boolean", "default": false},
+        "headingLevel": {"type": "integer", "minimum": 1, "maximum": 6, "default": 3},
+        "iconPosition": {"type": "string", "enum": ["left", "right"], "default": "right"},
+        "levelOptions": {"type": "array", "item_type": "integer"},
+        "showIcon": {"type": "boolean", "default": true}
+      }
+    },
+    "accordion-item": {
+      "include_shared_attributes": true,
+      "attributes": {
+        "openByDefault": {"type": "boolean", "default": false}
+      }
+    },
+    "accordion-heading": {
+      "include_shared_attributes": true,
+      "attributes": {
+        "iconPosition": {"type": "string", "enum": ["left", "right"], "default": "right"},
+        "level": {"type": "integer", "minimum": 1, "maximum": 6},
+        "openByDefault": {"type": "boolean", "default": false},
+        "showIcon": {"type": "boolean", "default": true},
+        "title": {"type": "string"}
+      }
+    },
+    "accordion-panel": {
+      "include_shared_attributes": true,
+      "attributes": {
+        "templateLock": {"type": ["boolean", "string"], "enum": [false, "all", "contentOnly", "insert"]}
+      }
+    },
     "separator": {
       "include_shared_attributes": true,
       "attributes": {
@@ -166,6 +213,23 @@
       "include_shared_attributes": true,
       "attributes": {
         "content": {"type": "string"}
+      }
+    },
+    "buttons": {
+      "include_shared_attributes": true,
+      "attributes": {}
+    },
+    "button": {
+      "include_shared_attributes": true,
+      "attributes": {
+        "linkTarget": {"type": "string", "enum": ["_blank", "_self"]},
+        "placeholder": {"type": "string"},
+        "rel": {"type": "string"},
+        "tagName": {"type": "string", "enum": ["a", "button"]},
+        "text": {"type": "string"},
+        "title": {"type": "string"},
+        "type": {"type": "string", "enum": ["button", "reset", "submit"]},
+        "url": {"type": "string", "value_type": "url"}
       }
     }
   }

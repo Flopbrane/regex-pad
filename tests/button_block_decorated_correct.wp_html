@@ -1,0 +1,5 @@
+<!-- wp:buttons -->
+<div class="wp-block-buttons"><!-- wp:button {"backgroundColor":"accent-3","textColor":"accent-1","style":{"elements":{"link":{"color":{"text":"var:preset|color|accent-1"}}},"dimensions":{"width":"var:preset|dimension|25"},"border":{"width":"4px"}},"fontSize":"large"} -->
+<div class="wp-block-button"><a class="wp-block-button__link has-accent-1-color has-accent-3-background-color has-text-color has-background has-link-color has-large-font-size has-custom-font-size wp-element-button" style="border-width:4px">ボタン</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons -->

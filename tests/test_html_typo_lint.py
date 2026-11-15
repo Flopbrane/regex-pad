@@ -283,6 +283,37 @@ def test_lint_checks_heading_pairs(level: int, wordpress: bool) -> None:
         ("<!-- wp:column --><div></div><!-- /wp:column -->", "invalid_wordpress_parent"),
         (
             (
+                '<!-- wp:button --><div class="wp-block-button"><a '
+                'class="wp-block-button__link wp-element-button">Button</a></div>'
+                '<!-- /wp:button -->'
+            ),
+            "invalid_wordpress_parent",
+        ),
+        (
+            (
+                '<!-- wp:accordion-item --><div class="wp-block-accordion-item"></div>'
+                '<!-- /wp:accordion-item -->'
+            ),
+            "invalid_wordpress_parent",
+        ),
+        (
+            (
+                '<!-- wp:accordion-heading --><h3 class="wp-block-accordion-heading">'
+                '<button type="button" class="wp-block-accordion-heading__toggle">'
+                '<span class="wp-block-accordion-heading__toggle-title">Title</span>'
+                "</button></h3><!-- /wp:accordion-heading -->"
+            ),
+            "invalid_wordpress_parent",
+        ),
+        (
+            (
+                '<!-- wp:accordion-panel --><div role="region" '
+                'class="wp-block-accordion-panel"></div><!-- /wp:accordion-panel -->'
+            ),
+            "invalid_wordpress_parent",
+        ),
+        (
+            (
                 "<!-- wp:paragraph --><p>Body</p><!-- wp:image -->"
                 '<figure><img src="x.jpg" alt=""></figure><!-- /wp:image --><!-- /wp:paragraph -->'
             ),
@@ -1598,6 +1629,133 @@ def test_lint_accepts_verified_decorated_group_block() -> None:
     )
 
     assert lint_html_typos(source) == []
+
+
+def test_lint_accepts_verified_decorated_button_block() -> None:
+    source = (Path(__file__).parent / "button_block_decorated_correct.wp_html").read_text(
+        encoding="utf-8"
+    )
+
+    assert lint_html_typos(source) == []
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        "quote_block_decorated_correct.wp_html",
+        "pullquote_block_decorated_correct.wp_html",
+    ],
+)
+def test_lint_accepts_verified_decorated_quote_blocks(fixture_name: str) -> None:
+    source = (Path(__file__).parent / fixture_name).read_text(encoding="utf-8")
+
+    assert lint_html_typos(source) == []
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        "accordion_block_background_font_correct.wp_html",
+        "accordion_block_border_correct.wp_html",
+    ],
+)
+def test_lint_accepts_verified_decorated_accordion_blocks(fixture_name: str) -> None:
+    source = (Path(__file__).parent / fixture_name).read_text(encoding="utf-8")
+
+    assert lint_html_typos(source) == []
+
+
+def test_lint_reports_verified_accordion_heading_class_mismatch() -> None:
+    source = (
+        Path(__file__).parent / "accordion_block_background_font_correct.wp_html"
+    ).read_text(encoding="utf-8")
+    broken_source = source.replace(" has-large-font-size", "", 1)
+
+    mismatch_attributes = {
+        message.values.get("attribute")
+        for message in lint_html_typos(broken_source)
+        if message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+    }
+
+    assert "fontSize" in mismatch_attributes
+
+
+def test_lint_reports_verified_accordion_heading_border_mismatch() -> None:
+    source = (Path(__file__).parent / "accordion_block_border_correct.wp_html").read_text(
+        encoding="utf-8"
+    )
+    broken_source = source.replace("border-width:1px", "border-width:2px", 1)
+
+    assert any(
+        message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+        and message.values.get("attribute") == "style.border.width"
+        for message in lint_html_typos(broken_source)
+    )
+
+
+def test_lint_reports_verified_quote_class_and_style_mismatches() -> None:
+    source = (Path(__file__).parent / "quote_block_decorated_correct.wp_html").read_text(
+        encoding="utf-8"
+    )
+    broken_source = source.replace(" has-background", "", 1).replace(
+        "border-left-width:4px",
+        "border-left-width:2px",
+        1,
+    )
+
+    mismatch_attributes = {
+        message.values.get("attribute")
+        for message in lint_html_typos(broken_source)
+        if message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+    }
+
+    assert "backgroundColor" in mismatch_attributes
+    assert "style.border.left.width" in mismatch_attributes
+
+
+def test_lint_reports_verified_pullquote_class_and_style_mismatches() -> None:
+    source = (
+        Path(__file__).parent / "pullquote_block_decorated_correct.wp_html"
+    ).read_text(encoding="utf-8")
+    broken_source = source.replace(" has-background", "", 1).replace(
+        "border-width:2px",
+        "border-width:1px",
+        1,
+    )
+
+    mismatch_attributes = {
+        message.values.get("attribute")
+        for message in lint_html_typos(broken_source)
+        if message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+    }
+
+    assert "backgroundColor" in mismatch_attributes
+    assert "style.border.width" in mismatch_attributes
+
+
+def test_lint_reports_verified_button_link_class_and_style_mismatches() -> None:
+    source = (Path(__file__).parent / "button_block_decorated_correct.wp_html").read_text(
+        encoding="utf-8"
+    )
+    broken_source = source.replace(" has-background", "", 1).replace(
+        "border-width:4px",
+        "border-width:2px",
+        1,
+    )
+
+    mismatch_attributes = {
+        message.values.get("attribute")
+        for message in lint_html_typos(broken_source)
+        if message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+    }
+
+    assert "backgroundColor" in mismatch_attributes
+    assert "style.border.width" in mismatch_attributes
 
 
 def test_lint_reports_verified_group_class_and_style_mismatches() -> None:

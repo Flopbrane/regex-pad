@@ -4267,3 +4267,72 @@ Request: document the implementation order for a modeless “Core Block Check”
 - Worktree and canonical document/packaging pytest: 13 passed in each checkout. Full Ruff passed and explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations in both checkouts; `git diff --check` passed.
 - Propagated only the new plan and this implementation record to `D:\PC\Python\regex_pad_project`. Both files matched the worktree by SHA-256 after the final record update; the user-edited verified table example and all unrelated files were preserved.
 - No EXE rebuild, physical GUI operation, live WordPress operation, or core-block-check source implementation was performed in this planning step.
+
+## Step15-section47 Verified Decorated Button Block
+
+Date: 2026-11-15
+
+Request: register the user's WordPress-verified decorated `core/buttons` / `core/button` example and its JSON-to-class/style relationships.
+
+- Added `tests/button_block_decorated_correct.wp_html` after removing only the Markdown display escapes. It preserves the outer Buttons container, child Button block, inner anchor, color/link/font classes, JSON-only dimension width, and link border style.
+- Audited the bundled WordPress 7.1.3 `buttons/block.json`, `button/block.json`, and `core/button` save implementation. The Button block intentionally performs several skipped block-support serializations in its own save function: its root remains `div.wp-block-button`, while the inner `a`/`button` receives color, typography, element and border output.
+- Extended `wordpress_block_serialization_reference.json` with separate `buttons`, `button` root, and named inner `link` targets. Verified mappings now include `textColor` to `has-{value}-color`/`has-text-color`, `backgroundColor` to `has-{value}-background-color`/`has-background`, link color JSON to `has-link-color`, `fontSize` to the preset class plus `has-custom-font-size`, and border width to the inner element's inline style. `style.dimensions.width` is recorded as JSON-only in this example.
+- Generalized the existing verified-serialization Linter check so a rule may target a uniquely identified descendant `a`/`button`, without changing Group and Paragraph root-target behavior. Added Buttons/Button HTML shapes and the core-required `button`-inside-`buttons` parent relationship.
+- Added Button and Buttons entries to `wordpress_block_schema.json`. Regenerated the class/tag reference with six strict relationships: the previous three plus `wp-block-buttons` on `div`, `wp-block-button` on `div`, and `wp-block-button__link` on `a` or `button`. The generated reference now contains 4,694 classes.
+- Updated the core-block-check implementation plan: Button/Buttons is now evidence-backed and follows the initial Group/Paragraph implementation; List, Columns and Quote remain deferred until verified examples arrive. Media-ID-dependent blocks remain excluded.
+
+Worktree validation:
+
+- Focused Linter/reference/schema/packaging pytest: 295 passed. The complete decorated Button fixture produces zero diagnostics. Focused regressions detect a missing `has-background`, a mismatched inner-link `border-width`, and an orphan `wp:button` outside `wp:buttons`.
+- Full pytest: 779 passed / 17 existing unrelated failures (11 absent Gutenberg fixture cases, four current dictionary-versus-test insertion expectations, and two visible-space marker expectations).
+- Full Ruff passed. Full Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Changed JSON parsed and `git diff --check` passed.
+- Canonical preflight detected that `D:\PC\Python\regex_pad_project` had advanced cleanly from `6f54dbe` to `0fa3adf` (`Supporting JSON for WordPress Core Blocks – Step 1`). Compared each intended destination against that new commit and transferred only the Button delta; the new canonical commit and its already committed table example were preserved.
+- Canonical focused Linter/reference/schema/packaging pytest: 295 passed. Full canonical pytest: 790 passed / six existing unrelated failures (four current dictionary-versus-test insertion expectations and two visible-space marker expectations).
+- Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Final SHA-256 equality for all 12 intended files was verified after this record update; changed JSON parsed and `git diff --check` passed.
+- The packaged EXE was not rebuilt; the supplied WordPress result is the live acceptance evidence for this Button rule set.
+
+## Step15-section48 Verified Quote and Pullquote Blocks
+
+Date: 2026-11-15
+
+Request: register the user's WordPress-verified decorated `core/quote` and `core/pullquote` examples, including the Quote child Paragraph decoration.
+
+- Added normalized correct fixtures for both blocks, excluding only the Markdown display escapes. Quote is stored as `blockquote.wp-block-quote` containing child Paragraph block comments; Pullquote is a separate `figure.wp-block-pullquote` whose own saved HTML contains `blockquote > p + cite` without child Paragraph comments.
+- Audited the bundled WordPress 7.1.3 Quote/Pullquote block metadata and save implementations. Added strict class/tag relationships for `wp-block-quote` on `blockquote` and `wp-block-pullquote` on `figure`.
+- Added verified Quote mappings for its background classes, four corner radii, top/right/bottom widths, left preset color and left width. Added Pullquote mappings for its background classes, overall border width and four corner radii.
+- Expanded the Paragraph evidence using the Quote children: `backgroundColor` now maps to its slug background class plus `has-background`, and the four demonstrated margin JSON paths map to inline margin properties with preset-variable conversion. Existing Group Paragraph border rules remain unchanged.
+- Added Quote and Pullquote to the WordPress block schema and HTML shape checks. Added the WordPress-emitted `border-left-color` property to the CSS standard dictionary; no unobserved side-color properties were inferred.
+- Regenerated the class/tag reference from both new fixtures. It now contains 4,697 classes: eight strict and 4,689 advisory. Updated the Core Block Check plan so Quote/Pullquote is evidence-backed and follows Button/Buttons; List and Columns remain deferred and media-ID blocks remain excluded.
+
+Worktree validation:
+
+- Focused Linter/reference/CSS/schema/packaging pytest: 318 passed. Both complete correct fixtures produce zero diagnostics. Broken-pair regressions detect missing background classes and mismatched Quote/Pullquote border widths.
+- Full pytest: 784 passed / 17 existing unrelated failures (11 absent Gutenberg fixture cases, four current dictionary-versus-test insertion expectations, and two visible-space marker expectations).
+- Full Ruff passed. Full Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Changed JSON parsed and `git diff --check` passed.
+- Propagated the 14 intended Quote/Pullquote correspondence/CSS/Linter/fixture/test/document files onto canonical commit `0fa3adf`, preserving the previously transferred Button changes and all unrelated files.
+- Canonical focused Linter/reference/CSS/schema/packaging pytest: 318 passed. Full canonical pytest: 795 passed / six existing unrelated failures (four current dictionary-versus-test insertion expectations and two visible-space marker expectations).
+- Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Final SHA-256 equality for all 14 intended files was verified after this record update; changed JSON parsed and `git diff --check` passed.
+- The packaged EXE was not rebuilt; the supplied WordPress results are the live acceptance evidence for these rules.
+
+## Step15-section49 Verified Accordion Block Variants
+
+Date: 2026-11-15
+
+Request: register the user's two WordPress-verified Accordion examples: one heading with background/font-size decoration and one heading with background/border-width decoration.
+
+- Added two normalized correct fixtures, excluding only Markdown display escapes. Both preserve the complete `accordion > accordion-item > accordion-heading / accordion-panel > paragraph` block nesting and the heading's `button > title span + icon span` HTML.
+- Audited the bundled WordPress 7.1.3 metadata and save functions for all four Accordion block types. Added their required parent/allowed-child relationships and HTML root shapes. Orphan item, heading and panel blocks now report their missing core parent.
+- Added verified serialization entries for the Accordion root, Item root, Heading root and Panel root. Heading rules map `backgroundColor`, `fontSize`, and the demonstrated border width; named descendant targets record the toggle button, title span and icon span.
+- Recorded `has-icon` and `has-icon-right` as observed default-context classes, not unconditional required classes. Core save output changes them according to `showIcon` and `iconPosition`, so a left-position or hidden-icon example is not rejected by an over-broad rule.
+- Added strict class/tag relationships for seven Accordion classes: Accordion/Item/Panel on `div`, Heading on `h1`–`h6`, toggle on `button`, and title/icon on `span`. Added all four block schemas, including defaults and value constraints for icon position, icon visibility, heading level, autoclose, open-by-default and panel template lock.
+- Regenerated the class/tag reference from both Accordion fixtures. It now contains 4,698 classes: 15 strict and 4,683 advisory. Updated the Core Block Check plan so the verified Accordion family follows Quote/Pullquote; List and Columns remain deferred and media-ID blocks remain excluded.
+
+Worktree validation:
+
+- Focused Linter/reference/CSS/schema/packaging pytest: 326 passed. Both correct Accordion fixtures produce zero diagnostics. Regressions detect missing heading font class, mismatched heading border width, and orphan Item/Heading/Panel blocks.
+- Full pytest: 792 passed / 17 existing unrelated failures (11 absent Gutenberg fixture cases, four current dictionary-versus-test insertion expectations, and two visible-space marker expectations).
+- Full Ruff passed. Full Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Changed JSON parsed and `git diff --check` passed.
+- Propagated the 13 intended Accordion correspondence/Linter/fixture/test/document files onto canonical commit `0fa3adf`, preserving the previously transferred Button and Quote/Pullquote changes and all unrelated files.
+- Canonical focused Linter/reference/CSS/schema/packaging pytest: 326 passed. Full canonical pytest: 803 passed / six existing unrelated failures (four current dictionary-versus-test insertion expectations and two visible-space marker expectations).
+- Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Final SHA-256 equality for all 13 intended files was verified after this record update; changed JSON parsed and `git diff --check` passed.
+- The packaged EXE was not rebuilt; the supplied WordPress results are the live acceptance evidence for these Accordion rules.

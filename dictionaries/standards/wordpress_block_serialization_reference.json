@@ -41,18 +41,205 @@
       "forbidden_empty_root_attributes": ["style"]
     },
     "paragraph": {
-      "evidence": ["tests/group_block_decorated_correct.wp_html"],
+      "evidence": [
+        "tests/group_block_decorated_correct.wp_html",
+        "tests/quote_block_decorated_correct.wp_html",
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
       "root_tags": ["p"],
       "required_classes": [],
-      "attribute_class_rules": [],
+      "attribute_class_rules": [
+        {
+          "json_path": "backgroundColor",
+          "class_templates": ["has-{value}-background-color", "has-background"]
+        }
+      ],
       "style_rules": [
         {"json_path": "style.border.width", "css_property": "border-width"},
         {"json_path": "style.border.top.width", "css_property": "border-top-width"},
         {"json_path": "style.border.right.width", "css_property": "border-right-width"},
         {"json_path": "style.border.bottom.width", "css_property": "border-bottom-width"},
-        {"json_path": "style.border.left.width", "css_property": "border-left-width"}
+        {"json_path": "style.border.left.width", "css_property": "border-left-width"},
+        {"json_path": "style.spacing.margin.top", "css_property": "margin-top", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.margin.right", "css_property": "margin-right", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.margin.bottom", "css_property": "margin-bottom", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.margin.left", "css_property": "margin-left", "value_transform": "wordpress_preset_variable"}
       ],
       "verified_non_inline_paths": ["style.layout"],
+      "forbidden_empty_root_attributes": []
+    },
+    "buttons": {
+      "evidence": ["tests/button_block_decorated_correct.wp_html"],
+      "root_tags": ["div"],
+      "required_classes": ["wp-block-buttons"],
+      "attribute_class_rules": [],
+      "style_rules": [],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "button": {
+      "evidence": ["tests/button_block_decorated_correct.wp_html"],
+      "root_tags": ["div"],
+      "required_classes": ["wp-block-button"],
+      "element_targets": {
+        "link": {
+          "tags": ["a", "button"],
+          "match_classes": ["wp-block-button__link"],
+          "required_classes": ["wp-block-button__link", "wp-element-button"]
+        }
+      },
+      "attribute_class_rules": [
+        {
+          "json_path": "textColor",
+          "html_target": "link",
+          "class_templates": ["has-{value}-color", "has-text-color"]
+        },
+        {
+          "json_path": "backgroundColor",
+          "html_target": "link",
+          "class_templates": ["has-{value}-background-color", "has-background"]
+        },
+        {
+          "json_path": "style.elements.link.color.text",
+          "html_target": "link",
+          "class_templates": ["has-link-color"]
+        },
+        {
+          "json_path": "fontSize",
+          "html_target": "link",
+          "class_templates": ["has-{value}-font-size", "has-custom-font-size"]
+        }
+      ],
+      "style_rules": [
+        {
+          "json_path": "style.border.width",
+          "html_target": "link",
+          "css_property": "border-width"
+        }
+      ],
+      "verified_non_inline_paths": ["style.dimensions.width"],
+      "forbidden_empty_root_attributes": []
+    },
+    "quote": {
+      "evidence": ["tests/quote_block_decorated_correct.wp_html"],
+      "root_tags": ["blockquote"],
+      "required_classes": ["wp-block-quote"],
+      "attribute_class_rules": [
+        {
+          "json_path": "backgroundColor",
+          "class_templates": ["has-{value}-background-color", "has-background"]
+        }
+      ],
+      "style_rules": [
+        {"json_path": "style.border.radius.topLeft", "css_property": "border-top-left-radius"},
+        {"json_path": "style.border.radius.topRight", "css_property": "border-top-right-radius"},
+        {"json_path": "style.border.radius.bottomLeft", "css_property": "border-bottom-left-radius"},
+        {"json_path": "style.border.radius.bottomRight", "css_property": "border-bottom-right-radius"},
+        {"json_path": "style.border.top.width", "css_property": "border-top-width"},
+        {"json_path": "style.border.right.width", "css_property": "border-right-width"},
+        {"json_path": "style.border.bottom.width", "css_property": "border-bottom-width"},
+        {"json_path": "style.border.left.color", "css_property": "border-left-color", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.border.left.width", "css_property": "border-left-width"}
+      ],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "pullquote": {
+      "evidence": ["tests/pullquote_block_decorated_correct.wp_html"],
+      "root_tags": ["figure"],
+      "required_classes": ["wp-block-pullquote"],
+      "attribute_class_rules": [
+        {
+          "json_path": "backgroundColor",
+          "class_templates": ["has-{value}-background-color", "has-background"]
+        }
+      ],
+      "style_rules": [
+        {"json_path": "style.border.width", "css_property": "border-width"},
+        {"json_path": "style.border.radius.topLeft", "css_property": "border-top-left-radius"},
+        {"json_path": "style.border.radius.topRight", "css_property": "border-top-right-radius"},
+        {"json_path": "style.border.radius.bottomLeft", "css_property": "border-bottom-left-radius"},
+        {"json_path": "style.border.radius.bottomRight", "css_property": "border-bottom-right-radius"}
+      ],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "accordion": {
+      "evidence": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "root_tags": ["div"],
+      "required_classes": ["wp-block-accordion"],
+      "attribute_class_rules": [],
+      "style_rules": [],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "accordion-item": {
+      "evidence": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "root_tags": ["div"],
+      "required_classes": ["wp-block-accordion-item"],
+      "attribute_class_rules": [],
+      "style_rules": [],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "accordion-heading": {
+      "evidence": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "root_tags": ["h1", "h2", "h3", "h4", "h5", "h6"],
+      "required_classes": ["wp-block-accordion-heading"],
+      "verified_default_classes": ["has-icon", "has-icon-right"],
+      "element_targets": {
+        "toggle": {
+          "tags": ["button"],
+          "match_classes": ["wp-block-accordion-heading__toggle"],
+          "required_classes": ["wp-block-accordion-heading__toggle"]
+        },
+        "title": {
+          "tags": ["span"],
+          "match_classes": ["wp-block-accordion-heading__toggle-title"],
+          "required_classes": ["wp-block-accordion-heading__toggle-title"]
+        },
+        "icon": {
+          "tags": ["span"],
+          "match_classes": ["wp-block-accordion-heading__toggle-icon"],
+          "required_classes": ["wp-block-accordion-heading__toggle-icon"]
+        }
+      },
+      "attribute_class_rules": [
+        {
+          "json_path": "backgroundColor",
+          "class_templates": ["has-{value}-background-color", "has-background"]
+        },
+        {
+          "json_path": "fontSize",
+          "class_templates": ["has-{value}-font-size"]
+        }
+      ],
+      "style_rules": [
+        {"json_path": "style.border.width", "css_property": "border-width"}
+      ],
+      "verified_non_inline_paths": [],
+      "forbidden_empty_root_attributes": []
+    },
+    "accordion-panel": {
+      "evidence": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "root_tags": ["div"],
+      "required_classes": ["wp-block-accordion-panel"],
+      "attribute_class_rules": [],
+      "style_rules": [],
+      "verified_non_inline_paths": [],
       "forbidden_empty_root_attributes": []
     }
   }

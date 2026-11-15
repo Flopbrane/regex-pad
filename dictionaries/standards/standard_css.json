@@ -64,6 +64,7 @@
     "border-collapse": {"value_types": ["keyword"], "keywords": ["collapse", "separate"]},
     "border-color": {"value_types": ["color", "keyword", "css_variable"]},
     "border-left": {"value_types": ["length", "keyword", "color", "css_variable"]},
+    "border-left-color": {"value_types": ["color", "keyword", "css_variable"]},
     "border-left-width": {"value_types": ["length", "keyword", "css_variable"]},
     "border-radius": {"value_types": ["length", "percentage", "css_variable"]},
     "border-right": {"value_types": ["length", "keyword", "color", "css_variable"]},

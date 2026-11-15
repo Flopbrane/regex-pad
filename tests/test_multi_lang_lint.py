@@ -198,7 +198,7 @@ def test_wordpress_block_schema_matches_existing_reference_names() -> None:
     schema_value_types = set(schema["value_types"])
     shared_attribute_names = set(schema["shared_attributes"])
 
-    assert len(schema["blocks"]) == 15
+    assert len(schema["blocks"]) == 23
     assert schema["blocks"]["heading"]["attributes"]["level"] == {
         "type": "integer",
         "minimum": 1,

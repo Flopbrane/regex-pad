@@ -351,12 +351,33 @@ STRUCTURAL_HTML_TAGS = {
 PARAGRAPH_BREAKING_TAGS = (
     STRUCTURAL_HTML_TAGS - {"code"}
 ) | {"address", "details", "dialog", "dl", "fieldset", "form", "hr", "menu"}
-WORDPRESS_REQUIRED_PARENTS = {"list-item": "list", "column": "columns"}
-WORDPRESS_ALLOWED_CHILDREN = {"list": {"list-item"}, "columns": {"column"}}
+WORDPRESS_REQUIRED_PARENTS = {
+    "accordion-heading": "accordion-item",
+    "accordion-item": "accordion",
+    "accordion-panel": "accordion-item",
+    "button": "buttons",
+    "column": "columns",
+    "list-item": "list",
+}
+WORDPRESS_ALLOWED_CHILDREN = {
+    "accordion": {"accordion-item"},
+    "accordion-item": {"accordion-heading", "accordion-panel"},
+    "buttons": {"button"},
+    "columns": {"column"},
+    "list": {"list-item"},
+}
 WORDPRESS_NON_CONTAINER_BLOCKS = {"paragraph", "heading", "separator", "spacer", "image"}
 WORDPRESS_HTML_SHAPES = {
+    "accordion": {"div"},
+    "accordion-heading": {f"h{level}" for level in range(1, 7)},
+    "accordion-item": {"div"},
+    "accordion-panel": {"div"},
+    "button": {"div"},
+    "buttons": {"div"},
     "group": {"article", "aside", "div", "footer", "header", "main", "section"},
     "paragraph": {"p"},
+    "pullquote": {"figure"},
+    "quote": {"blockquote"},
     "heading": {f"h{level}" for level in range(1, 7)},
     "list": {"ul", "ol"},
     "list-item": {"li"},
@@ -412,11 +433,21 @@ WORDPRESS_BLOCK_ATTRIBUTE_ALLOWLISTS = {
     "spacer": COMMON_WORDPRESS_BLOCK_ATTRIBUTES | {"height", "width"},
 }
 WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES = {
+    ("accordion", "autoclose"): "boolean",
+    ("accordion", "headingLevel"): "integer",
+    ("accordion", "levelOptions"): "array",
+    ("accordion", "showIcon"): "boolean",
+    ("accordion-heading", "level"): "integer",
+    ("accordion-heading", "openByDefault"): "boolean",
+    ("accordion-heading", "showIcon"): "boolean",
+    ("accordion-item", "openByDefault"): "boolean",
     ("group", "layout"): "object",
     ("heading", "level"): "integer",
     ("paragraph", "dropCap"): "boolean",
 }
 WORDPRESS_BLOCK_ATTRIBUTE_VALUE_RULES = {
+    ("accordion", "iconPosition"): {"left", "right"},
+    ("accordion-heading", "iconPosition"): {"left", "right"},
     ("paragraph", "align"): {"left", "center", "right"},
 }
 DECORATED_BLOCKS_BETTER_AS_HTML = {"preformatted"}
@@ -1777,6 +1808,8 @@ def _lint_wordpress_block_attribute_semantics(
 
 
 def _wordpress_attribute_value_has_type(value: Any, expected_type: str) -> bool:
+    if expected_type == "array":
+        return isinstance(value, list)
     if expected_type == "integer":
         return isinstance(value, int) and not isinstance(value, bool)
     if expected_type == "boolean":
@@ -1810,6 +1843,13 @@ def _lint_wordpress_block_attribute_html_consistency(
         )
     if block_name == "paragraph" and root_collector is not None:
         return _lint_wordpress_paragraph_attributes(block_attributes, root_collector, line_number)
+    if block_name in WORDPRESS_SERIALIZATION_RULES and root_collector is not None:
+        return _lint_verified_wordpress_serialization(
+            block_name,
+            block_attributes,
+            root_collector,
+            line_number,
+        )
     if block_name == "heading" and root_collector is not None:
         return _lint_wordpress_heading_level_consistency(
             block_attributes,
@@ -1888,6 +1928,34 @@ def _lint_verified_wordpress_serialization(
                     )
                 )
 
+    element_targets = block_rules.get("element_targets", {})
+    if isinstance(element_targets, dict):
+        for target_name, target_rule in element_targets.items():
+            if not isinstance(target_name, str) or not isinstance(target_rule, dict):
+                continue
+            target_attributes = _serialization_target_attributes(
+                collector,
+                target_name,
+                target_rule,
+            )
+            if target_attributes is None:
+                continue
+            target_classes = set(target_attributes.get("class", "").split())
+            target_required_classes = target_rule.get("required_classes", [])
+            if not isinstance(target_required_classes, list):
+                continue
+            for required_class in target_required_classes:
+                if isinstance(required_class, str) and required_class not in target_classes:
+                    messages.append(
+                        _wordpress_attribute_html_mismatch_message(
+                            line_number,
+                            block_name,
+                            f"{target_name}.class",
+                            required_class,
+                            target_attributes.get("class", "(absent)"),
+                        )
+                    )
+
     class_rules = block_rules.get("attribute_class_rules", [])
     if isinstance(class_rules, list):
         for class_rule in class_rules:
@@ -1900,27 +1968,32 @@ def _lint_verified_wordpress_serialization(
             value = _nested_wordpress_attribute(block_attributes, json_path)
             if not isinstance(value, str):
                 continue
+            target_name = class_rule.get("html_target", "root")
+            if not isinstance(target_name, str):
+                continue
+            target_attributes = _serialization_target_attributes(
+                collector,
+                target_name,
+                element_targets.get(target_name) if isinstance(element_targets, dict) else None,
+            )
+            if target_attributes is None:
+                continue
+            target_classes = set(target_attributes.get("class", "").split())
             for template in templates:
                 if not isinstance(template, str):
                     continue
                 expected_class = template.replace("{value}", value)
-                if expected_class not in classes:
+                if expected_class not in target_classes:
                     messages.append(
                         _wordpress_attribute_html_mismatch_message(
                             line_number,
                             block_name,
                             json_path,
                             value,
-                            html_attributes.get("class", "(absent)"),
+                            target_attributes.get("class", "(absent)"),
                         )
                     )
 
-    style_text = html_attributes.get("style", "")
-    if any(issue.severity == "error" for issue in lint_inline_style(style_text)):
-        return messages  # CSS syntax diagnostics take priority over value comparison.
-    html_style = parse_inline_style_values(style_text)
-    if html_style is None:
-        return messages
     style_rules = block_rules.get("style_rules", [])
     if not isinstance(style_rules, list):
         return messages
@@ -1930,6 +2003,22 @@ def _lint_verified_wordpress_serialization(
         json_path = style_rule.get("json_path")
         css_property = style_rule.get("css_property")
         if not isinstance(json_path, str) or not isinstance(css_property, str):
+            continue
+        target_name = style_rule.get("html_target", "root")
+        if not isinstance(target_name, str):
+            continue
+        target_attributes = _serialization_target_attributes(
+            collector,
+            target_name,
+            element_targets.get(target_name) if isinstance(element_targets, dict) else None,
+        )
+        if target_attributes is None:
+            continue
+        style_text = target_attributes.get("style", "")
+        if any(issue.severity == "error" for issue in lint_inline_style(style_text)):
+            continue  # CSS syntax diagnostics take priority over value comparison.
+        html_style = parse_inline_style_values(style_text)
+        if html_style is None:
             continue
         expected = _nested_wordpress_attribute(block_attributes, json_path)
         if isinstance(expected, bool) or not isinstance(expected, (str, int, float)):
@@ -1949,6 +2038,35 @@ def _lint_verified_wordpress_serialization(
                 )
             )
     return messages
+
+
+def _serialization_target_attributes(
+    collector: _BlockRootCollector,
+    target_name: str,
+    target_rule: Any,
+) -> dict[str, str] | None:
+    if target_name == "root":
+        return collector.root_tags[0][1] if len(collector.root_tags) == 1 else None
+    if not isinstance(target_rule, dict):
+        return None
+    tags = target_rule.get("tags", [])
+    if not isinstance(tags, list):
+        return None
+    allowed_tags = {tag for tag in tags if isinstance(tag, str)}
+    candidates = [
+        attributes
+        for tag, attributes in collector.all_tags
+        if tag in allowed_tags
+    ]
+    match_classes = target_rule.get("match_classes", [])
+    if isinstance(match_classes, list):
+        expected_classes = {value for value in match_classes if isinstance(value, str)}
+        for attributes in candidates:
+            if expected_classes <= set(attributes.get("class", "").split()):
+                return attributes
+    if len(candidates) == 1:
+        return candidates[0]
+    return None
 
 
 def _nested_wordpress_attribute(
@@ -2769,6 +2887,7 @@ class _BlockRootCollector(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.root_tags: list[tuple[str, dict[str, str]]] = []
+        self.all_tags: list[tuple[str, dict[str, str]]] = []
         self.open_tags: list[str] = []
         self.has_root_text = False
         self.first_content_line: int | None = None
@@ -2782,10 +2901,12 @@ class _BlockRootCollector(HTMLParser):
         self._record_root(tag, attrs)
 
     def _record_root(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attribute_values = {name: value or "" for name, value in attrs}
+        self.all_tags.append((tag, attribute_values))
         if not self.open_tags:
             if self.first_content_line is None:
                 self.first_content_line = self.getpos()[0]
-            self.root_tags.append((tag, {name: value or "" for name, value in attrs}))
+            self.root_tags.append((tag, attribute_values))
 
     def handle_endtag(self, tag: str) -> None:
         for index in range(len(self.open_tags) - 1, -1, -1):

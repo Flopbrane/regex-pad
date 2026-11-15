@@ -1,0 +1,3 @@
+<!-- wp:pullquote {"style":{"border":{"width":"2px","radius":{"topLeft":"8px","topRight":"8px","bottomLeft":"8px","bottomRight":"8px"}}},"backgroundColor":"accent-5"} -->
+<figure class="wp-block-pullquote has-accent-5-background-color has-background" style="border-width:2px;border-top-left-radius:8px;border-top-right-radius:8px;border-bottom-left-radius:8px;border-bottom-right-radius:8px"><blockquote><p>この様な引用を使いました</p><cite>この場所に引用元が有ります</cite></blockquote></figure>
+<!-- /wp:pullquote -->

@@ -213,13 +213,18 @@
     "verified_wordpress_html_files": [
       "docs_jp/example of the correct approach to table core control.wp_html",
       "tests/group_block_flex_nowrap_correct.wp_html",
-      "tests/group_block_decorated_correct.wp_html"
+      "tests/group_block_decorated_correct.wp_html",
+      "tests/button_block_decorated_correct.wp_html",
+      "tests/quote_block_decorated_correct.wp_html",
+      "tests/pullquote_block_decorated_correct.wp_html",
+      "tests/accordion_block_background_font_correct.wp_html",
+      "tests/accordion_block_border_correct.wp_html"
     ]
   },
   "summary": {
-    "class_count": 4691,
-    "strict_class_count": 3,
-    "advisory_class_count": 4688
+    "class_count": 4698,
+    "strict_class_count": 15,
+    "advisory_class_count": 4683
   },
   "classes": {
     "__resizable_base__": {
@@ -45904,14 +45909,39 @@
       "html_sources": [],
       "semantic_sources": []
     },
-    "has-accent-2-background-color": {
+    "has-accent-1-background-color": {
       "tag_scope": "advisory",
       "allowed_tags": [
         "*"
       ],
       "selector_tags": [],
       "observed_html_tags": [
-        "div"
+        "h3",
+        "p"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 3,
+      "html_source_count": 3,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html",
+        "tests/quote_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
+    "has-accent-1-color": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "a"
       ],
       "source_groups": [
         "verified_wordpress_html"
@@ -45922,7 +45952,100 @@
       "html_evidence_count": 1,
       "html_source_count": 1,
       "html_sources": [
-        "tests/group_block_decorated_correct.wp_html"
+        "tests/button_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
+    "has-accent-2-background-color": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "div",
+        "h3",
+        "p"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 4,
+      "html_source_count": 4,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html",
+        "tests/group_block_decorated_correct.wp_html",
+        "tests/quote_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
+    "has-accent-3-background-color": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "a"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/button_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
+    "has-accent-5-background-color": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "figure"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/pullquote_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
+    "has-accent-6-background-color": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "blockquote"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/quote_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -46005,7 +46128,12 @@
         "table"
       ],
       "observed_html_tags": [
+        "a",
+        "blockquote",
         "div",
+        "figure",
+        "h3",
+        "p",
         "table"
       ],
       "source_groups": [
@@ -46021,11 +46149,13 @@
         "wordpress/wp-includes/blocks/button/style.css",
         "wordpress/wp-includes/blocks/calendar/style.css"
       ],
-      "html_evidence_count": 2,
-      "html_source_count": 2,
+      "html_evidence_count": 10,
+      "html_source_count": 7,
       "html_sources": [
         "docs_jp/example of the correct approach to table core control.wp_html",
-        "tests/group_block_decorated_correct.wp_html"
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html",
+        "tests/button_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -46481,8 +46611,11 @@
         "*"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "a"
+      ],
       "source_groups": [
+        "verified_wordpress_html",
         "wordpress_core_css"
       ],
       "selector_evidence_count": 4,
@@ -46492,9 +46625,11 @@
         "wordpress/wp-includes/blocks/buttons/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/button_block_decorated_correct.wp_html"
+      ],
       "semantic_sources": []
     },
     "has-custom-width": {
@@ -46725,9 +46860,12 @@
       "selector_tags": [
         "button"
       ],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "h3"
+      ],
       "source_groups": [
         "business_sample_css",
+        "verified_wordpress_html",
         "wordpress_core_css"
       ],
       "selector_evidence_count": 3,
@@ -46737,9 +46875,12 @@
         "wordpress/wp-includes/blocks/search/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
       "semantic_sources": []
     },
     "has-icon-background-color": {
@@ -46784,6 +46925,29 @@
       "html_sources": [],
       "semantic_sources": []
     },
+    "has-icon-right": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "h3"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
     "has-illustration": {
       "tag_scope": "advisory",
       "allowed_tags": [
@@ -46826,6 +46990,30 @@
       "html_evidence_count": 0,
       "html_source_count": 0,
       "html_sources": [],
+      "semantic_sources": []
+    },
+    "has-large-font-size": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "a",
+        "h3"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/button_block_decorated_correct.wp_html"
+      ],
       "semantic_sources": []
     },
     "has-large-icon-size": {
@@ -46899,6 +47087,7 @@
       ],
       "selector_tags": [],
       "observed_html_tags": [
+        "a",
         "table"
       ],
       "source_groups": [
@@ -46913,10 +47102,11 @@
         "wordpress/wp-includes/blocks/paragraph/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 1,
-      "html_source_count": 1,
+      "html_evidence_count": 2,
+      "html_source_count": 2,
       "html_sources": [
-        "docs_jp/example of the correct approach to table core control.wp_html"
+        "docs_jp/example of the correct approach to table core control.wp_html",
+        "tests/button_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -46949,7 +47139,8 @@
       "selector_tags": [],
       "observed_html_tags": [
         "div",
-        "figure"
+        "figure",
+        "p"
       ],
       "source_groups": [
         "verified_wordpress_html"
@@ -46957,11 +47148,12 @@
       "selector_evidence_count": 0,
       "selector_source_count": 0,
       "selector_sources": [],
-      "html_evidence_count": 2,
-      "html_source_count": 2,
+      "html_evidence_count": 3,
+      "html_source_count": 3,
       "html_sources": [
         "docs_jp/example of the correct approach to table core control.wp_html",
-        "tests/group_block_decorated_correct.wp_html"
+        "tests/group_block_decorated_correct.wp_html",
+        "tests/quote_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -47491,6 +47683,7 @@
         "table"
       ],
       "observed_html_tags": [
+        "a",
         "table"
       ],
       "source_groups": [
@@ -47506,10 +47699,11 @@
         "wordpress/wp-includes/blocks/calendar/style.css",
         "wordpress/wp-includes/blocks/cover/style.css"
       ],
-      "html_evidence_count": 1,
-      "html_source_count": 1,
+      "html_evidence_count": 2,
+      "html_source_count": 2,
       "html_sources": [
-        "docs_jp/example of the correct approach to table core control.wp_html"
+        "docs_jp/example of the correct approach to table core control.wp_html",
+        "tests/button_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -88966,14 +89160,18 @@
       "semantic_sources": []
     },
     "wp-block-accordion": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "div"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 2,
       "selector_source_count": 2,
@@ -88981,20 +89179,35 @@
         "wordpress/wp-includes/blocks/accordion/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/accordion/block.json#allowedBlocks",
+        "wordpress/wp-includes/js/dist/block-library.js#core/accordion-save"
+      ]
     },
     "wp-block-accordion-heading": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "h3"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 4,
       "selector_source_count": 2,
@@ -89002,20 +89215,30 @@
         "wordpress/wp-includes/blocks/accordion-item/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/accordion/block.json#attributes.headingLevel",
+        "wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save"
+      ]
     },
     "wp-block-accordion-heading__toggle": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "button"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "button"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 6,
       "selector_source_count": 2,
@@ -89023,20 +89246,29 @@
         "wordpress/wp-includes/blocks/accordion-heading/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save"
+      ]
     },
     "wp-block-accordion-heading__toggle-icon": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "span"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "span"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 6,
       "selector_source_count": 3,
@@ -89045,20 +89277,29 @@
         "wordpress/wp-includes/blocks/accordion-item/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save"
+      ]
     },
     "wp-block-accordion-heading__toggle-title": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "span"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "span"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 4,
       "selector_source_count": 2,
@@ -89066,20 +89307,29 @@
         "wordpress/wp-includes/blocks/accordion-heading/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save"
+      ]
     },
     "wp-block-accordion-item": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "div"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 6,
       "selector_source_count": 2,
@@ -89087,20 +89337,30 @@
         "wordpress/wp-includes/blocks/accordion-item/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/accordion-item/block.json#parent",
+        "wordpress/wp-includes/js/dist/block-library.js#core/accordion-item-save"
+      ]
     },
     "wp-block-accordion-panel": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "div"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 2,
       "selector_source_count": 2,
@@ -89108,10 +89368,16 @@
         "wordpress/wp-includes/blocks/accordion-panel/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 2,
+      "html_source_count": 2,
+      "html_sources": [
+        "tests/accordion_block_background_font_correct.wp_html",
+        "tests/accordion_block_border_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/accordion-panel/block.json#parent",
+        "wordpress/wp-includes/js/dist/block-library.js#core/accordion-panel-save"
+      ]
     },
     "wp-block-archives": {
       "tag_scope": "advisory",
@@ -89242,14 +89508,18 @@
       "semantic_sources": []
     },
     "wp-block-button": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "div"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 62,
       "selector_source_count": 5,
@@ -89259,20 +89529,30 @@
         "wordpress/wp-includes/blocks/buttons/editor.css",
         "wordpress/wp-includes/blocks/buttons/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/button_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/button/block.json#selectors.root",
+        "wordpress/wp-includes/js/dist/block-library.js#core/button-save"
+      ]
     },
     "wp-block-button__link": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "a",
+        "button"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "a"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 36,
       "selector_source_count": 3,
@@ -89281,10 +89561,15 @@
         "wordpress/wp-includes/blocks/buttons/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/button_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/button/block.json#attributes.tagName",
+        "wordpress/wp-includes/js/dist/block-library.js#core/button-save"
+      ]
     },
     "wp-block-button__width-100": {
       "tag_scope": "advisory",
@@ -89371,14 +89656,18 @@
       "semantic_sources": []
     },
     "wp-block-buttons": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "div"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "div"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 68,
       "selector_source_count": 4,
@@ -89388,10 +89677,15 @@
         "wordpress/wp-includes/blocks/buttons/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/button_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/buttons/block.json#allowedBlocks",
+        "wordpress/wp-includes/js/dist/block-library.js#core/buttons-save"
+      ]
     },
     "wp-block-calendar": {
       "tag_scope": "advisory",
@@ -93823,14 +94117,18 @@
       "semantic_sources": []
     },
     "wp-block-pullquote": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "figure"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "figure"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 42,
       "selector_source_count": 5,
@@ -93840,10 +94138,15 @@
         "wordpress/wp-includes/blocks/pullquote/theme.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/pullquote_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/pullquote/block.json#save-root",
+        "wordpress/wp-includes/js/dist/block-library.js#core/pullquote-save"
+      ]
     },
     "wp-block-pullquote__citation": {
       "tag_scope": "advisory",
@@ -94076,14 +94379,18 @@
       "semantic_sources": []
     },
     "wp-block-quote": {
-      "tag_scope": "advisory",
+      "tag_scope": "strict",
       "allowed_tags": [
-        "*"
+        "blockquote"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "blockquote"
+      ],
       "source_groups": [
-        "wordpress_core_css"
+        "verified_wordpress_html",
+        "wordpress_core_css",
+        "wordpress_core_save"
       ],
       "selector_evidence_count": 36,
       "selector_source_count": 4,
@@ -94093,10 +94400,15 @@
         "wordpress/wp-includes/css/dist/block-library/style.css",
         "wordpress/wp-includes/css/dist/block-library/theme.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
-      "semantic_sources": []
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/quote_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": [
+        "wordpress/wp-includes/blocks/quote/block.json#value.selector",
+        "wordpress/wp-includes/js/dist/block-library.js#core/quote-save"
+      ]
     },
     "wp-block-read-more": {
       "tag_scope": "advisory",
@@ -95097,8 +95409,11 @@
       "selector_tags": [
         "a"
       ],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "a"
+      ],
       "source_groups": [
+        "verified_wordpress_html",
         "wordpress_core_css"
       ],
       "selector_evidence_count": 12,
@@ -95109,9 +95424,11 @@
         "wordpress/wp-includes/css/dist/block-library/elements.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/button_block_decorated_correct.wp_html"
+      ],
       "semantic_sources": []
     },
     "wp-embed-aspect-1-1": {

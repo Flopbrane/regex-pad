@@ -1,0 +1,9 @@
+<!-- wp:quote {"style":{"border":{"top":{"width":"1px"},"right":{"width":"1px"},"bottom":{"width":"1px"},"left":{"color":"var:preset|color|accent-3","width":"4px"},"radius":{"topLeft":"8px","topRight":"8px","bottomLeft":"8px","bottomRight":"8px"}}},"backgroundColor":"accent-6"} -->
+<blockquote class="wp-block-quote has-accent-6-background-color has-background" style="border-top-left-radius:8px;border-top-right-radius:8px;border-bottom-left-radius:8px;border-bottom-right-radius:8px;border-top-width:1px;border-right-width:1px;border-bottom-width:1px;border-left-color:var(--wp--preset--color--accent-3);border-left-width:4px"><!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"var:preset|spacing|20","bottom":"var:preset|spacing|20","left":"0","right":"0"}}},"backgroundColor":"accent-2"} -->
+<p class="has-accent-2-background-color has-background" style="margin-top:var(--wp--preset--spacing--20);margin-right:0;margin-bottom:var(--wp--preset--spacing--20);margin-left:0">引用はここになります。</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph {"backgroundColor":"accent-1","fontSize":"medium"} -->
+<p class="has-accent-1-background-color has-background has-medium-font-size">もう一つの引用はここです。</p>
+<!-- /wp:paragraph --></blockquote>
+<!-- /wp:quote -->

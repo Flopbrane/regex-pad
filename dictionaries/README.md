@@ -123,6 +123,29 @@ The Paragraph entry records the border styles proven by the decorated Group
 children. These rules support Linter consistency checks and can later supply
 class-insertion hints; they are not inferred from one site's CSS.
 
+The verified Button entry distinguishes three HTML targets: the outer
+`wp-block-buttons` container, the child `wp-block-button` wrapper, and the
+inner `a`/`button` element carrying `wp-block-button__link`. Its confirmed
+rules cover text/background/link/font-size classes and the link element's
+border width. `style.dimensions.width` is recorded as present in JSON but not
+repeated as an inline style in that saved example.
+
+The verified Quote entry uses a `blockquote.wp-block-quote` root and records
+its background classes, four corner radii, three one-pixel sides, and the
+left border's preset color and width. Its child Paragraph evidence adds
+background classes and four margin properties to the Paragraph rules. The
+separate Pullquote entry uses `figure.wp-block-pullquote` and records its
+background, overall border width, and corner radii; its inner `blockquote`,
+`p`, and `cite` are saved by the Pullquote block itself rather than as child
+WordPress block comments.
+
+The two verified Accordion examples record the complete parent chain
+`accordion > accordion-item > accordion-heading / accordion-panel`, the
+heading's nested toggle/title/icon elements, background and font-size classes,
+and the demonstrated heading border width. `has-icon` and `has-icon-right` are
+recorded as observed default-context classes rather than unconditional classes:
+the core context may hide the icon or move it to the left.
+
 Regenerate the checked-in reference with the required Python interpreter:
 
 ```powershell
@@ -132,6 +155,11 @@ D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe scripts\build_wordpress_class_r
   --extra-html "docs_jp\example of the correct approach to table core control.wp_html" `
   --extra-html "tests\group_block_flex_nowrap_correct.wp_html" `
   --extra-html "tests\group_block_decorated_correct.wp_html" `
+  --extra-html "tests\button_block_decorated_correct.wp_html" `
+  --extra-html "tests\quote_block_decorated_correct.wp_html" `
+  --extra-html "tests\pullquote_block_decorated_correct.wp_html" `
+  --extra-html "tests\accordion_block_background_font_correct.wp_html" `
+  --extra-html "tests\accordion_block_border_correct.wp_html" `
   --source-root . `
   --output dictionaries\standards\wordpress_class_tag_reference.json
 ```

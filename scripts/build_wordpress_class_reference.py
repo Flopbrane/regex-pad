@@ -45,6 +45,81 @@ CORE_SEMANTIC_TAG_RELATIONSHIPS: dict[str, tuple[set[str], list[str]]] = {
             "wordpress/wp-includes/blocks/group/block.json#attributes.tagName",
         ],
     ),
+    "wp-block-buttons": (
+        {"div"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/buttons-save",
+            "wordpress/wp-includes/blocks/buttons/block.json#allowedBlocks",
+        ],
+    ),
+    "wp-block-button": (
+        {"div"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/button-save",
+            "wordpress/wp-includes/blocks/button/block.json#selectors.root",
+        ],
+    ),
+    "wp-block-button__link": (
+        {"a", "button"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/button-save",
+            "wordpress/wp-includes/blocks/button/block.json#attributes.tagName",
+        ],
+    ),
+    "wp-block-quote": (
+        {"blockquote"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/quote-save",
+            "wordpress/wp-includes/blocks/quote/block.json#value.selector",
+        ],
+    ),
+    "wp-block-pullquote": (
+        {"figure"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/pullquote-save",
+            "wordpress/wp-includes/blocks/pullquote/block.json#save-root",
+        ],
+    ),
+    "wp-block-accordion": (
+        {"div"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/accordion-save",
+            "wordpress/wp-includes/blocks/accordion/block.json#allowedBlocks",
+        ],
+    ),
+    "wp-block-accordion-item": (
+        {"div"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/accordion-item-save",
+            "wordpress/wp-includes/blocks/accordion-item/block.json#parent",
+        ],
+    ),
+    "wp-block-accordion-heading": (
+        {"h1", "h2", "h3", "h4", "h5", "h6"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save",
+            "wordpress/wp-includes/blocks/accordion/block.json#attributes.headingLevel",
+        ],
+    ),
+    "wp-block-accordion-heading__toggle": (
+        {"button"},
+        ["wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save"],
+    ),
+    "wp-block-accordion-heading__toggle-title": (
+        {"span"},
+        ["wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save"],
+    ),
+    "wp-block-accordion-heading__toggle-icon": (
+        {"span"},
+        ["wordpress/wp-includes/js/dist/block-library.js#core/accordion-heading-save"],
+    ),
+    "wp-block-accordion-panel": (
+        {"div"},
+        [
+            "wordpress/wp-includes/js/dist/block-library.js#core/accordion-panel-save",
+            "wordpress/wp-includes/blocks/accordion-panel/block.json#parent",
+        ],
+    ),
 }
 
 
