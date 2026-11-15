@@ -92,3 +92,46 @@ It contains:
 - `allowed_attribute_prefixes`: prefixes such as `aria-` and `data-`.
 
 Add entries here when RegexPad should treat a tag, block, or attribute spelling as valid.
+
+### WordPress class / HTML tag reference
+
+`standards/wordpress_class_tag_reference.json` is generated from the bundled
+WordPress core block CSS, the saved business-site sample under `sample/`, and
+verified WordPress HTML examples. It records each discovered class with:
+
+- `tag_scope`: `strict` only when WordPress core save output confirms the tag;
+  otherwise `advisory`.
+- `allowed_tags`: tags enforced by the Linter for a strict entry, or `*` for an
+  advisory entry.
+- `selector_tags`: tags explicitly paired with the class in CSS selectors.
+- `observed_html_tags`: tags on which saved HTML actually used the class.
+- source groups, source files, evidence counts, and audited core-save sources.
+
+Custom class names remain valid. Absence from this reference is not a warning.
+Advisory entries are not treated as an exhaustive tag allowlist. The Linter
+currently checks only strict relationships, including `has-fixed-layout` on
+`table`, `wp-block-table` on `figure`, and `wp-block-group` on the root tags
+supported by the core Group block.
+
+`standards/wordpress_block_serialization_reference.json` is the verified
+per-block JSON-to-HTML correspondence table. It records only relationships
+observed in accepted saved block examples. The current Group entry covers its
+root class, `backgroundColor` and `fontSize` classes, border/spacing inline
+styles, preset-variable conversion, and the JSON paths such as `layout` and
+`style.spacing.blockGap` that the verified example does not repeat inline.
+The Paragraph entry records the border styles proven by the decorated Group
+children. These rules support Linter consistency checks and can later supply
+class-insertion hints; they are not inferred from one site's CSS.
+
+Regenerate the checked-in reference with the required Python interpreter:
+
+```powershell
+D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe scripts\build_wordpress_class_reference.py `
+  --wordpress-zip runtime\wordpress-preview\wordpress.zip `
+  --sample-dir "sample\AIに気軽に触って♪3 - キャリカク_files" `
+  --extra-html "docs_jp\example of the correct approach to table core control.wp_html" `
+  --extra-html "tests\group_block_flex_nowrap_correct.wp_html" `
+  --extra-html "tests\group_block_decorated_correct.wp_html" `
+  --source-root . `
+  --output dictionaries\standards\wordpress_class_tag_reference.json
+```

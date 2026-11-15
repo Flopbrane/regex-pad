@@ -1,0 +1,59 @@
+{
+  "schema_id": "wordpress_core_block_serialization_reference",
+  "schema_version": 1,
+  "status": "verified_examples_only",
+  "value_transforms": {
+    "wordpress_preset_variable": "var:preset|spacing|20 -> var(--wp--preset--spacing--20)"
+  },
+  "blocks": {
+    "group": {
+      "evidence": [
+        "tests/group_block_flex_nowrap_correct.wp_html",
+        "tests/group_block_decorated_correct.wp_html",
+        "tests/group_block_flex_nowrap_empty_style_broken.wp_html"
+      ],
+      "root_tags": ["article", "aside", "div", "footer", "header", "main", "section"],
+      "required_classes": ["wp-block-group"],
+      "attribute_class_rules": [
+        {
+          "json_path": "backgroundColor",
+          "class_templates": ["has-{value}-background-color", "has-background"]
+        },
+        {
+          "json_path": "fontSize",
+          "class_templates": ["has-{value}-font-size"]
+        }
+      ],
+      "style_rules": [
+        {"json_path": "style.border.width", "css_property": "border-width"},
+        {"json_path": "style.border.radius.topLeft", "css_property": "border-top-left-radius"},
+        {"json_path": "style.border.radius.topRight", "css_property": "border-top-right-radius"},
+        {"json_path": "style.border.radius.bottomLeft", "css_property": "border-bottom-left-radius"},
+        {"json_path": "style.border.radius.bottomRight", "css_property": "border-bottom-right-radius"},
+        {"json_path": "style.spacing.margin.top", "css_property": "margin-top", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.margin.bottom", "css_property": "margin-bottom", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.top", "css_property": "padding-top", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.right", "css_property": "padding-right", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.bottom", "css_property": "padding-bottom", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.left", "css_property": "padding-left", "value_transform": "wordpress_preset_variable"}
+      ],
+      "verified_non_inline_paths": ["layout", "style.spacing.blockGap"],
+      "forbidden_empty_root_attributes": ["style"]
+    },
+    "paragraph": {
+      "evidence": ["tests/group_block_decorated_correct.wp_html"],
+      "root_tags": ["p"],
+      "required_classes": [],
+      "attribute_class_rules": [],
+      "style_rules": [
+        {"json_path": "style.border.width", "css_property": "border-width"},
+        {"json_path": "style.border.top.width", "css_property": "border-top-width"},
+        {"json_path": "style.border.right.width", "css_property": "border-right-width"},
+        {"json_path": "style.border.bottom.width", "css_property": "border-bottom-width"},
+        {"json_path": "style.border.left.width", "css_property": "border-left-width"}
+      ],
+      "verified_non_inline_paths": ["style.layout"],
+      "forbidden_empty_root_attributes": []
+    }
+  }
+}

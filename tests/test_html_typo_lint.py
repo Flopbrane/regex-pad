@@ -390,7 +390,7 @@ def test_paragraph_style_and_preset_consistency(
             "</div><!-- /wp:column --></div><!-- /wp:columns -->"
         ),
         (
-            "<!-- wp:group --><div><!-- wp:latest-posts /-->"
+            '<!-- wp:group --><div class="wp-block-group"><!-- wp:latest-posts /-->'
             "<!-- wp:paragraph --><p>Following text</p><!-- /wp:paragraph -->"
             "</div><!-- /wp:group -->"
         ),
@@ -1108,18 +1108,15 @@ def test_lint_guides_decorated_preformatted_block_to_custom_html() -> None:
     )
 
 
-def test_lint_guides_decorated_group_block_to_custom_html() -> None:
+def test_lint_does_not_reject_group_style_json_as_custom_html() -> None:
     messages = lint_html_typos(
         '<!-- wp:group {"style":{"color":{"background":"#f6f6f6"}}} -->\n'
         '<div class="wp-block-group"><p>Note</p></div>\n'
         "<!-- /wp:group -->"
     )
 
-    assert any(
-        message.message_key
-        == "html_typo_lint.wordpress_decorated_block_should_use_html"
-        and message.line_number == 1
-        and message.values == {"block": "group"}
+    assert not any(
+        message.message_key == "html_typo_lint.wordpress_decorated_block_should_use_html"
         for message in messages
     )
 
@@ -1552,3 +1549,112 @@ def test_lint_warns_about_restricted_html_tags_and_event_attributes() -> None:
 
     assert message_keys.count("html_typo_lint.restricted_html_tag") >= 3
     assert "html_typo_lint.restricted_html_attribute" in message_keys
+
+
+def test_lint_accepts_verified_wordpress_table_classes_with_character_references() -> None:
+    source = (
+        '<figure class="wp-block-table"><table class="&#x9;has-base-color&#x20;'
+        'has-text-color&#x20;has-background&#x20;has-link-color&#x20;'
+        'has-fixed-layout"><tbody><tr><td>内容</td></tr></tbody></table></figure>'
+    )
+
+    messages = lint_html_typos(source)
+
+    assert not any(
+        message.message_key == "html_typo_lint.wordpress_class_tag_mismatch"
+        for message in messages
+    )
+
+
+def test_lint_reports_only_strict_wordpress_class_tag_mismatch() -> None:
+    messages = lint_html_typos(
+        '<div class="has-fixed-layout has-background custom-class">内容</div>'
+    )
+
+    mismatch_messages = [
+        message
+        for message in messages
+        if message.message_key == "html_typo_lint.wordpress_class_tag_mismatch"
+    ]
+    assert len(mismatch_messages) == 1
+    assert mismatch_messages[0].values == {
+        "class_name": "has-fixed-layout",
+        "tag": "div",
+        "allowed_tags": "<table>",
+    }
+
+
+def test_lint_accepts_verified_flex_nowrap_group_block() -> None:
+    source = (Path(__file__).parent / "group_block_flex_nowrap_correct.wp_html").read_text(
+        encoding="utf-8"
+    )
+
+    assert lint_html_typos(source) == []
+
+
+def test_lint_accepts_verified_decorated_group_block() -> None:
+    source = (Path(__file__).parent / "group_block_decorated_correct.wp_html").read_text(
+        encoding="utf-8"
+    )
+
+    assert lint_html_typos(source) == []
+
+
+def test_lint_reports_verified_group_class_and_style_mismatches() -> None:
+    source = (Path(__file__).parent / "group_block_decorated_correct.wp_html").read_text(
+        encoding="utf-8"
+    )
+    broken_source = source.replace(" has-background", "", 1).replace(
+        "margin-top:var(--wp--preset--spacing--20)",
+        "margin-top:10px",
+        1,
+    )
+
+    mismatch_attributes = {
+        message.values.get("attribute")
+        for message in lint_html_typos(broken_source)
+        if message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+    }
+
+    assert "backgroundColor" in mismatch_attributes
+    assert "style.spacing.margin.top" in mismatch_attributes
+
+
+def test_lint_reports_empty_root_style_in_verified_flex_nowrap_group_block() -> None:
+    correct_source = (
+        Path(__file__).parent / "group_block_flex_nowrap_correct.wp_html"
+    ).read_text(encoding="utf-8")
+    broken_source = (
+        Path(__file__).parent / "group_block_flex_nowrap_empty_style_broken.wp_html"
+    ).read_text(encoding="utf-8")
+
+    correct_keys = {message.message_key for message in lint_html_typos(correct_source)}
+    broken_messages = lint_html_typos(broken_source)
+
+    assert "html_typo_lint.wordpress_group_empty_root_style" not in correct_keys
+    assert any(
+        message.severity == "error"
+        and message.message_key == "html_typo_lint.wordpress_group_empty_root_style"
+        and message.line_number == 1
+        for message in broken_messages
+    )
+
+
+def test_lint_registers_group_layout_as_an_object_attribute() -> None:
+    source = (
+        '<!-- wp:group {"layout":"flex"} -->\n'
+        '<div class="wp-block-group"></div>\n'
+        '<!-- /wp:group -->'
+    )
+
+    messages = lint_html_typos(source)
+
+    assert any(
+        message.message_key == "html_typo_lint.invalid_wordpress_block_attribute_type"
+        and message.values
+        and message.values.get("block") == "group"
+        and message.values.get("attribute") == "layout"
+        and message.values.get("expected_type") == "object"
+        for message in messages
+    )

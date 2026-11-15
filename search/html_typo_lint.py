@@ -20,6 +20,18 @@ from search.css_lint import (
 )
 
 LINT_REFERENCE_PATH = Path(__file__).resolve().parent.parent / "dictionaries" / "lint_reference.json"
+WORDPRESS_CLASS_REFERENCE_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "dictionaries"
+    / "standards"
+    / "wordpress_class_tag_reference.json"
+)
+WORDPRESS_SERIALIZATION_REFERENCE_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "dictionaries"
+    / "standards"
+    / "wordpress_block_serialization_reference.json"
+)
 BLOCK_COMMENT_PATTERN = re.compile(
     r"<!--\s*(/)?\s*wp:([a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)?)"
     r"(?:\s+((?:(?!-->)[\s\S])*?))?\s*(/)?\s*-->",
@@ -343,6 +355,7 @@ WORDPRESS_REQUIRED_PARENTS = {"list-item": "list", "column": "columns"}
 WORDPRESS_ALLOWED_CHILDREN = {"list": {"list-item"}, "columns": {"column"}}
 WORDPRESS_NON_CONTAINER_BLOCKS = {"paragraph", "heading", "separator", "spacer", "image"}
 WORDPRESS_HTML_SHAPES = {
+    "group": {"article", "aside", "div", "footer", "header", "main", "section"},
     "paragraph": {"p"},
     "heading": {f"h{level}" for level in range(1, 7)},
     "list": {"ul", "ol"},
@@ -399,13 +412,14 @@ WORDPRESS_BLOCK_ATTRIBUTE_ALLOWLISTS = {
     "spacer": COMMON_WORDPRESS_BLOCK_ATTRIBUTES | {"height", "width"},
 }
 WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES = {
+    ("group", "layout"): "object",
     ("heading", "level"): "integer",
     ("paragraph", "dropCap"): "boolean",
 }
 WORDPRESS_BLOCK_ATTRIBUTE_VALUE_RULES = {
     ("paragraph", "align"): {"left", "center", "right"},
 }
-DECORATED_BLOCKS_BETTER_AS_HTML = {"group", "preformatted"}
+DECORATED_BLOCKS_BETTER_AS_HTML = {"preformatted"}
 
 
 @dataclass(frozen=True)
@@ -432,6 +446,8 @@ class LintReferenceCache:
     html_attributes_by_tag: dict[str, set[str]]
     global_html_attributes: set[str]
     allowed_attribute_prefixes: tuple[str, ...]
+    wordpress_classes: set[str]
+    wordpress_class_tags: dict[str, set[str]]
 
 
 @dataclass(frozen=True)
@@ -1064,6 +1080,64 @@ def _load_lint_reference() -> dict[str, Any]:
     return data
 
 
+def _load_wordpress_class_reference() -> dict[str, Any]:
+    try:
+        data = json.loads(WORDPRESS_CLASS_REFERENCE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def _load_wordpress_serialization_reference() -> dict[str, Any]:
+    try:
+        data = json.loads(WORDPRESS_SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    blocks = data.get("blocks")
+    if not isinstance(blocks, dict):
+        return {}
+    return {
+        block_name: block_rules
+        for block_name, block_rules in blocks.items()
+        if isinstance(block_name, str) and isinstance(block_rules, dict)
+    }
+
+
+def _reference_wordpress_classes(
+    reference_data: dict[str, Any],
+) -> tuple[set[str], dict[str, set[str]]]:
+    values = reference_data.get("classes")
+    if not isinstance(values, dict):
+        return set(), {}
+
+    class_names: set[str] = set()
+    strict_tags: dict[str, set[str]] = {}
+    for class_name, class_data in values.items():
+        if not isinstance(class_name, str) or not isinstance(class_data, dict):
+            continue
+        clean_class_name = class_name.strip()
+        if not clean_class_name:
+            continue
+        class_names.add(clean_class_name)
+        if class_data.get("tag_scope") != "strict":
+            continue
+        allowed_tags = class_data.get("allowed_tags")
+        if not isinstance(allowed_tags, list):
+            continue
+        clean_tags = {
+            tag.strip().lower()
+            for tag in allowed_tags
+            if isinstance(tag, str) and tag.strip() and tag != "*"
+        }
+        if clean_tags:
+            strict_tags[clean_class_name] = clean_tags
+    return class_names, strict_tags
+
+
 def _reference_list(
     reference_data: dict[str, Any],
     key: str,
@@ -1137,6 +1211,9 @@ def _reference_string_map(
 
 def _build_lint_reference_cache() -> LintReferenceCache:
     reference_data = _load_lint_reference()
+    wordpress_classes, wordpress_class_tags = _reference_wordpress_classes(
+        _load_wordpress_class_reference()
+    )
     return LintReferenceCache(
         wordpress_core_blocks=_reference_set(
             reference_data,
@@ -1171,10 +1248,13 @@ def _build_lint_reference_cache() -> LintReferenceCache:
                 list(DEFAULT_ALLOWED_ATTRIBUTE_PREFIXES),
             )
         ),
+        wordpress_classes=wordpress_classes,
+        wordpress_class_tags=wordpress_class_tags,
     )
 
 
 LINT_REFERENCE_CACHE = _build_lint_reference_cache()
+WORDPRESS_SERIALIZATION_RULES = _load_wordpress_serialization_reference()
 KNOWN_WORDPRESS_CORE_BLOCKS = LINT_REFERENCE_CACHE.wordpress_core_blocks
 KNOWN_WORDPRESS_BLOCK_ATTRIBUTES = LINT_REFERENCE_CACHE.wordpress_block_attributes
 KNOWN_HTML_TAGS = LINT_REFERENCE_CACHE.html_tags
@@ -1182,6 +1262,8 @@ KNOWN_HTML_ATTRIBUTES = LINT_REFERENCE_CACHE.html_attributes
 KNOWN_HTML_ATTRIBUTES_BY_TAG = LINT_REFERENCE_CACHE.html_attributes_by_tag
 KNOWN_GLOBAL_HTML_ATTRIBUTES = LINT_REFERENCE_CACHE.global_html_attributes
 ALLOWED_HTML_ATTRIBUTE_PREFIXES = LINT_REFERENCE_CACHE.allowed_attribute_prefixes
+KNOWN_WORDPRESS_CLASSES = LINT_REFERENCE_CACHE.wordpress_classes
+KNOWN_WORDPRESS_CLASS_TAGS = LINT_REFERENCE_CACHE.wordpress_class_tags
 
 
 def _lint_wordpress_block_typos(load_data: str) -> list[HtmlTypoLintMessage]:
@@ -1701,6 +1783,8 @@ def _wordpress_attribute_value_has_type(value: Any, expected_type: str) -> bool:
         return isinstance(value, bool)
     if expected_type == "string":
         return isinstance(value, str)
+    if expected_type == "object":
+        return isinstance(value, dict)
     return True
 
 
@@ -1718,6 +1802,12 @@ def _lint_wordpress_block_attribute_html_consistency(
     line_number: int,
     root_collector: _BlockRootCollector | None = None,
 ) -> list[HtmlTypoLintMessage]:
+    if block_name == "group" and root_collector is not None:
+        return _lint_wordpress_group_root_attributes(
+            block_attributes,
+            root_collector,
+            line_number,
+        )
     if block_name == "paragraph" and root_collector is not None:
         return _lint_wordpress_paragraph_attributes(block_attributes, root_collector, line_number)
     if block_name == "heading" and root_collector is not None:
@@ -1739,6 +1829,138 @@ def _lint_wordpress_block_attribute_html_consistency(
             line_number,
         )
     return []
+
+
+def _lint_wordpress_group_root_attributes(
+    block_attributes: dict[str, Any],
+    collector: _BlockRootCollector,
+    line_number: int,
+) -> list[HtmlTypoLintMessage]:
+    """Check verified Group JSON-to-class/style serialization relationships."""
+    if len(collector.root_tags) != 1:
+        return []
+    html_attributes = collector.root_tags[0][1]
+    messages: list[HtmlTypoLintMessage] = []
+    if "style" in html_attributes and not html_attributes["style"].strip():
+        messages.append(
+            HtmlTypoLintMessage(
+                "error",
+                "html_typo_lint.wordpress_group_empty_root_style",
+                line_number,
+            )
+        )
+    messages.extend(
+        _lint_verified_wordpress_serialization(
+            "group",
+            block_attributes,
+            collector,
+            line_number,
+        )
+    )
+    return messages
+
+
+def _lint_verified_wordpress_serialization(
+    block_name: str,
+    block_attributes: dict[str, Any],
+    collector: _BlockRootCollector,
+    line_number: int,
+) -> list[HtmlTypoLintMessage]:
+    """Apply only JSON-to-HTML relationships backed by saved correct examples."""
+    block_rules = WORDPRESS_SERIALIZATION_RULES.get(block_name)
+    if not isinstance(block_rules, dict) or len(collector.root_tags) != 1:
+        return []
+    html_attributes = collector.root_tags[0][1]
+    classes = set(html_attributes.get("class", "").split())
+    messages: list[HtmlTypoLintMessage] = []
+
+    required_classes = block_rules.get("required_classes", [])
+    if isinstance(required_classes, list):
+        for required_class in required_classes:
+            if isinstance(required_class, str) and required_class not in classes:
+                messages.append(
+                    _wordpress_attribute_html_mismatch_message(
+                        line_number,
+                        block_name,
+                        "class",
+                        required_class,
+                        html_attributes.get("class", "(absent)"),
+                    )
+                )
+
+    class_rules = block_rules.get("attribute_class_rules", [])
+    if isinstance(class_rules, list):
+        for class_rule in class_rules:
+            if not isinstance(class_rule, dict):
+                continue
+            json_path = class_rule.get("json_path")
+            templates = class_rule.get("class_templates")
+            if not isinstance(json_path, str) or not isinstance(templates, list):
+                continue
+            value = _nested_wordpress_attribute(block_attributes, json_path)
+            if not isinstance(value, str):
+                continue
+            for template in templates:
+                if not isinstance(template, str):
+                    continue
+                expected_class = template.replace("{value}", value)
+                if expected_class not in classes:
+                    messages.append(
+                        _wordpress_attribute_html_mismatch_message(
+                            line_number,
+                            block_name,
+                            json_path,
+                            value,
+                            html_attributes.get("class", "(absent)"),
+                        )
+                    )
+
+    style_text = html_attributes.get("style", "")
+    if any(issue.severity == "error" for issue in lint_inline_style(style_text)):
+        return messages  # CSS syntax diagnostics take priority over value comparison.
+    html_style = parse_inline_style_values(style_text)
+    if html_style is None:
+        return messages
+    style_rules = block_rules.get("style_rules", [])
+    if not isinstance(style_rules, list):
+        return messages
+    for style_rule in style_rules:
+        if not isinstance(style_rule, dict):
+            continue
+        json_path = style_rule.get("json_path")
+        css_property = style_rule.get("css_property")
+        if not isinstance(json_path, str) or not isinstance(css_property, str):
+            continue
+        expected = _nested_wordpress_attribute(block_attributes, json_path)
+        if isinstance(expected, bool) or not isinstance(expected, (str, int, float)):
+            continue
+        expected_text = _wordpress_style_value(str(expected))
+        actual_text = html_style.get(css_property)
+        if actual_text is None or (
+            _normalize_css_value(expected_text) != _normalize_css_value(actual_text)
+        ):
+            messages.append(
+                _wordpress_attribute_html_mismatch_message(
+                    line_number,
+                    block_name,
+                    json_path,
+                    str(expected),
+                    f"{css_property}:{actual_text or '(absent)'}",
+                )
+            )
+    return messages
+
+
+def _nested_wordpress_attribute(
+    block_attributes: dict[str, Any],
+    json_path: str,
+) -> Any:
+    value: Any = block_attributes
+    for path_part in json_path.split("."):
+        if not isinstance(value, dict) or path_part not in value:
+            return None
+        value = value[path_part]
+    return value
 
 
 def _lint_wordpress_block_html_shape(
@@ -1823,6 +2045,14 @@ def _lint_wordpress_paragraph_attributes(
                 line_number, "paragraph", attribute, value,
                 html_attributes.get("class", "(absent)"),
             ))
+    messages.extend(
+        _lint_verified_wordpress_serialization(
+            "paragraph",
+            block_attributes,
+            collector,
+            line_number,
+        )
+    )
     return messages
 
 
@@ -2314,10 +2544,39 @@ class HtmlTypoLintParser(HTMLParser):
         self._lint_unknown_html_attrs(clean_tag, attrs_dict, line_number)
         self._lint_unexpected_html_attrs_for_tag(clean_tag, attrs_dict, line_number)
         self._lint_restricted_html_attrs(clean_tag, attrs_dict, line_number)
+        self._lint_wordpress_class_tags(clean_tag, attrs_dict, line_number)
         if "style" in attrs_dict:
             self.messages.extend(
                 _css_issue_to_html(issue)
                 for issue in lint_inline_style(attrs_dict["style"], line_number)
+            )
+
+    def _lint_wordpress_class_tags(
+        self,
+        tag: str,
+        attrs: dict[str, str],
+        line_number: int,
+    ) -> None:
+        class_value = unescape(attrs.get("class", ""))
+        for class_name in class_value.split():
+            if "{" in class_name or "}" in class_name:
+                continue
+            allowed_tags = KNOWN_WORDPRESS_CLASS_TAGS.get(class_name)
+            if allowed_tags is None or tag in allowed_tags:
+                continue
+            self.messages.append(
+                HtmlTypoLintMessage(
+                    "warning",
+                    "html_typo_lint.wordpress_class_tag_mismatch",
+                    line_number,
+                    {
+                        "class_name": class_name,
+                        "tag": tag,
+                        "allowed_tags": ", ".join(
+                            f"<{allowed_tag}>" for allowed_tag in sorted(allowed_tags)
+                        ),
+                    },
+                )
             )
 
     def _lint_inline_endtag(self, tag: str, line_number: int) -> None:

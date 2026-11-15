@@ -9,7 +9,8 @@
 		"top":"var:preset|spacing|20",
 		"bottom":"var:preset|spacing|20",
 		"left":"var:preset|spacing|20",
-		"right":"var:preset|spacing|20"}},
+		"right":"var:preset|spacing|20"}
+		},
 		"border":{"width":"2px"},
 	"elements":{
 		"link":{

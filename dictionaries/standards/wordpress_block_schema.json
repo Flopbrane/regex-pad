@@ -99,6 +99,7 @@
     "group": {
       "include_shared_attributes": true,
       "attributes": {
+        "layout": {"type": "object"},
         "tagName": {"type": "string", "enum": ["article", "aside", "div", "footer", "header", "main", "section"]},
         "templateLock": {"type": ["boolean", "string"], "enum": [false, "all", "contentOnly", "insert"]}
       }

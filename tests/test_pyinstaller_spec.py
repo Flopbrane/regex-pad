@@ -30,6 +30,14 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(monkeypatch: p
     assert ("resources/app_text_ja.json", "resources") in app_datas
     assert ("resources/color_presets.json", "resources") in app_datas
     assert ("dictionaries/standards/standard_css.json", "dictionaries/standards") in app_datas
+    assert (
+        "dictionaries/standards/wordpress_class_tag_reference.json",
+        "dictionaries/standards",
+    ) in app_datas
+    assert (
+        "dictionaries/standards/wordpress_block_serialization_reference.json",
+        "dictionaries/standards",
+    ) in app_datas
     assert ("dictionaries/html_dict.json", "dictionaries") in app_datas
     assert ("dictionaries/wordpress_html_dict.json", "dictionaries") in app_datas
     assert ("config.json", ".") not in app_datas

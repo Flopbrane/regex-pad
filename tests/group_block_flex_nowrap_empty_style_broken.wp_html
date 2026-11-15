@@ -1,0 +1,14 @@
+<!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap"}} -->
+<div class="wp-block-group" style=""><!-- wp:paragraph -->
+<p>今日のテスト・グループテスト<br>グループ1-左<br>かなり癖のあるコアブロックです。</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>グループ2-右<br>このブロックのコードを参照</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>グループ3<br>普通にEnterを押すと次のブロックが発生する</p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:group -->

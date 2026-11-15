@@ -4179,3 +4179,91 @@ Validation and canonical propagation:
 - Propagated the intended source, dictionary, bilingual messages, tests and this record to `D:\PC\Python\regex_pad_project`, preserving the unrelated table-policy documents and resource differences. Eight files that should be byte-identical matched by SHA-256 after transfer.
 - Canonical focused paragraph/GUI pytest: 28 passed. Full canonical pytest: 776 passed / six existing unrelated failures (one HTML-div dictionary expectation, three frame-style expectation differences and two visible-space-marker expectation differences). Full Ruff and explicit-interpreter Pyright passed; `git diff --check` reported only the checkout's existing bilingual-JSON line-ending notices.
 - The packaged EXE was not rebuilt. Physical Windows GUI and real WordPress save/reopen acceptance were not performed; the source implementation is available in the canonical project.
+
+## Step15-section43 WordPress Class-to-HTML-Tag Linter Reference
+
+Date: 2026-11-14
+
+Request: analyze the bundled WordPress core blocks and the saved business-site sample under `sample/AIに気軽に触って♪3 - キャリカク_files`, record class names and their HTML-tag relationships in JSON, and make the result a Linter reference. The user-provided verified table-block HTML was also used as saved-HTML evidence for the requested `has-*` classes.
+
+- Added `scripts/build_wordpress_class_reference.py`, a standard-library-only generator for the checked-in reference. It scans 159 non-minified/non-RTL WordPress core block CSS files inside the bundled WordPress 7.1.3 ZIP, 31 CSS and five HTML files in the saved business-site folder, and explicitly supplied verified WordPress HTML. Paths stored in the JSON are project-relative rather than machine-specific absolute paths.
+- Added `dictionaries/standards/wordpress_class_tag_reference.json` with 4,690 classes: 736 have WordPress-core evidence and 3,997 have saved business-sample evidence. Every entry records source groups, CSS selector tag evidence, observed HTML tags, and evidence counts. `has-base-color`, `has-text-color`, `has-background`, and `has-link-color` are advisory and are observed on `table`; tag-neutral CSS classes are not incorrectly treated as exhaustive tag allowlists.
+- Separated `strict` and `advisory` evidence. CSS selectors and one saved page are evidence of use, not proof that every other tag is invalid. Only audited WordPress core save relationships are enforced: `has-fixed-layout` belongs on `table`, and `wp-block-table` belongs on `figure`. Unknown/custom classes remain valid and produce no warning.
+- Loaded the new JSON once in the existing HTML Linter startup cache. Added `html_typo_lint.wordpress_class_tag_mismatch` with Japanese/English text. Character-reference whitespace such as `&#x9;` and `&#x20;` in `class` values is decoded before checking. The verified multiline table class list remains clean, while `<div class="has-fixed-layout">` reports the tag mismatch.
+- Documented the schema, safety boundary and regeneration command in `dictionaries/README.md`. The existing recursive JSON packaging path includes the new file; its packaging test now asserts the exact destination.
+
+Worktree validation:
+
+- Generated reference: 4,690 classes, two strict and 4,688 advisory; JSON size 2,787,064 bytes. The user-provided correct table sample produced zero Linter diagnostics.
+- Focused reference/Linter/translation/packaging pytest: 275 passed. Full pytest: 769 passed / 17 unrelated existing failures (11 missing Gutenberg fixture cases, four current dictionary-versus-test insertion expectations, and two visible-space marker expectations).
+- Full Ruff passed. Full Pyright with the required explicit `--pythonpath` reported 0 errors, 0 warnings and 0 informations. Running Pyright without the explicit environment path could not resolve the installed PySide6/pytest packages; the explicit configured run is the valid result. `git diff --check` passed.
+- Canonical propagation and validation follow. The packaged EXE was not rebuilt, and physical GUI/WordPress acceptance was not performed.
+
+Canonical validation:
+
+- Propagated only the ten intended source/reference/resource/test/document files to `D:\PC\Python\regex_pad_project`. The existing user-edited verified table example and all unrelated canonical files were preserved.
+- Focused reference/Linter/translation/packaging pytest: 275 passed. The verified table example again produced zero Linter diagnostics. Full canonical pytest: 780 passed / six existing unrelated failures (four current dictionary-versus-test insertion expectations and two visible-space marker expectations).
+- Full canonical Ruff passed. Full canonical Pyright with the required explicit `--pythonpath` reported 0 errors, 0 warnings and 0 informations. `git diff --check` passed.
+- Final SHA-256 equality for all ten intended files was verified after this record update. The new JSON is included by the existing recursive PyInstaller data collection, but no packaged EXE rebuild or physical GUI/WordPress acceptance was performed.
+
+## Step15-section44 Verified Flex No-Wrap Group Block
+
+Date: 2026-11-15
+
+Request: register the user's WordPress-verified `core/group` example and the follow-up result that adding `style=""` to the root `<div>` makes Gutenberg report a block error.
+
+- Added a normalized correct fixture for `<!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap"}} -->`. Backslashes used to display the sample in Markdown are not stored as block content. The accepted saved form has one root `<div class="wp-block-group">`, three direct paragraph child blocks, and no root `style` attribute.
+- Registered `layout` as an object-valued `group` block attribute in both Linter references. Registered the core-supported group root tags `article`, `aside`, `div`, `footer`, `header`, `main`, and `section` as the strict tag relationship for `wp-block-group`; the user's saved example supplies observed `<div>` evidence.
+- Added the correct fixture to the reproducible class-reference generator input. The generated reference remains at 4,690 classes and now has three strict relationships: `has-fixed-layout`, `wp-block-table`, and `wp-block-group`.
+- Added a paired broken fixture containing `<div class="wp-block-group" style="">`. The HTML Linter now reports the dedicated error `html_typo_lint.wordpress_group_empty_root_style` only for the broken form and tells the user to remove the empty attribute. The existing general group-decoration warning may also appear in that broken case.
+- Kept the evidence boundary narrow. This example does not serialize a `style` attribute or an extra layout class from its `layout` JSON, so no speculative JSON-to-style/class mapping was added. Nonempty group styles may have legitimate matching JSON and are not blanket-rejected. List, Button, Columns, Quote, image and video behavior was not changed.
+
+Worktree validation:
+
+- Focused reference/Linter/packaging/schema pytest: 277 passed. The verified correct group fixture produces zero diagnostics; the paired empty-style fixture produces the new error.
+- Full pytest: 772 passed / 17 existing unrelated failures (11 absent Gutenberg fixture cases, four current dictionary-versus-test insertion expectations, and two visible-space marker expectations).
+- Full Ruff passed. Full Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Both JSON references parsed and the group `layout` registration was checked; `git diff --check` passed.
+- Propagated the 13 intended group/reference/Linter/resource/test/document files to `D:\PC\Python\regex_pad_project`. The user-edited verified table example and all unrelated canonical files were preserved.
+- Canonical focused reference/Linter/packaging/schema pytest: 277 passed. Full canonical pytest: 783 passed / six existing unrelated failures (four current dictionary-versus-test insertion expectations and two visible-space marker expectations).
+- Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Final SHA-256 equality for all 13 intended files was verified after this record update; both JSON references parsed and `git diff --check` passed.
+- The packaged EXE was not rebuilt, and physical GUI/live WordPress acceptance was not performed by Codex; the supplied correct/broken observations are the acceptance evidence for this rule.
+
+## Step15-section45 Verified Decorated Group Serialization
+
+Date: 2026-11-15
+
+Request: register the user's WordPress-verified decorated Group block, including its matching block JSON, root classes, inline styles, and decorated child Paragraph blocks.
+
+- Added `tests/group_block_decorated_correct.wp_html` after removing only the Markdown display escapes. It preserves the accepted Group JSON, root `wp-block-group`/background/font-size classes, border/radius/margin/padding styles, three child Paragraph blocks, and the two verified Paragraph border serializations.
+- Added `dictionaries/standards/wordpress_block_serialization_reference.json` as a per-core-block correspondence table restricted to verified examples. The Group rules map `backgroundColor` to `has-{value}-background-color` plus `has-background`, `fontSize` to `has-{value}-font-size`, and the demonstrated spacing/border/radius JSON paths to their CSS properties. The Paragraph rules map the demonstrated all-sides and individual-side border widths.
+- Recorded `layout` and `style.spacing.blockGap` as verified JSON paths that are not repeated as inline styles in this saved Group example. The Paragraph `style.layout` data is likewise retained in JSON without inventing an HTML style mapping.
+- Made the HTML Linter read the new correspondence table. It checks only expected relationships whose JSON values are present; a correct decorated Group produces zero diagnostics, while a missing required class or mismatched verified inline value produces the existing block-attribute/HTML mismatch warning. The earlier empty `style=""` Group error remains active.
+- Removed `group` from the blanket “use Custom HTML for direct decoration” warning. Verified JSON-backed Group decoration is now accepted; `preformatted` retains the existing guidance. Arbitrary extra nonempty Group styles are not declared correct merely by this change, and no unverified class/style mapping is inferred.
+- Added the eight CSS longhand properties emitted by the correct example: four side-specific border widths and four corner-specific border radii. Regenerated the class/tag reference with the decorated fixture; it now contains 4,691 classes, including the observed advisory `has-accent-2-background-color` on `div`, while retaining three strict relationships.
+- Updated the dictionary documentation and packaging regression. The new JSON is collected by the existing recursive PyInstaller data rule and is structured for future class-insertion hints, but this change does not add or alter a GUI class-insertion button.
+
+Worktree validation:
+
+- Focused Linter/reference/CSS/schema/packaging pytest: 309 passed. The complete decorated fixture produces zero Linter diagnostics, and focused mismatch tests detect a removed `has-background` class and a changed `margin-top` value.
+- Full pytest: 775 passed / 17 existing unrelated failures (11 absent Gutenberg fixture cases, four current dictionary-versus-test insertion expectations, and two visible-space marker expectations).
+- Full Ruff passed. Full Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. All changed JSON parsed successfully and `git diff --check` passed.
+- Propagated the ten intended decorated-Group correspondence/CSS/Linter/fixture/test/document files to `D:\PC\Python\regex_pad_project`. The user-edited verified table example and all unrelated canonical files were preserved.
+- Canonical focused Linter/reference/CSS/schema/packaging pytest: 309 passed. Full canonical pytest: 786 passed / six existing unrelated failures (four current dictionary-versus-test insertion expectations and two visible-space marker expectations).
+- Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. Final SHA-256 equality for all ten intended files was verified after this record update; changed JSON parsed and `git diff --check` passed.
+- The packaged EXE was not rebuilt; the supplied WordPress result is the live acceptance evidence for this correspondence table.
+
+## Step15-section46 Core Block Check Implementation Plan
+
+Date: 2026-11-15
+
+Request: document the implementation order for a modeless “Core Block Check” window that displays checkable block-JSON candidates, required class candidates, and repair candidates, then inserts only the explicitly selected candidates.
+
+- Added `CORE_BLOCK_CHECK_IMPLEMENTATION_PLAN.md` as a planning document only. No action, dialog, candidate engine, or automatic edit behavior was added in this step.
+- Grounded the plan in the current modeless Grammar Check/Schema Reference patterns, tabbed editor, one-step `QTextCursor` Undo operations, read-only HTML/WordPress Linter, and verified `wordpress_block_serialization_reference.json`.
+- Split the implementation into 14 numbered steps: evidence fixtures, bidirectional rule schema, shared block parsing, source-position HTML targets, style-to-JSON candidates, JSON-to-class candidates, repairs, edit plans/previews, the modeless dialog, MainWindow binding, safe one-Undo application, Linter separation, incremental block coverage, and packaging/manual acceptance.
+- Defined the initial release scope as Group plus child Paragraph. Table follows from verified data; List, Button, Columns and Quote remain evidence-gated. Image, Video, Gallery and other media-ID-dependent paths remain explicitly out of scope.
+- Required every candidate to start unchecked, bind to the originating editor/tab/document revision, stop on stale text, preserve custom data, reject conflicting edits, show evidence level, and apply selected edits as one Undo unit. The plan forbids silent fallback to the newly focused tab.
+- Documented separate automated, physical GUI, packaged-EXE, and live WordPress save/reload/re-edit acceptance. WordPress preview alone is not an acceptance substitute.
+- Worktree and canonical document/packaging pytest: 13 passed in each checkout. Full Ruff passed and explicit-interpreter Pyright reported 0 errors, 0 warnings and 0 informations in both checkouts; `git diff --check` passed.
+- Propagated only the new plan and this implementation record to `D:\PC\Python\regex_pad_project`. Both files matched the worktree by SHA-256 after the final record update; the user-edited verified table example and all unrelated files were preserved.
+- No EXE rebuild, physical GUI operation, live WordPress operation, or core-block-check source implementation was performed in this planning step.
