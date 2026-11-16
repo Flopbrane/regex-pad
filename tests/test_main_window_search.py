@@ -350,6 +350,32 @@ def test_replace_all_can_target_selected_text_only(app: QApplication) -> None:
     assert window.editor.toPlainText() == "first 123\nsecond NUM\nthird 789"
 
 
+def test_dialog_replace_all_honours_selection_and_exclusion(app: QApplication) -> None:
+    _ = app
+    window = MainWindow()
+    source_text = "outside target\n[target] target\noutside target"
+    window.editor.setPlainText(source_text)
+    scope_start = len("outside target\n")
+    scope_end = len("outside target\n[target] target")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(scope_start)
+    cursor.setPosition(scope_end, QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    dialog.replace_text_edit.setText("done")
+    dialog.exclusion_text_edit.setText("[target]")
+    dialog.selected_only_check_box.setChecked(True)
+
+    dialog.replace_all_button.click()
+
+    assert window.editor.toPlainText() == (
+        "outside target\n[target] done\noutside target"
+    )
+
+
 def test_regex_normalise_rewrites_document_text(app: QApplication) -> None:
     _ = app
     window = MainWindow()
@@ -849,7 +875,39 @@ def test_search_highlights_can_target_selected_text_only(app: QApplication) -> N
 
     assert len(window.editor.search_matches) == 1
     assert window.editor.search_matches[0].start == 14
-    assert len(window.editor.extraSelections()) == 1
+    assert len(window.editor.extraSelections()) == 2
+
+
+def test_selected_scope_shows_search_and_exclusion_marker_colors(
+    app: QApplication,
+) -> None:
+    _ = app
+    window = MainWindow()
+    window.editor.setPlainText("outside target\n[target] target\noutside target")
+    scope_start = len("outside target\n")
+    scope_end = len("outside target\n[target] target")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(scope_start)
+    cursor.setPosition(scope_end, QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.search_scope = (scope_start, scope_end)
+
+    window.update_search_highlights(
+        "target",
+        SearchOptions(selected_only=True, exclusion_text="[target]"),
+    )
+
+    assert not window.editor.textCursor().hasSelection()
+    assert [match.text for match in window.editor.search_matches] == ["target"]
+    assert [match.text for match in window.editor.search_exclusion_matches] == [
+        "[target]"
+    ]
+    marked_text_and_color = {
+        selection.cursor.selectedText(): selection.format.background().color().name()
+        for selection in window.editor.extraSelections()
+    }
+    assert marked_text_and_color["target"] == "#ffff00"
+    assert marked_text_and_color["[target]"] == "#ff9900"
 
 
 def test_find_next_can_target_visible_text_only(

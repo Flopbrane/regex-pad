@@ -4405,3 +4405,23 @@ Validation:
 - Targeted Ruff passed for `search/html_typo_lint.py`. Targeted Pyright reported 0 errors, 0 warnings and 0 informations. The 466-line status document loaded as UTF-8 and `git diff --check` passed.
 - Canonical preflight used commit `bf5b463` and preserved the intended uncommitted Paragraph delta recorded in section51. No Python, JSON, UI or behavior file was changed by this documentation-only step.
 - Final SHA-256 equality for `WORDPRESS_LINTER_CURRENT_STATUS.md` and this `SCRIPT_STEP.md` record was verified. No full test suite, EXE rebuild, GUI operation, preview operation or live WordPress operation was performed for this documentation-only change.
+
+## Step15-section53 Selected-range Search/Replace and Match Markers
+
+Date: 2026-11-17
+
+Request: make the Find/Replace option explicitly cover both search and replacement inside the retained selection, and show search/exclusion matches in marker colors instead of leaving them hidden by the native white-on-blue selection.
+
+- Changed the option label to `選択範囲内だけを検索/置換する` / `Search/replace only selected text`, including the English help text.
+- Kept the existing selected-range replacement engine and added a dialog-level regression proving that Replace All changes only allowed matches inside the captured selection. Matches covered by the exclusion condition and matches outside the selection remain unchanged.
+- Added exclusion-match collection for display without changing replacement decisions. Normal search matches use the existing yellow search-marker color; exclusion-condition matches use the existing orange current-marker color.
+- When selected-range search is active, the original native dark-blue selection is collapsed after its bounds are retained. The retained scope is shown in pale blue, with yellow and orange match markers layered on top, so the marker colors remain visible.
+- Clearing or leaving the selected-range search mode also clears the retained scope/exclusion marker state from the editor display.
+
+Minimal validation requested by the user:
+
+- Worktree: four focused tests passed, covering the bilingual option label, actual dialog Replace All with selection plus exclusion, selected-scope search highlighting, and the yellow/orange marker colors.
+- Targeted Ruff passed for the changed Python/test files. Targeted Pyright with the required explicit Python interpreter path reported 0 errors, 0 warnings and 0 informations.
+- Canonical preflight found a clean `D:\PC\Python\regex_pad_project` at commit `4932e7b`. Each destination differed from the worktree only by this intended change, so the ten source/resource/test/document files were transferred without overwriting unrelated work.
+- Canonical: the same four focused tests passed. Targeted Ruff passed, targeted Pyright reported 0 errors, both changed localization JSON files loaded successfully, and `git diff --check` passed. Final SHA-256 equality for all ten intended files was verified after this record update.
+- The full pytest, full-project Ruff, and full-project Pyright suites were not run. The packaged EXE was not rebuilt and physical GUI acceptance was not performed.

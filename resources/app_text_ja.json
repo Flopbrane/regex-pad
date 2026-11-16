@@ -413,7 +413,7 @@
   "find.case_sensitive": "大文字と小文字を区別する",
   "find.regex": "正規表現として検索する",
   "find.whole_word": "単語全体に一致するものだけ",
-  "find.selected_only": "選択範囲内だけを検索する",
+  "find.selected_only": "選択範囲内だけを検索/置換する",
   "find.visible_only": "表示中の範囲だけを検索する",
   "find.unicode_normalize": "Unicode正規化置換",
   "find.unicode_normalize_hint": "一致した文字列だけをUnicode正規化結果で置換します。一致範囲外は変更しません。",

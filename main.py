@@ -3724,9 +3724,26 @@ class MainWindow(QMainWindow):
                 options,
                 max_matches=MAX_AUTO_SEARCH_HIGHLIGHTS,
             )
+            exclusion_matches = self.search_engine.find_exclusion_matches(
+                source_text,
+                options,
+                max_matches=MAX_AUTO_SEARCH_HIGHLIGHTS,
+            )
         except RegexError:
             self.editor.clear_search_matches()
             return
+
+        scope_bounds: tuple[int, int] | None = None
+        if options.selected_only:
+            scope_bounds = (scope_offset, scope_offset + len(source_text))
+            cursor = self.editor.textCursor()
+            selection_bounds = (
+                self.editor.cursor_position_to_text_position(cursor.selectionStart()),
+                self.editor.cursor_position_to_text_position(cursor.selectionEnd()),
+            )
+            if cursor.hasSelection() and selection_bounds == scope_bounds:
+                cursor.clearSelection()
+                self.editor.setTextCursor(cursor)
 
         self.editor.set_search_matches(
             [
@@ -3736,7 +3753,16 @@ class MainWindow(QMainWindow):
                     match.text,
                 )
                 for match in matches
-            ]
+            ],
+            [
+                SearchMatch(
+                    match.start + scope_offset,
+                    match.end + scope_offset,
+                    match.text,
+                )
+                for match in exclusion_matches
+            ],
+            scope_bounds,
         )
 
     def _refresh_search_highlights_from_dialog(self) -> None:

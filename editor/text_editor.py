@@ -146,8 +146,11 @@ class TextEditor(QPlainTextEdit):
         self.search_marker_area = SearchMarkerArea(self)
         self.line_numbers_enabled = True
         self.search_matches: list[SearchMatch] = []
+        self.search_exclusion_matches: list[SearchMatch] = []
+        self.search_scope_bounds: tuple[int, int] | None = None
         self.search_marker_color = "#ffff00"
         self.current_match_marker_color = "#ff9900"
+        self.search_scope_marker_color = "#dcecff"
         self.grammar_issue_lines: list[int] = []
         self.grammar_issue_background_color = "#ffe3e3"
         self.visible_spaces_enabled = False
@@ -398,15 +401,22 @@ class TextEditor(QPlainTextEdit):
         painter.setPen(QColor("#1f9d55"))
         painter.drawLine(line_x, event.rect().top(), line_x, event.rect().bottom())
 
-    def set_search_matches(self, matches: list[SearchMatch]) -> None:
+    def set_search_matches(
+        self,
+        matches: list[SearchMatch],
+        exclusion_matches: list[SearchMatch] | None = None,
+        scope_bounds: tuple[int, int] | None = None,
+    ) -> None:
         """検索マッチのリストを設定するメソッド"""
         self.search_matches = matches
+        self.search_exclusion_matches = exclusion_matches or []
+        self.search_scope_bounds = scope_bounds
         self._apply_extra_selections()
         self.search_marker_area.update()
 
     def clear_search_matches(self) -> None:
         """検索マッチをクリアするメソッド"""
-        self.set_search_matches([])
+        self.set_search_matches([], [], None)
 
     def set_search_marker_colors(
         self,
@@ -642,8 +652,32 @@ class TextEditor(QPlainTextEdit):
     def _apply_extra_selections(self) -> None:
         """文法エラーと検索マッチのハイライトを適用するヘルパーメソッド"""
         selections: list[QTextEdit.ExtraSelection] = self._grammar_issue_selections()
+        scope_selection = self._search_scope_selection()
+        if scope_selection is not None:
+            selections.append(scope_selection)
         selections.extend(self._search_match_selections())
         self.setExtraSelections(selections)
+
+    def _search_scope_selection(self) -> QTextEdit.ExtraSelection | None:
+        """Create the retained selected-range highlight used during scoped search."""
+        if self.search_scope_bounds is None:
+            return None
+        scope_start, scope_end = self.search_scope_bounds
+        if scope_start >= scope_end:
+            return None
+
+        scope_format = QTextCharFormat()
+        scope_format.setBackground(QColor(self.search_scope_marker_color))
+        scope_cursor = QTextCursor(self.document())
+        scope_cursor.setPosition(self.text_position_to_cursor_position(scope_start))
+        scope_cursor.setPosition(
+            self.text_position_to_cursor_position(scope_end),
+            QTextCursor.MoveMode.KeepAnchor,
+        )
+        selection = QTextEdit.ExtraSelection()
+        selection.format = scope_format
+        selection.cursor = scope_cursor
+        return selection
 
     def _grammar_issue_selections(self) -> list[QTextEdit.ExtraSelection]:
         """文法エラーの行に対するハイライトを適用するヘルパーメソッド"""
@@ -669,6 +703,8 @@ class TextEditor(QPlainTextEdit):
         highlight_format.setBackground(QColor(self.search_marker_color))
         current_highlight_format: QTextCharFormat = QTextCharFormat()
         current_highlight_format.setBackground(QColor(self.current_match_marker_color))
+        exclusion_highlight_format: QTextCharFormat = QTextCharFormat()
+        exclusion_highlight_format.setBackground(QColor(self.current_match_marker_color))
 
         selections: list[QTextEdit.ExtraSelection] = []
         cursor: QTextCursor = self.textCursor()
@@ -683,6 +719,19 @@ class TextEditor(QPlainTextEdit):
                 if match.start == selection_start and match.end == selection_end
                 else highlight_format
             )
+            match_cursor: QTextCursor = QTextCursor(self.document())
+            match_cursor.setPosition(self.text_position_to_cursor_position(match.start))
+            match_cursor.setPosition(
+                self.text_position_to_cursor_position(match.end),
+                QTextCursor.MoveMode.KeepAnchor,
+            )
+            selection.cursor = match_cursor
+            selections.append(selection)
+        for match in self.search_exclusion_matches[:1000]:
+            if match.start == match.end:
+                continue
+            selection: QTextEdit.ExtraSelection = QTextEdit.ExtraSelection()
+            selection.format = exclusion_highlight_format
             match_cursor: QTextCursor = QTextCursor(self.document())
             match_cursor.setPosition(self.text_position_to_cursor_position(match.start))
             match_cursor.setPosition(

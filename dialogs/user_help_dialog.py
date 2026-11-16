@@ -42,7 +42,7 @@ HELP_TOPICS = {
             """# Search / Replace
 
 - Find / Replace: Ctrl+F.
-- Use Case-sensitive, Regular expression, Whole word, Search only selected text, or Search only visible text as needed.
+- Use Case-sensitive, Regular expression, Whole word, Search/replace only selected text, or Search only visible text as needed.
 - Preview shows replacement results before applying them.
 - Regex Help opens examples and can insert a pattern into the Find field.
 - Use the arrow buttons next to the Find text field to move to the previous or next match.

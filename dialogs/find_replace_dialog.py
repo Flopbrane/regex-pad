@@ -61,7 +61,7 @@ class FindReplaceDialog(QDialog):
         self.case_sensitive_check_box = QCheckBox("Case-sensitive", self)
         self.regular_expression_check_box = QCheckBox("Regular expression", self)
         self.whole_word_check_box = QCheckBox("Whole word", self)
-        self.selected_only_check_box = QCheckBox("Search only selected text", self)
+        self.selected_only_check_box = QCheckBox("Search/replace only selected text", self)
         self.visible_only_check_box = QCheckBox("Search only visible text", self)
         self.unicode_normalize_separator = QFrame(self)
         self.unicode_normalize_separator.setFrameShape(QFrame.Shape.HLine)

@@ -44,6 +44,13 @@ def test_recipe_sets_find_replace_and_regex_mode(app: QApplication) -> None:
     assert dialog.regular_expression_check_box.isChecked()
 
 
+def test_selected_scope_label_includes_replace(app: QApplication) -> None:
+    _ = app
+    dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
+
+    assert dialog.selected_only_check_box.text() == "選択範囲内だけを検索/置換する"
+
+
 def test_paragraph_boundary_recipe_matches_lf_and_crlf(app: QApplication) -> None:
     _ = app
     translator = Translator(Path("resources"), "en")

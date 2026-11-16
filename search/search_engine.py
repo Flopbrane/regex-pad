@@ -58,6 +58,27 @@ class SearchEngine:
                 break
         return matches
 
+    def find_exclusion_matches(
+        self,
+        source_text: str,
+        options: SearchOptions | None = None,
+        *,
+        max_matches: int | None = None,
+    ) -> list[SearchMatch]:
+        """Return nonempty exclusion matches for marker display."""
+        search_options = options or SearchOptions()
+        if not search_options.exclusion_text:
+            return []
+
+        excluded_ranges = self._excluded_ranges(source_text, search_options)
+        matches = [
+            SearchMatch(start, end, source_text[start:end])
+            for start, end in excluded_ranges
+        ]
+        if max_matches is not None:
+            return matches[:max_matches]
+        return matches
+
     def find_next(
         self,
         source_text: str,
