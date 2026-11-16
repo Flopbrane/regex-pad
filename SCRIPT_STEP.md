@@ -4425,3 +4425,22 @@ Minimal validation requested by the user:
 - Canonical preflight found a clean `D:\PC\Python\regex_pad_project` at commit `4932e7b`. Each destination differed from the worktree only by this intended change, so the ten source/resource/test/document files were transferred without overwriting unrelated work.
 - Canonical: the same four focused tests passed. Targeted Ruff passed, targeted Pyright reported 0 errors, both changed localization JSON files loaded successfully, and `git diff --check` passed. Final SHA-256 equality for all ten intended files was verified after this record update.
 - The full pytest, full-project Ruff, and full-project Pyright suites were not run. The packaged EXE was not rebuilt and physical GUI acceptance was not performed.
+
+## Step15-section54 Preserve WordPress Linter Evidence JSON in Packaging
+
+Date: 2026-11-17
+
+Request: keep the JSON gathered while strengthening the WordPress Linter inside the PyInstaller distribution and continue using the currently verified major-core-block JSON checks.
+
+- Confirmed that the current spec collects all 13 dictionary JSON files and all six resource JSON files. No current runtime dictionary is omitted.
+- Preserved `analysis_cases` JSON and the root Linter verification records as intentional packaged research evidence. Added a spec comment clarifying that these files are retained evidence, while only validated files under `dictionaries` are consumed as runtime rules.
+- Added packaging regressions for `analysis_cases/evidence_verification.json` and `linter_modification_manifest.json` so a future cleanup does not silently remove the evidence requested by the user.
+- Kept the current safety boundary: evidence JSON is not automatically promoted into diagnostics. JSON syntax checks apply to WordPress block attributes, known-attribute coverage exists for the registered block set, selected type/value rules are active, and verified JSON-to-class/style serialization rules are active for 13 core block types.
+- No Linter rule, severity, dictionary content, or PyInstaller copy behavior was changed in this step.
+
+Minimal validation:
+
+- The focused PyInstaller data-selection test passed and confirmed both evidence paths remain in `app_datas`.
+- Four representative WordPress JSON Linter tests also passed: malformed JSON, unknown block attributes, invalid attribute types, and a verified decorated Paragraph serialization.
+- Propagated the spec comment, packaging regression and this record to `D:\PC\Python\regex_pad_project`. The same five focused tests passed there; targeted Ruff and Pyright passed, `git diff --check` passed, and SHA-256 equality was verified for all three transferred files.
+- No full pytest run, PyInstaller build, packaged-EXE launch, or live WordPress operation was performed.

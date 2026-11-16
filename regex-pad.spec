@@ -26,6 +26,9 @@ ICON_FILE = PROJECT_DIR / "assets" / "icons" / "regex_pad_icon.ico"
 ICON_PATH = str(ICON_FILE) if ICON_FILE.exists() else None
 
 def _project_json_datas():
+    # Keep Linter evidence JSON (including analysis_cases and root verification
+    # records) in the bundle.  They are retained research material; only the
+    # validated dictionaries under dictionaries/ are used as runtime rules.
     ignored_parts = {"build", "dist", "_internal", ".git", ".vscode", "runtime", "Temp", "install_records", "logs", "cache", "modules", "data"}
     ignored_names = {"pyrightconfig.json"}
     user_editable_root_json = {Path("config.json"), Path("color_presets.json")}

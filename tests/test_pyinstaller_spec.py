@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -18,7 +20,10 @@ def test_pyinstaller_spec_collects_project_json_files() -> None:
     assert '"_internal"' in spec_text
 
 
-def test_pyinstaller_spec_json_datas_include_current_project_json(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pyinstaller_spec_json_datas_include_current_project_json(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     monkeypatch.setenv("REGEXPAD_SKIP_WORDPRESS_RUNTIME", "1")
     spec_path = Path("regex-pad.spec")
     spec_prefix = spec_path.read_text(encoding="utf-8").split("a = Analysis", maxsplit=1)[0]
@@ -40,10 +45,24 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(monkeypatch: p
     ) in app_datas
     assert ("dictionaries/html_dict.json", "dictionaries") in app_datas
     assert ("dictionaries/wordpress_html_dict.json", "dictionaries") in app_datas
+    assert ("linter_modification_manifest.json", ".") in app_datas
     assert ("config.json", ".") not in app_datas
     assert ("color_presets.json", ".") not in app_datas
     assert all(not source.startswith("_internal/") for source, _target in app_datas)
     assert all(not source.startswith("runtime/") for source, _target in app_datas)
+
+    analysis_path = tmp_path / "analysis_cases" / "evidence_verification.json"
+    analysis_path.parent.mkdir()
+    analysis_path.write_text("{}", encoding="utf-8")
+    namespace["PROJECT_ROOT"] = tmp_path
+    project_json_datas = cast(
+        Callable[[], list[tuple[str, str]]],
+        namespace["_project_json_datas"],
+    )
+    assert (
+        "analysis_cases/evidence_verification.json",
+        "analysis_cases",
+    ) in project_json_datas()
 
 
 def test_pyinstaller_spec_builds_gui_app_without_upx() -> None:
