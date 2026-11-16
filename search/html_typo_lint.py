@@ -431,7 +431,7 @@ WORDPRESS_BLOCK_ATTRIBUTE_ALLOWLISTS = {
     },
     "list": COMMON_WORDPRESS_BLOCK_ATTRIBUTES | {"ordered", "reversed", "start", "type"},
     "paragraph": COMMON_WORDPRESS_BLOCK_ATTRIBUTES
-    | {"content", "direction", "dropCap", "placeholder"},
+    | {"content", "direction", "dropCap", "fitText", "fontFamily", "placeholder"},
     "separator": COMMON_WORDPRESS_BLOCK_ATTRIBUTES | {"opacity"},
     "spacer": COMMON_WORDPRESS_BLOCK_ATTRIBUTES | {"height", "width"},
 }
@@ -447,6 +447,7 @@ WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES = {
     ("group", "layout"): "object",
     ("heading", "level"): "integer",
     ("paragraph", "dropCap"): "boolean",
+    ("paragraph", "fitText"): "boolean",
 }
 WORDPRESS_BLOCK_ATTRIBUTE_VALUE_RULES = {
     ("accordion", "iconPosition"): {"left", "right"},
@@ -1977,8 +1978,12 @@ def _lint_verified_wordpress_serialization(
             if not isinstance(json_path, str) or not isinstance(templates, list):
                 continue
             value = _nested_wordpress_attribute(block_attributes, json_path)
-            if not isinstance(value, str):
+            if "equals" in class_rule:
+                if value != class_rule["equals"]:
+                    continue
+            elif not isinstance(value, str):
                 continue
+            value_text = value if isinstance(value, str) else str(value).lower()
             target_name = class_rule.get("html_target", "root")
             if not isinstance(target_name, str):
                 continue
@@ -1993,14 +1998,14 @@ def _lint_verified_wordpress_serialization(
             for template in templates:
                 if not isinstance(template, str):
                     continue
-                expected_class = template.replace("{value}", value)
+                expected_class = template.replace("{value}", value_text)
                 if expected_class not in target_classes:
                     messages.append(
                         _wordpress_attribute_html_mismatch_message(
                             line_number,
                             block_name,
                             json_path,
-                            value,
+                            value_text,
                             target_attributes.get("class", "(absent)"),
                         )
                     )

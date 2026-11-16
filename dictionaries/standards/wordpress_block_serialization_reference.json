@@ -45,7 +45,8 @@
         "tests/group_block_decorated_correct.wp_html",
         "tests/quote_block_decorated_correct.wp_html",
         "tests/accordion_block_background_font_correct.wp_html",
-        "tests/accordion_block_border_correct.wp_html"
+        "tests/accordion_block_border_correct.wp_html",
+        "tests/paragraph_block_decorated_correct.wp_html"
       ],
       "root_tags": ["p"],
       "required_classes": [],
@@ -53,6 +54,23 @@
         {
           "json_path": "backgroundColor",
           "class_templates": ["has-{value}-background-color", "has-background"]
+        },
+        {
+          "json_path": "textColor",
+          "class_templates": ["has-{value}-color", "has-text-color"]
+        },
+        {
+          "json_path": "style.elements.link.color.text",
+          "class_templates": ["has-link-color"]
+        },
+        {
+          "json_path": "fontFamily",
+          "class_templates": ["has-{value}-font-family"]
+        },
+        {
+          "json_path": "fitText",
+          "equals": true,
+          "class_templates": ["has-fit-text"]
         }
       ],
       "style_rules": [
@@ -64,9 +82,22 @@
         {"json_path": "style.spacing.margin.top", "css_property": "margin-top", "value_transform": "wordpress_preset_variable"},
         {"json_path": "style.spacing.margin.right", "css_property": "margin-right", "value_transform": "wordpress_preset_variable"},
         {"json_path": "style.spacing.margin.bottom", "css_property": "margin-bottom", "value_transform": "wordpress_preset_variable"},
-        {"json_path": "style.spacing.margin.left", "css_property": "margin-left", "value_transform": "wordpress_preset_variable"}
+        {"json_path": "style.spacing.margin.left", "css_property": "margin-left", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.top", "css_property": "padding-top", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.right", "css_property": "padding-right", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.bottom", "css_property": "padding-bottom", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.spacing.padding.left", "css_property": "padding-left", "value_transform": "wordpress_preset_variable"},
+        {"json_path": "style.typography.fontStyle", "css_property": "font-style"},
+        {"json_path": "style.typography.fontWeight", "css_property": "font-weight"},
+        {"json_path": "style.typography.letterSpacing", "css_property": "letter-spacing"},
+        {"json_path": "style.typography.lineHeight", "css_property": "line-height"},
+        {"json_path": "style.typography.textDecoration", "css_property": "text-decoration"},
+        {"json_path": "style.typography.textIndent", "css_property": "text-indent"}
       ],
-      "verified_non_inline_paths": ["style.layout"],
+      "verified_non_inline_paths": [
+        "style.layout",
+        "style.elements.link.:hover.color.text"
+      ],
       "forbidden_empty_root_attributes": []
     },
     "buttons": {

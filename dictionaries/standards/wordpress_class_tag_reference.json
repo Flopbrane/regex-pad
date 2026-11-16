@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_date": "2026-11-15",
+  "generated_date": "2026-11-16",
   "policy": {
     "strict": "The relationship was confirmed in WordPress core save output and may be checked by the Linter.",
     "advisory": "CSS selectors and observed HTML provide reference evidence only; selector_tags and observed_html_tags are not an exhaustive allowlist.",
@@ -219,13 +219,14 @@
       "tests/pullquote_block_decorated_correct.wp_html",
       "tests/accordion_block_background_font_correct.wp_html",
       "tests/accordion_block_border_correct.wp_html",
-      "tests/columns_block_mixed_content_correct.wp_html"
+      "tests/columns_block_mixed_content_correct.wp_html",
+      "tests/paragraph_block_decorated_correct.wp_html"
     ]
   },
   "summary": {
-    "class_count": 4698,
+    "class_count": 4700,
     "strict_class_count": 19,
-    "advisory_class_count": 4679
+    "advisory_class_count": 4681
   },
   "classes": {
     "__resizable_base__": {
@@ -45926,11 +45927,12 @@
       "selector_evidence_count": 0,
       "selector_source_count": 0,
       "selector_sources": [],
-      "html_evidence_count": 3,
-      "html_source_count": 3,
+      "html_evidence_count": 4,
+      "html_source_count": 4,
       "html_sources": [
         "tests/accordion_block_background_font_correct.wp_html",
         "tests/accordion_block_border_correct.wp_html",
+        "tests/paragraph_block_decorated_correct.wp_html",
         "tests/quote_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
@@ -46003,6 +46005,28 @@
       "html_source_count": 1,
       "html_sources": [
         "tests/button_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
+    "has-accent-3-color": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "p"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/paragraph_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -46160,8 +46184,8 @@
         "wordpress/wp-includes/blocks/button/style.css",
         "wordpress/wp-includes/blocks/calendar/style.css"
       ],
-      "html_evidence_count": 11,
-      "html_source_count": 8,
+      "html_evidence_count": 12,
+      "html_source_count": 9,
       "html_sources": [
         "docs_jp/example of the correct approach to table core control.wp_html",
         "tests/accordion_block_background_font_correct.wp_html",
@@ -46752,14 +46776,39 @@
       "html_sources": [],
       "semantic_sources": []
     },
+    "has-fira-code-font-family": {
+      "tag_scope": "advisory",
+      "allowed_tags": [
+        "*"
+      ],
+      "selector_tags": [],
+      "observed_html_tags": [
+        "p"
+      ],
+      "source_groups": [
+        "verified_wordpress_html"
+      ],
+      "selector_evidence_count": 0,
+      "selector_source_count": 0,
+      "selector_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/paragraph_block_decorated_correct.wp_html"
+      ],
+      "semantic_sources": []
+    },
     "has-fit-text": {
       "tag_scope": "advisory",
       "allowed_tags": [
         "*"
       ],
       "selector_tags": [],
-      "observed_html_tags": [],
+      "observed_html_tags": [
+        "p"
+      ],
       "source_groups": [
+        "verified_wordpress_html",
         "wordpress_core_css"
       ],
       "selector_evidence_count": 1,
@@ -46767,9 +46816,11 @@
       "selector_sources": [
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 0,
-      "html_source_count": 0,
-      "html_sources": [],
+      "html_evidence_count": 1,
+      "html_source_count": 1,
+      "html_sources": [
+        "tests/paragraph_block_decorated_correct.wp_html"
+      ],
       "semantic_sources": []
     },
     "has-fixed-layout": {
@@ -47099,6 +47150,7 @@
       "selector_tags": [],
       "observed_html_tags": [
         "a",
+        "p",
         "table"
       ],
       "source_groups": [
@@ -47113,11 +47165,12 @@
         "wordpress/wp-includes/blocks/paragraph/style.css",
         "wordpress/wp-includes/css/dist/block-library/style.css"
       ],
-      "html_evidence_count": 2,
-      "html_source_count": 2,
+      "html_evidence_count": 3,
+      "html_source_count": 3,
       "html_sources": [
         "docs_jp/example of the correct approach to table core control.wp_html",
-        "tests/button_block_decorated_correct.wp_html"
+        "tests/button_block_decorated_correct.wp_html",
+        "tests/paragraph_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },
@@ -47695,6 +47748,7 @@
       ],
       "observed_html_tags": [
         "a",
+        "p",
         "table"
       ],
       "source_groups": [
@@ -47710,11 +47764,12 @@
         "wordpress/wp-includes/blocks/calendar/style.css",
         "wordpress/wp-includes/blocks/cover/style.css"
       ],
-      "html_evidence_count": 2,
-      "html_source_count": 2,
+      "html_evidence_count": 3,
+      "html_source_count": 3,
       "html_sources": [
         "docs_jp/example of the correct approach to table core control.wp_html",
-        "tests/button_block_decorated_correct.wp_html"
+        "tests/button_block_decorated_correct.wp_html",
+        "tests/paragraph_block_decorated_correct.wp_html"
       ],
       "semantic_sources": []
     },

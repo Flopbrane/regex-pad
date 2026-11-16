@@ -26,6 +26,8 @@
         "content": {"type": "string"},
         "direction": {"type": "string", "enum": ["ltr", "rtl"]},
         "dropCap": {"type": "boolean"},
+        "fitText": {"type": "boolean"},
+        "fontFamily": {"type": "string"},
         "placeholder": {"type": "string"}
       }
     },

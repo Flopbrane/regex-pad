@@ -1632,6 +1632,35 @@ def test_lint_accepts_verified_decorated_group_block() -> None:
     assert lint_html_typos(source) == []
 
 
+def test_lint_accepts_verified_decorated_paragraph_block() -> None:
+    source = (
+        Path(__file__).parent / "paragraph_block_decorated_correct.wp_html"
+    ).read_text(encoding="utf-8")
+
+    assert lint_html_typos(source) == []
+
+
+def test_lint_reports_verified_paragraph_fit_text_and_weight_mismatches() -> None:
+    source = (
+        Path(__file__).parent / "paragraph_block_decorated_correct.wp_html"
+    ).read_text(encoding="utf-8")
+    broken_source = source.replace("has-fit-text ", "", 1).replace(
+        "font-weight:700",
+        "font-weight:400",
+        1,
+    )
+
+    mismatch_attributes = {
+        message.values.get("attribute")
+        for message in lint_html_typos(broken_source)
+        if message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
+        and message.values
+    }
+
+    assert "fitText" in mismatch_attributes
+    assert "style.typography.fontWeight" in mismatch_attributes
+
+
 def test_lint_accepts_verified_decorated_button_block() -> None:
     source = (Path(__file__).parent / "button_block_decorated_correct.wp_html").read_text(
         encoding="utf-8"

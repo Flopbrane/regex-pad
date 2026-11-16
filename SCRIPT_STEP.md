@@ -4363,3 +4363,45 @@ Canonical validation:
 - Canonical focused Linter/reference/schema pytest: 299 passed. Full canonical pytest: 807 passed / six existing unrelated failures (four insertion-snippet expectation mismatches and two visible-space marker expectations). The verified Columns fixture again produced zero diagnostics.
 - Full canonical Ruff passed. Full canonical Pyright with the required explicit interpreter path reported 0 errors, 0 warnings and 0 informations. All changed JSON parsed, the generator reproduced the checked-in 4,698-class reference exactly, and `git diff --check` passed.
 - Final SHA-256 equality for all 12 intended source/reference/fixture/test/document files was verified after this record update. The packaged EXE was not rebuilt; the user's supplied WordPress result is the live acceptance evidence for this Columns structure.
+
+## Step15-section51 Verified Decorated Paragraph Block
+
+Date: 2026-11-16
+
+Request: register the user's WordPress-verified decorated `core/paragraph` example and keep post-analysis testing to the minimum relevant set.
+
+- Added `tests/paragraph_block_decorated_correct.wp_html`, removing only the Markdown display escapes. The saved fixture retains the inline Strong/Break/Link content, while the displayed `http\://` escape was normalized to the actual HTML URL `http://`.
+- Extended the verified Paragraph correspondence table. `backgroundColor`, `textColor`, link preset color, `fontFamily`, and boolean `fitText: true` map to their demonstrated root classes. The Linter rule format now supports an exact-value condition so `has-fit-text` is required only when `fitText` is true.
+- Added the demonstrated inline mappings for four border sides, four margin sides, four padding sides, and typography `fontStyle`, `fontWeight`, `letterSpacing`, `lineHeight`, `textDecoration`, and `textIndent`.
+- Recorded `style.elements.link.:hover.color.text` as a verified JSON-only path for this saved example. It does not produce an additional inline declaration or a separate class; the link element settings are represented by the root `has-link-color` class.
+- Added `fontFamily` and `fitText` to the Paragraph attribute dictionaries and schema, with `fitText` validated as boolean. Regenerated the class/tag reference from the new fixture: 4,700 classes, 19 strict and 4,681 advisory. The new observed `has-fira-code-font-family` relationship remains advisory rather than being incorrectly restricted to Paragraph only.
+- Updated dictionary documentation and the reproducible generator command. No unrelated block rules, GUI actions, automatic insertion behavior, or media handling were changed.
+
+Minimal validation requested by the user:
+
+- Worktree: five focused tests passed. They cover the complete fixture with zero diagnostics, `fitText`/font-weight mismatch detection, class-reference evidence, Paragraph correspondence data, and schema/reference consistency.
+- Canonical: propagated the Paragraph-only delta onto clean commit `bf5b463` in `D:\PC\Python\regex_pad_project`; the same five focused tests passed and the fixture again produced zero diagnostics.
+- Targeted Ruff passed for the three changed Python/test files. Targeted Pyright reported 0 errors, 0 warnings and 0 informations. Four changed JSON files parsed, the canonical generator reproduced the 4,700-class reference exactly, and `git diff --check` passed.
+- In accordance with the request, the full pytest, full-project Ruff, and full-project Pyright suites were not run. The packaged EXE was not rebuilt and Codex did not repeat the live WordPress save/reload test; the supplied WordPress result is the acceptance evidence for this rule set.
+
+## Step15-section52 WordPress Linter Current Capability Boundary
+
+Date: 2026-11-16
+
+Request: summarize in Markdown how much of WordPress Linting is currently implemented, which diagnostics are practical, and where Gutenberg-level compatibility remains out of scope.
+
+- Added `WORDPRESS_LINTER_CURRENT_STATUS.md` as an evidence-backed current-state document. It defines RegexPad as a paste-safety and content-loss-prevention Linter with a second, partial verified-serialization layer, not as a complete Gutenberg `save()` validator.
+- Documented the implemented HTML/CSS checks, WordPress block boundaries, parent/child rules, non-container blocks, root HTML shapes, selected block attributes, severity policy, class-reference policy, and preview limitations.
+- Recorded the current measured coverage from the checked-in dictionaries: 23 blocks with selected attribute schemas, 13 blocks with verified serialization entries, and 4,700 class references consisting of 19 strict and 4,681 advisory relationships.
+- Separated structural coverage from serialization coverage. Table has verified strict class/tag relationships but is not yet in the 13-block full correspondence table; List/List item and Heading have structural/selected-attribute checks but no verified decoration serialization table.
+- Listed the unimplemented boundaries: complete Gutenberg compatibility, Style Engine reimplementation, theme/plugin variants, internal media and page IDs, the planned Core Block Check dialog, candidate generation, automatic insertion, preview-before-apply and one-Undo repair.
+- Added a realistic daily workflow: use readable Paragraph/RichText HTML for simple text decoration, use WordPress controls for paragraph-wide/container decoration, run RegexPad F7 for paste safety, and use real Gutenberg save/reload/re-edit as final acceptance.
+- Explained that the existing structural Linter does not need a complete rewrite. Candidate generation and automatic insertion, if resumed, should remain a separate engine from read-only diagnostics.
+
+Validation:
+
+- Verified all nine related file paths referenced by the document. Re-read the active JSON dictionaries and confirmed the documented counts of 23, 13, 4,700, 19 and 4,681.
+- Canonical representative pytest: eight focused tests passed, covering HTML tag order, missing WordPress close, attribute types, decorated Paragraph, Columns, strict class/tag checks, Heading consistency and Separator contamination.
+- Targeted Ruff passed for `search/html_typo_lint.py`. Targeted Pyright reported 0 errors, 0 warnings and 0 informations. The 466-line status document loaded as UTF-8 and `git diff --check` passed.
+- Canonical preflight used commit `bf5b463` and preserved the intended uncommitted Paragraph delta recorded in section51. No Python, JSON, UI or behavior file was changed by this documentation-only step.
+- Final SHA-256 equality for `WORDPRESS_LINTER_CURRENT_STATUS.md` and this `SCRIPT_STEP.md` record was verified. No full test suite, EXE rebuild, GUI operation, preview operation or live WordPress operation was performed for this documentation-only change.

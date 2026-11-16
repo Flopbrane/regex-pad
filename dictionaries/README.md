@@ -155,6 +155,12 @@ the two separator-specific classes. Width, vertical alignment, gap, and other
 Columns decoration rules are intentionally not inferred from this undecorated
 example.
 
+The verified decorated Paragraph example records text/background/link/font
+classes, the boolean `fitText` class, border widths, four-sided margin and
+padding, and the demonstrated typography properties. The link hover preset is
+stored in block JSON but is not repeated as an inline declaration in the saved
+Paragraph HTML, so it is recorded as a verified non-inline path.
+
 Regenerate the checked-in reference with the required Python interpreter:
 
 ```powershell
@@ -170,6 +176,7 @@ D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe scripts\build_wordpress_class_r
   --extra-html "tests\accordion_block_background_font_correct.wp_html" `
   --extra-html "tests\accordion_block_border_correct.wp_html" `
   --extra-html "tests\columns_block_mixed_content_correct.wp_html" `
+  --extra-html "tests\paragraph_block_decorated_correct.wp_html" `
   --source-root . `
   --output dictionaries\standards\wordpress_class_tag_reference.json
 ```

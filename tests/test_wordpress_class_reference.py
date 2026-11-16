@@ -72,6 +72,8 @@ def test_reference_contains_verified_table_classes_and_business_sample() -> None
     assert "hr" in classes["has-alpha-channel-opacity"]["observed_html_tags"]
     assert "div" in classes["wp-block-group"]["observed_html_tags"]
     assert "div" in classes["has-accent-2-background-color"]["observed_html_tags"]
+    assert "p" in classes["has-fit-text"]["observed_html_tags"]
+    assert classes["has-fira-code-font-family"]["observed_html_tags"] == ["p"]
     for class_name in (
         "has-base-color",
         "has-text-color",
@@ -161,17 +163,37 @@ def test_serialization_reference_records_verified_quote_rules() -> None:
         and rule["css_property"] == "border-width"
         for rule in pullquote_rules["style_rules"]
     )
-    assert paragraph_rules["attribute_class_rules"] == [
-        {
-            "json_path": "backgroundColor",
-            "class_templates": ["has-{value}-background-color", "has-background"],
-        }
-    ]
+    assert {
+        rule["json_path"] for rule in paragraph_rules["attribute_class_rules"]
+    } == {
+        "backgroundColor",
+        "fitText",
+        "fontFamily",
+        "style.elements.link.color.text",
+        "textColor",
+    }
+    assert next(
+        rule
+        for rule in paragraph_rules["attribute_class_rules"]
+        if rule["json_path"] == "fitText"
+    ) == {
+        "json_path": "fitText",
+        "equals": True,
+        "class_templates": ["has-fit-text"],
+    }
     assert any(
         rule["json_path"] == "style.spacing.margin.right"
         and rule["css_property"] == "margin-right"
         for rule in paragraph_rules["style_rules"]
     )
+    assert any(
+        rule["json_path"] == "style.typography.textIndent"
+        and rule["css_property"] == "text-indent"
+        for rule in paragraph_rules["style_rules"]
+    )
+    assert "style.elements.link.:hover.color.text" in paragraph_rules[
+        "verified_non_inline_paths"
+    ]
 
 
 def test_serialization_reference_records_verified_accordion_rules() -> None:
