@@ -4444,3 +4444,50 @@ Minimal validation:
 - Four representative WordPress JSON Linter tests also passed: malformed JSON, unknown block attributes, invalid attribute types, and a verified decorated Paragraph serialization.
 - Propagated the spec comment, packaging regression and this record to `D:\PC\Python\regex_pad_project`. The same five focused tests passed there; targeted Ruff and Pyright passed, `git diff --check` passed, and SHA-256 equality was verified for all three transferred files.
 - No full pytest run, PyInstaller build, packaged-EXE launch, or live WordPress operation was performed.
+
+## Step15-section55 Pseudo-macro Package Skeleton
+
+Date: 2026-11-17
+
+Request: create the future `macro` package and add only module Docstrings before implementing the pseudo-macro feature.
+
+- Added `macro/__init__.py` plus separate model, parser, normalizer, validator, Linter, runner and preview modules.
+- Every new Python file contains exactly one module Docstring. No imports, classes, functions, constants, JSON format, GUI wiring or execution behavior were added.
+- The Docstrings preserve the planned safety boundaries: duplicate-key-aware parsing, no silent rewriting of search expressions, validation before execution, in-memory sequential transformation, and preview before document changes.
+
+Minimal validation:
+
+- Parsed all eight new files as Python source and confirmed that each module contains only its Docstring.
+- Targeted Ruff and Pyright passed for the new package. No pytest, PyInstaller build, GUI operation or pseudo-macro execution was performed because there is no behavior yet.
+- Propagated the eight modules and this record to clean canonical commit `15a343f` at `D:\PC\Python\regex_pad_project`. The same Docstring-only, Ruff and Pyright checks passed there, and SHA-256 equality was verified for all nine intended files.
+
+## Step15-section56 Pseudo-macro JSON Version 1 Baseline
+
+Date: 2026-11-17
+
+Request: create the baseline pseudo-macro JSON format before implementing its parser, validator, normalizer or Linter, and decide whether the internal model should use dataclasses.
+
+- Added `macro/macro_format_v1.json` with a version number, macro name, description, and an explicitly ordered `手順` array.
+- Each step contains the agreed complete field set: step name, enabled flag, regular-expression flag, Unicode-normalization flag and form, search text, exclusion text, and replacement text.
+- Included one ordinary regular-expression replacement example (`@@@` to a WordPress Spacer block) and one regex-selected NFKC normalization example. `null` distinguishes a field that is unused from an empty replacement string that intentionally deletes matched text.
+- Kept this step format-only. JSON necessarily loads initially as dictionaries/lists; the planned safe boundary is raw JSON -> validation -> normalization -> immutable dataclasses -> preview/runner. No dataclass, parser or execution behavior was implemented yet.
+
+Minimal validation:
+
+- Parsed the new file as UTF-8 JSON and checked its required root and two complete step records.
+- Confirmed the existing PyInstaller JSON collector includes `macro/macro_format_v1.json`. No pytest, GUI operation, macro execution or packaged build was performed.
+- Propagated the baseline JSON and this record to canonical `D:\PC\Python\regex_pad_project`; the same format and collection checks passed there, and SHA-256 equality was verified for both intended files.
+
+## Step15-section57 Pseudo-macro JSON Data Model Placeholder
+
+Date: 2026-11-17
+
+Request: add only `json_data_model.py` in preparation for separating JSON file data from the pseudo-macro domain model.
+
+- Added `macro/json_data_model.py` with one module Docstring identifying it as the future location for file-I/O dataclasses mirroring the pseudo-macro JSON format.
+- Added no imports, dataclasses, functions, constants, Bridge behavior or runtime integration.
+
+Minimal validation:
+
+- Parsed the new file as Python and confirmed the module contains only its Docstring. Targeted Ruff and Pyright passed; no pytest or runtime operation was performed.
+- Propagated the placeholder and this record to canonical `D:\PC\Python\regex_pad_project`; the same checks passed there, and SHA-256 equality was verified for both intended files.
