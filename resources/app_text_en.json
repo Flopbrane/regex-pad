@@ -414,6 +414,8 @@
   "find.regex": "Regular expression",
   "find.whole_word": "Whole word",
   "find.selected_only": "Search/replace only selected text",
+  "find.reset_selection_scope": "Reset selection reference",
+  "find.clear_text_fields": "Clear",
   "find.visible_only": "Search only visible text",
   "find.unicode_normalize": "Unicode normalization replacement",
   "find.unicode_normalize_hint": "Replace each matched string with its Unicode-normalized form. Text outside matches is unchanged.",

@@ -39,6 +39,7 @@ class FindReplaceDialog(QDialog):
     replace_marked_requested = Signal(str, str, SearchOptions)
     preview_requested = Signal(str, str, SearchOptions)
     search_parameters_changed = Signal(str, SearchOptions)
+    selection_scope_reset_requested = Signal()
     regex_help_requested = Signal()
     normalise_requested = Signal(str)
     REGEX_INPUT_TEXT_COLOR: QColor = REGEX_TOKEN_COLOR
@@ -82,6 +83,7 @@ class FindReplaceDialog(QDialog):
         )
 
         self.find_button = QPushButton("Find", self)
+        self.clear_text_button = QPushButton("Clear", self)
         self.find_previous_button = QPushButton("↑", self)
         self.find_next_button = QPushButton("↓", self)
         self.replace_button = QPushButton("Replace", self)
@@ -93,6 +95,11 @@ class FindReplaceDialog(QDialog):
         self.preview_button = QPushButton("Preview", self)
         self.regex_help_button = QPushButton("Regex Help", self)
         self.close_button = QPushButton("Close", self)
+        self.reset_selection_scope_button = QPushButton(
+            "Reset selection reference",
+            self,
+        )
+        self.reset_selection_scope_button.setEnabled(False)
         self.error_label = QLabel(self)
         self.error_label.setStyleSheet("color: #b00020;")
         self.error_label.setWordWrap(True)
@@ -187,6 +194,15 @@ class FindReplaceDialog(QDialog):
         self.preview_summary_label.clear()
         self.preview_table.setRowCount(0)
 
+    def clear_text_fields(self) -> None:
+        """Clear the find, exclusion and replacement text fields."""
+        self.find_text_edit.clear()
+        self.exclusion_text_edit.clear()
+        self.replace_text_edit.clear()
+        self.clear_error()
+        self.clear_preview_rows()
+        self.find_text_edit.setFocus()
+
     def apply_language(self) -> None:
         """Apply the current language translations to all UI elements."""
         self.setWindowTitle(self.translator.text("find.title"))
@@ -198,6 +214,9 @@ class FindReplaceDialog(QDialog):
         self.regular_expression_check_box.setText(self.translator.text("find.regex"))
         self.whole_word_check_box.setText(self.translator.text("find.whole_word"))
         self.selected_only_check_box.setText(self.translator.text("find.selected_only"))
+        self.reset_selection_scope_button.setText(
+            self.translator.text("find.reset_selection_scope")
+        )
         self.visible_only_check_box.setText(self.translator.text("find.visible_only"))
         self.unicode_normalize_check_box.setText(
             self.translator.text("find.unicode_normalize")
@@ -215,6 +234,7 @@ class FindReplaceDialog(QDialog):
             self.translator.text("find.unicode_normalize_append_dot")
         )
         self.find_button.setText(self.translator.text("find.find"))
+        self.clear_text_button.setText(self.translator.text("find.clear_text_fields"))
         self.find_previous_button.setToolTip(self.translator.text("find.previous"))
         self.find_next_button.setToolTip(self.translator.text("find.next"))
         self.replace_button.setText(self.translator.text("find.replace"))
@@ -248,6 +268,12 @@ class FindReplaceDialog(QDialog):
         find_input_layout.addWidget(self.find_text_edit, 0, 0)
         find_input_layout.addWidget(self.find_previous_button, 0, 1)
         find_input_layout.addWidget(self.find_next_button, 0, 2)
+        find_input_layout.addWidget(self.clear_text_button, 0, 3)
+
+        selected_scope_layout = QGridLayout()
+        selected_scope_layout.setContentsMargins(0, 0, 0, 0)
+        selected_scope_layout.addWidget(self.selected_only_check_box, 0, 0)
+        selected_scope_layout.addWidget(self.reset_selection_scope_button, 0, 1)
 
         form_layout.addWidget(self.find_text_label, 0, 0)
         form_layout.addLayout(find_input_layout, 0, 1)
@@ -258,7 +284,7 @@ class FindReplaceDialog(QDialog):
         form_layout.addWidget(self.case_sensitive_check_box, 3, 1)
         form_layout.addWidget(self.regular_expression_check_box, 4, 1)
         form_layout.addWidget(self.whole_word_check_box, 5, 1)
-        form_layout.addWidget(self.selected_only_check_box, 6, 1)
+        form_layout.addLayout(selected_scope_layout, 6, 1)
         form_layout.addWidget(self.visible_only_check_box, 7, 1)
         form_layout.addWidget(self.unicode_normalize_separator, 8, 0, 1, 2)
         form_layout.addWidget(self.unicode_normalize_check_box, 9, 1)
@@ -427,6 +453,7 @@ class FindReplaceDialog(QDialog):
     def _connect_signals(self) -> None:
         """Connect signals from buttons and input fields to their respective slots."""
         self.find_button.clicked.connect(self._emit_find_requested)
+        self.clear_text_button.clicked.connect(self.clear_text_fields)
         self.find_previous_button.clicked.connect(self._emit_find_previous_requested)
         self.find_next_button.clicked.connect(self._emit_find_requested)
         self.find_text_edit.returnPressed.connect(self._emit_find_requested)
@@ -451,6 +478,12 @@ class FindReplaceDialog(QDialog):
         )
         self.whole_word_check_box.toggled.connect(self._emit_search_parameters_changed)
         self.selected_only_check_box.toggled.connect(self._emit_search_parameters_changed)
+        self.selected_only_check_box.toggled.connect(
+            self.reset_selection_scope_button.setEnabled
+        )
+        self.reset_selection_scope_button.clicked.connect(
+            self.selection_scope_reset_requested.emit
+        )
         self.visible_only_check_box.toggled.connect(self._emit_search_parameters_changed)
         self.unicode_normalize_check_box.toggled.connect(
             self._handle_unicode_normalize_changed

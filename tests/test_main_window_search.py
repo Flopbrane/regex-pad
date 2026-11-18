@@ -376,6 +376,38 @@ def test_dialog_replace_all_honours_selection_and_exclusion(app: QApplication) -
     )
 
 
+def test_dialog_can_reset_scope_to_current_editor_selection(
+    app: QApplication,
+) -> None:
+    _ = app
+    window = MainWindow()
+    source_text = "first target\nsecond target\nthird target"
+    window.editor.setPlainText(source_text)
+
+    first_start = 0
+    first_end = len("first target")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(first_start)
+    cursor.setPosition(first_end, QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.selected_only_check_box.setChecked(True)
+    assert window.search_scope == (first_start, first_end)
+
+    second_start = len("first target\n")
+    second_end = second_start + len("second target")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(second_start)
+    cursor.setPosition(second_end, QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+
+    dialog.reset_selection_scope_button.click()
+
+    assert window.search_scope == (second_start, second_end)
+
+
 def test_regex_normalise_rewrites_document_text(app: QApplication) -> None:
     _ = app
     window = MainWindow()

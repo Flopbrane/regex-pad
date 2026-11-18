@@ -15,7 +15,7 @@ def normalize_matched_text(
     append_dot_to_circled_number: bool = False,
 ) -> str:
     """Normalize one search match without changing text outside that match."""
-    normalized_text = unicodedata.normalize(form, matched_text)
+    normalized_text: str = unicodedata.normalize(form, matched_text)
     if (
         append_dot_to_circled_number
         and len(matched_text) == 1

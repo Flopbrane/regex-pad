@@ -51,6 +51,39 @@ def test_selected_scope_label_includes_replace(app: QApplication) -> None:
     assert dialog.selected_only_check_box.text() == "選択範囲内だけを検索/置換する"
 
 
+def test_clear_button_empties_all_text_fields(app: QApplication) -> None:
+    _ = app
+    dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
+    dialog.find_text_edit.setText("検索")
+    dialog.exclusion_text_edit.setText("除外")
+    dialog.replace_text_edit.setText("置換")
+
+    dialog.clear_text_button.click()
+
+    assert dialog.clear_text_button.text() == "クリア"
+    assert dialog.find_text_edit.text() == ""
+    assert dialog.exclusion_text_edit.text() == ""
+    assert dialog.replace_text_edit.text() == ""
+
+
+def test_selection_scope_reset_button_emits_only_when_enabled(
+    app: QApplication,
+) -> None:
+    _ = app
+    dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
+    emitted: list[bool] = []
+    dialog.selection_scope_reset_requested.connect(lambda: emitted.append(True))
+
+    assert not dialog.reset_selection_scope_button.isEnabled()
+    dialog.selected_only_check_box.setChecked(True)
+    assert dialog.reset_selection_scope_button.isEnabled()
+    assert dialog.reset_selection_scope_button.text() == "選択範囲参照をリセット"
+
+    dialog.reset_selection_scope_button.click()
+
+    assert emitted == [True]
+
+
 def test_paragraph_boundary_recipe_matches_lf_and_crlf(app: QApplication) -> None:
     _ = app
     translator = Translator(Path("resources"), "en")

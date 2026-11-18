@@ -4619,3 +4619,21 @@ Minimal validation:
 - Focused Logger and affected integration tests passed. Targeted Ruff and Pyright passed.
 - Propagated the three intended Logger/test/documentation files to canonical `D:\PC\Python\regex_pad_project`; 51 focused cases passed there, including the user's current `isinstance()` macro model. Targeted Ruff and Pyright passed, and SHA-256 equality was verified for the transferred files.
 - Full pytest, packaged EXE rebuild and physical GUI acceptance were not performed.
+
+## Step15-section65 Search Scope Reset and Text-field Clear Controls
+
+Date: 2026-11-19
+
+Request: allow a modeless Find/Replace dialog to switch from its remembered selected-text scope to a newly selected editor range without closing the dialog, and add one control that clears every search-related text input.
+
+- Added a translated `Reset selection reference` button beside `Search/replace only selected text`. It is enabled only while the selected-text option is active.
+- Added a dedicated dialog signal and `MainWindow.reset_search_scope_reference()`. The handler discards the remembered `search_scope`, then immediately resolves the editor's current selection through the existing highlighting/search-scope path. If no current selection exists, the scope remains unavailable and the existing select-text diagnostic is used by the next operation.
+- Kept the selected-text checkbox enabled and preserved the search text when changing scope, so repeated operations within one scope remain unchanged until the user explicitly resets the reference.
+- Added a translated `Clear` button beside the find input. One click clears the find, exclusion and replacement fields, clears stale diagnostics/preview rows and returns focus to the find input; search option checkboxes are not reset.
+- Added Japanese and English translation keys and focused dialog/main-window regressions for button state, signal emission, clearing all three fields and adopting a second editor selection.
+
+Minimal validation:
+
+- Focused Find/Replace dialog and main-window search tests passed: 96 cases. Both translation JSON files loaded successfully.
+- Targeted Ruff and Pyright passed. Full pytest, packaged EXE rebuild and physical GUI acceptance were not performed.
+- Propagated the seven intended source/resource/test/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 96 focused cases, translation JSON loading, Ruff and Pyright checks passed there, and SHA-256 equality was verified.

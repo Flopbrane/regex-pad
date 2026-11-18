@@ -3280,6 +3280,9 @@ class MainWindow(QMainWindow):
             self.find_replace_dialog.search_parameters_changed.connect(
                 self.schedule_search_highlights
             )
+            self.find_replace_dialog.selection_scope_reset_requested.connect(
+                self.reset_search_scope_reference
+            )
             self.find_replace_dialog.regex_help_requested.connect(self.show_regex_help_dialog)
             self.find_replace_dialog.normalise_requested.connect(
                 self.apply_regex_normalise_operation
@@ -3304,6 +3307,16 @@ class MainWindow(QMainWindow):
         self.find_replace_dialog.show()
         self.find_replace_dialog.raise_()
         self.find_replace_dialog.activateWindow()
+
+    def reset_search_scope_reference(self) -> None:
+        """Forget the old search scope and capture the editor's current selection."""
+        self.search_scope = None
+        if self.find_replace_dialog is None:
+            return
+        self.update_search_highlights(
+            self.find_replace_dialog.find_text_edit.text(),
+            self.find_replace_dialog.current_search_options(),
+        )
 
     def find_next(self, search_text: str, options: SearchOptions) -> None:
         """Find the next occurrence of the search text using the specified search options.""" 
