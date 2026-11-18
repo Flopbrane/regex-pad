@@ -4601,3 +4601,21 @@ Minimal validation:
 - Focused packaging and Logger tests passed. The PowerShell parser accepted `build.ps1`; targeted Ruff and Pyright passed for the changed test.
 - Propagated the five intended packaging/test/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 14 focused tests, PowerShell parse, Ruff and Pyright checks passed there, and SHA-256 equality was verified.
 - A full PyInstaller build was not run, so packaged-EXE startup and physical inspection of the completed distribution remain separate acceptance steps.
+
+## Step15-section64 Separate Exception Signalling from Logging
+
+Date: 2026-11-18
+
+Request: correct the earlier "escape from `raise` into Logger" wording so invalid data is still rejected and Logger cannot be confused with an operation-success result.
+
+- Audited the Logger integration commit and confirmed that it removed no deliberate `raise`. Dataclass type/value checks, dictionary conversion errors, regular-expression errors and other domain exceptions still propagate to their existing operation boundary.
+- Changed `AppLogger.log()`, `exception()`, callable `logger(error)` and all level helpers to return `None`, matching normal logging semantics. They no longer expose the JSONL write-success Boolean as though it were the caller's operation result.
+- Kept storage best-effort internally: a log-write failure still falls back to stderr and never masks the original application error.
+- Kept explicit recovery outside Logger. Existing GUI/file/thread boundaries still record the exception and then independently return `False`/`None`, emit a failure signal, show a diagnostic, or delegate an unhandled exception to the original hook.
+- Updated focused tests to assert that successful recording, failed recording and unrenderable exceptions all return `None`; the JSONL record checks remain unchanged.
+
+Minimal validation:
+
+- Focused Logger and affected integration tests passed. Targeted Ruff and Pyright passed.
+- Propagated the three intended Logger/test/documentation files to canonical `D:\PC\Python\regex_pad_project`; 51 focused cases passed there, including the user's current `isinstance()` macro model. Targeted Ruff and Pyright passed, and SHA-256 equality was verified for the transferred files.
+- Full pytest, packaged EXE rebuild and physical GUI acceptance were not performed.

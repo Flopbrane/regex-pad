@@ -112,8 +112,13 @@ class AppLogger:
         context: Mapping[str, Any] | None = None,
         where: LogWhere | None = None,
         output: LogOutput | None = None,
-    ) -> bool:
-        """Build and emit one structured log record."""
+    ) -> None:
+        """Build and emit one structured log record.
+
+        Logging success is deliberately not returned as an operation result.
+        Callers must separately return, raise, or provide their own failure
+        result after recording an error.
+        """
         try:
             timestamp = datetime.now(timezone.utc)
             resolved_output = output or self.default_output
@@ -144,11 +149,9 @@ class AppLogger:
                     file=sys.stderr,
                 )
             if resolved_output in (LogOutput.FILE, LogOutput.BOTH):
-                return append_log_record(self._log_file(timestamp), save_data)
-            return True
+                append_log_record(self._log_file(timestamp), save_data)
         except Exception as error:  # noqa: BLE001 - the logger must never stop the app.
             print(f"[LOGGER ERROR] {error}", file=sys.stderr)
-            return False
 
     def exception(
         self,
@@ -161,8 +164,8 @@ class AppLogger:
         action: str | None = None,
         status: str = "failed",
         category: str = "exception",
-    ) -> bool:
-        """Record an exception and its traceback without re-raising it."""
+    ) -> None:
+        """Record an exception without deciding whether the caller recovers."""
         try:
             resolved_traceback = traceback_object or error.__traceback__
             exception_context = dict(context or {})
@@ -179,7 +182,7 @@ class AppLogger:
                     ),
                 }
             )
-            return self.log(
+            self.log(
                 level,
                 message or str(error) or type(error).__name__,
                 action=action,
@@ -188,7 +191,7 @@ class AppLogger:
                 context=exception_context,
             )
         except Exception as formatting_error:  # noqa: BLE001 - logging must be safe.
-            return self.log(
+            self.log(
                 level,
                 message or type(error).__name__,
                 action=action,
@@ -206,24 +209,24 @@ class AppLogger:
         error: BaseException,
         message: str | None = None,
         **kwargs: Any,
-    ) -> bool:
+    ) -> None:
         """Allow the requested ``logger(error)`` recording form."""
-        return self.exception(error, message, **kwargs)
+        self.exception(error, message, **kwargs)
 
-    def debug(self, message: str, **kwargs: Any) -> bool:
-        return self.log(LogLevel.DEBUG, message, **kwargs)
+    def debug(self, message: str, **kwargs: Any) -> None:
+        self.log(LogLevel.DEBUG, message, **kwargs)
 
-    def info(self, message: str, **kwargs: Any) -> bool:
-        return self.log(LogLevel.INFO, message, **kwargs)
+    def info(self, message: str, **kwargs: Any) -> None:
+        self.log(LogLevel.INFO, message, **kwargs)
 
-    def warning(self, message: str, **kwargs: Any) -> bool:
-        return self.log(LogLevel.WARNING, message, **kwargs)
+    def warning(self, message: str, **kwargs: Any) -> None:
+        self.log(LogLevel.WARNING, message, **kwargs)
 
-    def error(self, message: str, **kwargs: Any) -> bool:
-        return self.log(LogLevel.ERROR, message, **kwargs)
+    def error(self, message: str, **kwargs: Any) -> None:
+        self.log(LogLevel.ERROR, message, **kwargs)
 
-    def critical(self, message: str, **kwargs: Any) -> bool:
-        return self.log(LogLevel.CRITICAL, message, **kwargs)
+    def critical(self, message: str, **kwargs: Any) -> None:
+        self.log(LogLevel.CRITICAL, message, **kwargs)
 
 
 _LOGGER: AppLogger | None = None

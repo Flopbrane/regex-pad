@@ -34,12 +34,14 @@ def test_logger_call_records_exception_as_jsonl(tmp_path: Path) -> None:
     try:
         raise ValueError("broken input")
     except ValueError as error:
-        assert logger(
+        result = logger(
             error,
             "Test operation failed",
             action="test_operation",
             context={"load_file_path": tmp_path / "input.txt"},
         )
+
+    assert result is None
 
     record = _load_only_record(tmp_path)
     assert record["level"] == "ERROR"
@@ -63,7 +65,7 @@ def test_logger_storage_failure_does_not_raise(tmp_path: Path) -> None:
 
     logger = AppLogger(occupied_path)
 
-    assert not logger.info("This cannot be persisted")
+    assert logger.info("This cannot be persisted") is None
 
 
 def test_logger_survives_exception_that_cannot_be_rendered(tmp_path: Path) -> None:
@@ -73,7 +75,7 @@ def test_logger_survives_exception_that_cannot_be_rendered(tmp_path: Path) -> No
 
     logger = AppLogger(tmp_path)
 
-    assert logger(BrokenException(), "Unrenderable exception")
+    assert logger(BrokenException(), "Unrenderable exception") is None
 
     record = _load_only_record(tmp_path)
     context = record["context"]
