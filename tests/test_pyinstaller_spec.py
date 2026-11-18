@@ -15,6 +15,9 @@ def test_pyinstaller_spec_collects_project_json_files() -> None:
     assert "def _project_json_datas():" in spec_text
     assert 'PROJECT_ROOT.rglob("*.json")' in spec_text
     assert "*_project_json_datas()," in spec_text
+    assert "hiddenimports=APP_HIDDEN_IMPORTS" in spec_text
+    assert '"app_logging.app_logger"' in spec_text
+    assert '"macro.json_data_model"' in spec_text
     assert '"build"' in spec_text
     assert '"dist"' in spec_text
     assert '"_internal"' in spec_text
@@ -45,6 +48,7 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(
     ) in app_datas
     assert ("dictionaries/html_dict.json", "dictionaries") in app_datas
     assert ("dictionaries/wordpress_html_dict.json", "dictionaries") in app_datas
+    assert ("macro/macro_format_v1.json", "macro") in app_datas
     assert ("linter_modification_manifest.json", ".") in app_datas
     assert ("config.json", ".") not in app_datas
     assert ("color_presets.json", ".") not in app_datas
@@ -86,11 +90,16 @@ def test_build_script_copies_and_verifies_runtime_json_and_portable_settings() -
 
     assert '$DictionarySourcePath = Join-Path $ProjectRoot "dictionaries"' in build_script
     assert "Assert-JsonFilesCopied" in build_script
+    assert "Assert-ProjectJsonFilesBundled" in build_script
+    assert '-SourceRoot $ProjectRoot' in build_script
+    assert '-DestinationRoot $InternalPath' in build_script
     assert '-DestinationPath (Join-Path $InternalPath "dictionaries")' in build_script
     assert 'Join-Path $DistAppPath "config.json"' in build_script
     assert 'Join-Path $DistAppPath "color_presets.json"' in build_script
     assert "$PreservedConfigPath" in build_script
     assert "$PreservedColorPresetsPath" in build_script
+    assert '$LogOutputPath = Join-Path $DistAppPath "logs"' in build_script
+    assert 'Test-Path -LiteralPath $LogOutputPath -PathType Container' in build_script
 
 
 def _prepared_runtime(root: Path, monkeypatch: pytest.MonkeyPatch) -> Path:

@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import LiteralString, cast
+
+from unicode_normalize import NORMALIZATION_FORMS, NormalizationForm
 
 
 def _string_value(field_name: str, value: object) -> str:
@@ -12,13 +15,13 @@ def _string_value(field_name: str, value: object) -> str:
 
 
 def _boolean_value(field_name: str, value: object) -> bool:
-    if type(value) is not bool:
+    if not isinstance(value, bool):
         raise TypeError(f"{field_name} must be bool")
     return value
 
 
 def _integer_value(field_name: str, value: object) -> int:
-    if type(value) is not int:
+    if not isinstance(value, int) or isinstance(value, bool):
         raise TypeError(f"{field_name} must be int")
     return value
 
@@ -29,6 +32,19 @@ def _optional_string_value(field_name: str, value: object) -> str | None:
     return value
 
 
+def _optional_normalization_form_value(value: object) -> NormalizationForm | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError("unicode_normalize_form must be str or None")
+    if value not in NORMALIZATION_FORMS:
+        allowed_values: LiteralString = ", ".join(NORMALIZATION_FORMS)
+        raise ValueError(
+            f"unicode_normalize_form must be one of {allowed_values} or None"
+        )
+    return cast(NormalizationForm, value)
+
+
 @dataclass(slots=True, init=False)
 class MacroJsonStepData:
     """Represent one step in a pseudo-macro JSON file."""
@@ -37,7 +53,8 @@ class MacroJsonStepData:
     _enabled: bool
     _regular_expression: bool
     _unicode_normalize: bool
-    _unicode_normalize_form: str | None
+    _unicode_normalize_form: NormalizationForm | None
+    _append_dot_to_circled_number: bool
     _search_text: str
     _exclusion_text: str | None
     _replacement_text: str | None
@@ -48,7 +65,8 @@ class MacroJsonStepData:
         enabled: bool,
         regular_expression: bool,
         unicode_normalize: bool,
-        unicode_normalize_form: str | None,
+        unicode_normalize_form: NormalizationForm | None,
+        append_dot_to_circled_number: bool,
         search_text: str,
         exclusion_text: str | None,
         replacement_text: str | None,
@@ -58,6 +76,7 @@ class MacroJsonStepData:
         self.regular_expression = regular_expression
         self.unicode_normalize = unicode_normalize
         self.unicode_normalize_form = unicode_normalize_form
+        self.append_dot_to_circled_number = append_dot_to_circled_number
         self.search_text = search_text
         self.exclusion_text = exclusion_text
         self.replacement_text = replacement_text
@@ -99,14 +118,23 @@ class MacroJsonStepData:
         self._unicode_normalize = _boolean_value("unicode_normalize", value)
 
     @property
-    def unicode_normalize_form(self) -> str | None:
+    def unicode_normalize_form(self) -> NormalizationForm | None:
         """Return the requested Unicode normalization form."""
         return self._unicode_normalize_form
 
     @unicode_normalize_form.setter
-    def unicode_normalize_form(self, value: str | None) -> None:
-        self._unicode_normalize_form = _optional_string_value(
-            "unicode_normalize_form",
+    def unicode_normalize_form(self, value: NormalizationForm | None) -> None:
+        self._unicode_normalize_form = _optional_normalization_form_value(value)
+
+    @property
+    def append_dot_to_circled_number(self) -> bool:
+        """Return whether converted circled numbers receive a trailing dot."""
+        return self._append_dot_to_circled_number
+
+    @append_dot_to_circled_number.setter
+    def append_dot_to_circled_number(self, value: bool) -> None:
+        self._append_dot_to_circled_number = _boolean_value(
+            "append_dot_to_circled_number",
             value,
         )
 

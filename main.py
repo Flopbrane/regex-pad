@@ -26,6 +26,10 @@ from portable_runtime import app_base_dir, bundled_base_dir, configure_portable_
 
 configure_portable_runtime()
 
+from app_logging import LogLevel, get_logger, install_exception_hooks
+
+LOGGER = get_logger()
+
 # PySide6 exposes Qt modules dynamically; Pylint may report false no-name-in-module.
 from PySide6.QtCore import QPoint, Qt, QTimer  # pylint: disable=no-name-in-module
 from PySide6.QtGui import (  # pylint: disable=no-name-in-module
@@ -1520,6 +1524,13 @@ class MainWindow(QMainWindow):
             tag_snippet_groups(Path(user_dictionary_folder))
             load_paragraph_insert_rule_book(Path(user_dictionary_folder))
         except (OSError, TypeError, ValueError) as error:
+            LOGGER(
+                error,
+                "User dictionary validation failed",
+                level=LogLevel.WARNING,
+                action="validate_user_dictionaries",
+                context={"load_file_path": user_dictionary_folder},
+            )
             QMessageBox.critical(
                 self,
                 self.translator.text("dialog.dictionary_check_failed.title"),
@@ -2820,6 +2831,15 @@ class MainWindow(QMainWindow):
         try:
             load_data = self.file_manager.load_text(load_file_path, selected_encoding)
         except (OSError, UnicodeError) as error:
+            LOGGER(
+                error,
+                "File open failed",
+                action="open_file",
+                context={
+                    "load_file_path": load_file_path,
+                    "encoding": selected_encoding,
+                },
+            )
             QMessageBox.critical(
                 self,
                 self.translator.text("dialog.open_failed.title"),
@@ -2854,6 +2874,15 @@ class MainWindow(QMainWindow):
                 selected_encoding,
             )
         except (OSError, UnicodeError) as error:
+            LOGGER(
+                error,
+                "File reload failed",
+                action="reload_file",
+                context={
+                    "load_file_path": self.current_save_file_path,
+                    "encoding": selected_encoding,
+                },
+            )
             QMessageBox.critical(
                 self,
                 self.translator.text("dialog.reload_failed.title"),
@@ -2944,6 +2973,15 @@ class MainWindow(QMainWindow):
                 self.newline_code,
             )
         except OSError as error:
+            LOGGER(
+                error,
+                "File save failed",
+                action="save_file",
+                context={
+                    "save_file_path": save_file_path,
+                    "encoding": self.current_encoding,
+                },
+            )
             QMessageBox.critical(
                 self,
                 self.translator.text("dialog.save_failed.title"),
@@ -3047,6 +3085,15 @@ class MainWindow(QMainWindow):
         try:
             load_data = self.file_manager.load_text(backup_path, self.current_encoding)
         except (OSError, UnicodeError) as error:
+            LOGGER(
+                error,
+                "File backup restore failed",
+                action="restore_file_backup",
+                context={
+                    "load_file_path": backup_path,
+                    "encoding": self.current_encoding,
+                },
+            )
             QMessageBox.critical(
                 self,
                 self.translator.text("dialog.file_backup_restore.failed_title"),
@@ -4131,12 +4178,20 @@ class MainWindow(QMainWindow):
 
 def main() -> int:
     """Entry point for the application."""
+    install_exception_hooks(LOGGER)
+    LOGGER.info("Regex Pad started", action="application_start")
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(str(ICON_PATH)))
     window = MainWindow()
     window.setWindowIcon(QIcon(str(ICON_PATH)))
     window.show()
-    return app.exec()
+    exit_code = app.exec()
+    LOGGER.info(
+        "Regex Pad stopped",
+        action="application_stop",
+        context={"exit_code": exit_code},
+    )
+    return exit_code
 
 
 if __name__ == "__main__":

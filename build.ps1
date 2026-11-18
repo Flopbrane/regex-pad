@@ -133,6 +133,46 @@ function Assert-JsonFilesCopied {
     }
 }
 
+function Assert-ProjectJsonFilesBundled {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $SourceRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationRoot
+    )
+
+    # Keep this filter aligned with _project_json_datas() in regex-pad.spec.
+    $IgnoredParts = @(
+        "build", "dist", "_internal", ".git", ".vscode", "runtime",
+        "Temp", "install_records", "logs", "cache", "modules", "data"
+    )
+    $IgnoredNames = @("pyrightconfig.json")
+    $PortableRootJson = @("config.json", "color_presets.json")
+
+    Get-ChildItem -LiteralPath $SourceRoot -Recurse -File -Filter "*.json" | ForEach-Object {
+        $RelativePath = [System.IO.Path]::GetRelativePath($SourceRoot, $_.FullName)
+        $RelativeParts = $RelativePath -split "[\\/]"
+        if ($IgnoredNames -contains $_.Name) {
+            return
+        }
+        if ($RelativeParts.Count -eq 1 -and $PortableRootJson -contains $RelativePath) {
+            return
+        }
+        if (@($RelativeParts | Where-Object { $IgnoredParts -contains $_ }).Count -gt 0) {
+            return
+        }
+
+        $BundledPath = Join-Path $DestinationRoot $RelativePath
+        if (-not (Test-Path -LiteralPath $BundledPath -PathType Leaf)) {
+            throw "Required project JSON was not bundled: $BundledPath"
+        }
+        if ((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $BundledPath -Algorithm SHA256).Hash) {
+            throw "Bundled project JSON does not match its source: $BundledPath"
+        }
+    }
+}
+
 if (-not (Test-Path -LiteralPath $PythonExe)) {
     throw "Python interpreter was not found: $PythonExe"
 }
@@ -222,6 +262,12 @@ try {
         -SourcePath $DictionarySourcePath `
         -DestinationPath (Join-Path $InternalPath "dictionaries")
 
+    # Verify every JSON selected by regex-pad.spec, including pseudo-macro,
+    # WordPress Linter references and root-level verification records.
+    Assert-ProjectJsonFilesBundled `
+        -SourceRoot $ProjectRoot `
+        -DestinationRoot $InternalPath
+
     # Keep user-owned portable settings beside regex-pad.exe. An earlier dist
     # configuration wins over the project defaults when rebuilding in place.
     $ConfigToCopy = if ($null -ne $PreservedConfigPath) { $PreservedConfigPath } else { $ConfigSourcePath }
@@ -233,6 +279,14 @@ try {
         if (-not (Test-Path -LiteralPath $PortableFilePath -PathType Leaf)) {
             throw "Portable settings file was not copied beside regex-pad.exe: $PortableFilePath"
         }
+    }
+
+    # Runtime logs are user-owned output. Create an empty portable destination
+    # beside the EXE; never copy development logs into a release.
+    $LogOutputPath = Join-Path $DistAppPath "logs"
+    New-Item -ItemType Directory -Path $LogOutputPath -Force | Out-Null
+    if (-not (Test-Path -LiteralPath $LogOutputPath -PathType Container)) {
+        throw "Portable log output directory could not be created: $LogOutputPath"
     }
 
     # 実行時にQIcon等で assets を参照する場合に備えて、assetsも同梱します。
@@ -267,6 +321,7 @@ try {
     Write-Host "Copied resources to: $(Join-Path $InternalPath 'resources')"
     Write-Host "Copied dictionaries to: $(Join-Path $InternalPath 'dictionaries')"
     Write-Host "Portable settings are beside regex-pad.exe: $DistAppPath"
+    Write-Host "Portable logs will be written to: $LogOutputPath"
     Write-Host "Copied release documentation beside regex-pad.exe: $DistAppPath"
 
     if (Test-Path -LiteralPath $PyInstallerCachePath) {

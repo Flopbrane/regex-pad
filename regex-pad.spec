@@ -22,6 +22,24 @@ from preview.package_runtime import runtime_datas
 APP_NAME = "regex-pad"
 DIST_FOLDER_NAME = "regex-pad"
 
+# Keep the recording-only Logger core and the staged pseudo-macro modules in
+# the executable even before every module has a direct runtime import path.
+APP_HIDDEN_IMPORTS = [
+    "app_logging",
+    "app_logging.app_logger",
+    "app_logging.log_storage",
+    "app_logging.log_types",
+    "macro",
+    "macro.json_data_model",
+    "macro.macro_linter",
+    "macro.macro_model",
+    "macro.macro_normalizer",
+    "macro.macro_parser",
+    "macro.macro_preview",
+    "macro.macro_runner",
+    "macro.macro_validator",
+]
+
 ICON_FILE = PROJECT_DIR / "assets" / "icons" / "regex_pad_icon.ico"
 ICON_PATH = str(ICON_FILE) if ICON_FILE.exists() else None
 
@@ -81,7 +99,7 @@ a = Analysis(
     pathex=[str(PROJECT_DIR)],
     binaries=[],
     datas=DATAS,
-    hiddenimports=[],
+    hiddenimports=APP_HIDDEN_IMPORTS,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

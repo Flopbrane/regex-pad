@@ -5,6 +5,7 @@ from dataclasses import is_dataclass
 import pytest
 
 from macro.json_data_model import MacroJsonData, MacroJsonStepData
+from unicode_normalize import NORMALIZATION_FORMS, NormalizationForm
 
 
 def _step() -> MacroJsonStepData:
@@ -14,6 +15,7 @@ def _step() -> MacroJsonStepData:
         regular_expression=True,
         unicode_normalize=False,
         unicode_normalize_form=None,
+        append_dot_to_circled_number=False,
         search_text=r"(?m)^@@@$",
         exclusion_text=None,
         replacement_text="<div></div>",
@@ -31,6 +33,7 @@ def test_macro_json_models_are_dataclasses_with_public_properties() -> None:
     assert step.regular_expression is True
     assert step.unicode_normalize is False
     assert step.unicode_normalize_form is None
+    assert step.append_dot_to_circled_number is False
     assert step.search_text == r"(?m)^@@@$"
     assert step.exclusion_text is None
     assert step.replacement_text == "<div></div>"
@@ -48,6 +51,7 @@ def test_macro_json_model_setters_update_every_field() -> None:
     first_step.regular_expression = False
     first_step.unicode_normalize = True
     first_step.unicode_normalize_form = "NFKC"
+    first_step.append_dot_to_circled_number = True
     first_step.search_text = "Ａ"
     first_step.exclusion_text = "除外"
     first_step.replacement_text = None
@@ -62,6 +66,7 @@ def test_macro_json_model_setters_update_every_field() -> None:
     assert first_step.regular_expression is False
     assert first_step.unicode_normalize is True
     assert first_step.unicode_normalize_form == "NFKC"
+    assert first_step.append_dot_to_circled_number is True
     assert first_step.search_text == "Ａ"
     assert first_step.exclusion_text == "除外"
     assert first_step.replacement_text is None
@@ -79,6 +84,7 @@ def test_macro_json_model_setters_update_every_field() -> None:
         ("regular_expression", "true"),
         ("unicode_normalize", None),
         ("unicode_normalize_form", 1),
+        ("append_dot_to_circled_number", 1),
         ("search_text", []),
         ("exclusion_text", False),
         ("replacement_text", 1),
@@ -92,6 +98,24 @@ def test_macro_json_step_setters_reject_wrong_types(
 
     with pytest.raises(TypeError):
         setattr(step, field_name, value)
+
+
+@pytest.mark.parametrize("normalization_form", NORMALIZATION_FORMS)
+def test_unicode_normalize_form_accepts_only_registered_literal_values(
+    normalization_form: NormalizationForm,
+) -> None:
+    step = _step()
+
+    step.unicode_normalize_form = normalization_form
+
+    assert step.unicode_normalize_form == normalization_form
+
+
+def test_unicode_normalize_form_rejects_unknown_string() -> None:
+    step = _step()
+
+    with pytest.raises(ValueError, match="NFC, NFD, NFKC, NFKD"):
+        step.unicode_normalize_form = "NFCK"  # type: ignore[assignment]
 
 
 def test_macro_json_data_rejects_wrong_types_and_step_contents() -> None:

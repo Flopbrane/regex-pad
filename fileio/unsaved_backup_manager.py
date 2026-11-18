@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from app_logging import LogLevel, get_logger
+
 
 @dataclass(frozen=True)
 class UnsavedBackup:
@@ -44,7 +46,14 @@ class UnsavedBackupManager:
             load_data: dict[str, Any] = json.loads(
                 load_file_path.read_text(encoding="utf-8")
             )
-        except (OSError, json.JSONDecodeError):
+        except (OSError, json.JSONDecodeError) as error:
+            get_logger().exception(
+                error,
+                "Unsaved backup could not be loaded",
+                level=LogLevel.WARNING,
+                action="load_unsaved_backup",
+                context={"load_file_path": load_file_path},
+            )
             return None
 
         tabs_data = load_data.get("tabs")
@@ -152,9 +161,24 @@ class UnsavedBackupManager:
                 temporary_file_path = Path(temporary_file.name)
 
             temporary_file_path.replace(save_file_path)
-        except OSError:
+        except OSError as error:
             if temporary_file_path is not None:
-                temporary_file_path.unlink(missing_ok=True)
+                try:
+                    temporary_file_path.unlink(missing_ok=True)
+                except OSError as cleanup_error:
+                    get_logger().exception(
+                        cleanup_error,
+                        "Temporary unsaved-backup file could not be removed",
+                        level=LogLevel.WARNING,
+                        action="cleanup_unsaved_backup_temp",
+                        context={"save_file_path": temporary_file_path},
+                    )
+            get_logger()(
+                error,
+                "Unsaved backup could not be saved",
+                action="save_unsaved_backup",
+                context={"save_file_path": save_file_path},
+            )
             return False
         return True
 
@@ -163,11 +187,25 @@ class UnsavedBackupManager:
         for snapshot_path in snapshots[self.HISTORY_RETENTION_COUNT :]:
             try:
                 snapshot_path.unlink(missing_ok=True)
-            except OSError:
+            except OSError as error:
+                get_logger().exception(
+                    error,
+                    "Old unsaved-backup snapshot could not be removed",
+                    level=LogLevel.WARNING,
+                    action="prune_unsaved_backup_history",
+                    context={"save_file_path": snapshot_path},
+                )
                 continue
 
     def clear(self) -> None:
         try:
             self.backup_path.unlink(missing_ok=True)
-        except OSError:
+        except OSError as error:
+            get_logger().exception(
+                error,
+                "Unsaved backup could not be cleared",
+                level=LogLevel.WARNING,
+                action="clear_unsaved_backup",
+                context={"save_file_path": self.backup_path},
+            )
             return

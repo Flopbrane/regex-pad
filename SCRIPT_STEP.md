@@ -4508,3 +4508,96 @@ Minimal validation:
 
 - Focused model tests passed. Targeted Ruff and Pyright passed for the model and its tests; no full pytest, Bridge, Validator, GUI, Runner or PyInstaller operation was performed.
 - Propagated the model, focused tests and this record onto clean canonical commit `fe0df7e` at `D:\PC\Python\regex_pad_project`. The same 12 focused cases, Ruff and Pyright checks passed there, and SHA-256 equality was verified for all three intended files.
+
+## Step15-section59 Pseudo-macro Architecture Record
+
+Date: 2026-11-18
+
+Request: preserve the agreed pseudo-macro algorithm, including the clarification that Parser and Manager are different responsibilities.
+
+- Added `PSEUDO_MACRO_ARCHITECTURE.md` as the authoritative design record for the pseudo-macro feature.
+- Documented the terminology and boundaries for Loader, Parser, File/GUI Bridges, Normalizer, Validator, Linter, MacroManager, MacroRunner, SearchEngine, Preview and Saver.
+- Recorded the three required routes: new XML-like editor input, JSON load/execute, and existing JSON edit/save. Normalizer and Validator are mandatory boundaries for direct JSON edits rather than optional per-route safeguards.
+- Separated macro-definition persistence from transformed-article persistence. MacroRunner returns an in-memory result; existing RegexPad Undo and document-save behavior remains responsible for the article.
+- Established `MacroManager -> MacroRunner -> SearchEngine` as the execution relationship, with Manager coordinating but not implementing conversion, validation or replacement logic.
+- Recorded current implemented and unimplemented scope plus the recommended incremental order beginning with the File Bridge.
+
+Validation:
+
+- Verified every currently implemented macro path named by the document and checked the Markdown as UTF-8. No Python, JSON, GUI or runtime behavior was changed by this documentation-only step.
+- Propagated the architecture document and this record onto clean canonical commit `b289509` at `D:\PC\Python\regex_pad_project`; the same document/path checks passed there, and SHA-256 equality was verified for both intended files.
+
+## Step15-section60 Unicode Normalization Literal in Macro JSON Model
+
+Date: 2026-11-18
+
+Request: narrow `MacroJsonStepData.unicode_normalize_form` from `str | None` to the four supported Unicode normalization forms.
+
+- Reused the existing `unicode_normalize.NormalizationForm` alias (`Literal["NFC", "NFD", "NFKC", "NFKD"]`) instead of defining a duplicate Literal in the macro package.
+- Updated the private field, constructor, property getter and setter to use `NormalizationForm | None`.
+- Added runtime setter enforcement because type annotations alone cannot protect JSON-derived strings. Non-string values raise `TypeError`; unsupported strings such as `NFCK` raise `ValueError`.
+- Kept cross-field semantics in the future Validator. The data model validates the closed normalization-form value set, but does not decide whether normalization may be combined with replacement text.
+- Updated the architecture record and focused tests for all four accepted forms plus an unknown form.
+
+Minimal validation:
+
+- Focused macro model tests passed. Targeted Ruff and Pyright passed; no full pytest, Bridge, Validator, GUI, Runner or PyInstaller operation was performed.
+- Propagated the model, tests, architecture update and this record onto canonical commit `b289509` at `D:\PC\Python\regex_pad_project`. The same 17 focused cases, Ruff and Pyright checks passed there, and SHA-256 equality was verified for all four intended files.
+
+## Step15-section61 Circled-number Dot Option in Macro JSON Model
+
+Date: 2026-11-18
+
+Request: add a Boolean step property for appending a period after Unicode-normalized circled numbers and correct the proposed variable-name typo.
+
+- Added `append_dot_to_circled_number: bool` to `MacroJsonStepData`, matching the existing `SearchOptions` and Unicode normalization function name. The proposed `_add_priod` name was corrected rather than retained because it is misspelled and does not identify the circled-number-only behavior.
+- Added the private field, constructor argument, property getter and setter. The setter uses the existing strict Boolean check and rejects integers such as `1`.
+- Added the `丸数字変換後ピリオド追加` Boolean key to every step in `macro_format_v1.json` without changing the version because Version 1 has not yet been consumed by an implemented Loader or Runner.
+- Kept cross-field rules in the future Validator: the option is meaningful only when Unicode normalization is enabled with NFKC or NFKD.
+- Updated the architecture record and focused getter/setter/type tests.
+
+Minimal validation:
+
+- Focused macro model tests and the Version 1 JSON field check passed. Targeted Ruff and Pyright passed; no full pytest, Bridge, Validator, GUI, Runner or PyInstaller operation was performed.
+- Propagated the model, baseline JSON, tests, architecture update and this record onto canonical commit `b289509` at `D:\PC\Python\regex_pad_project`. The same 18 focused cases and JSON field check passed there; Ruff and Pyright passed, and SHA-256 equality was verified for all five intended files.
+
+## Step15-section62 Recording-only Application Logger
+
+Date: 2026-11-18
+
+Request: port the recording and persistence core from `logger_project`, omit its analysis features, and route recoverable Regex Pad exceptions to a persistent error log instead of allowing them to stop the editor.
+
+- Added the `app_logging` package with the logger project's structured JSONL concepts: daily files, levels, output modes, trace IDs, source locations, JSON-safe context conversion and best-effort append storage.
+- Deliberately excluded query, summary, triage, viewer, aggregation and log-analysis components. The Regex Pad port has no online dependency and writes under the portable `logs` folder.
+- Added the callable `logger(error)` form. Exception records include the exception type, message and traceback, while logger serialization or storage failures fall back to stderr and never raise into the editor.
+- Installed main-thread and Python worker-thread exception hooks during application startup. The original hooks still run for genuinely unhandled exceptions because arbitrary execution cannot safely resume after an unknown failure.
+- Added recording at recoverable operation boundaries for legacy settings migration, unsaved-backup load/save/cleanup, file open/reload/save/restore, user-dictionary validation and WordPress preview preparation/snapshot/response handling.
+- Preserved deliberate domain and validation exceptions. Examples include invalid regular expressions and malformed dictionary models: these still reach their existing caller/UI boundary, where the operation is cancelled safely. Replacing every `raise` with continuation would risk corrupted state and was therefore not done.
+- Added focused logger tests covering a structured exception JSONL record and a storage failure that returns safely without raising.
+- Isolated the process-wide logger to each pytest temporary folder so expected failure-path tests do not leave diagnostic files in the source tree.
+
+Minimal validation:
+
+- Focused tests for the logger, configuration migration, unsaved backups and WordPress preview passed: 32 tests.
+- Targeted Ruff passed. Targeted Pyright passed for the logger/config/backup/tests and, with the required interpreter supplied explicitly, for `main.py` and the WordPress preview integration.
+- Propagated the 11 intended files to canonical `D:\PC\Python\regex_pad_project`, where the same 32 tests, targeted Ruff and targeted Pyright checks passed. SHA-256 equality was verified after transfer.
+- Full pytest, packaged EXE rebuild and physical GUI error-generation tests were not performed.
+
+## Step15-section63 Logger and JSON Packaging Coverage
+
+Date: 2026-11-18
+
+Request: explicitly keep log output under `logs` and prevent the Logger, pseudo-macro modules and accumulated JSON data from being omitted by PyInstaller packaging.
+
+- Confirmed and regression-tested that `AppLogger()` resolves its default output to `app_base_dir() / "logs"`. Source runs therefore use the project `logs` folder and packaged runs use `logs` beside `regex-pad.exe`.
+- Updated `build.ps1` to create and validate the empty `dist\regex-pad\logs` directory after every build. Development logs are deliberately not copied into a release.
+- Added explicit PyInstaller hidden imports for all recording-only `app_logging` modules and the currently staged `macro` package modules, including `json_data_model.py`.
+- Kept `_project_json_datas()` as the authoritative collection rule for JSON other than user-owned root settings. It includes `macro/macro_format_v1.json`, dictionaries, WordPress serialization/class references, Linter verification records and resource JSON while excluding build/runtime/cache/log output.
+- Added `Assert-ProjectJsonFilesBundled` to `build.ps1`. After PyInstaller finishes, every JSON selected by the spec must exist at the corresponding `_internal` path and have the same SHA-256 digest; otherwise the build stops instead of producing an incomplete distribution.
+- Kept `config.json` and root `color_presets.json` beside the EXE with the existing preserve-on-rebuild behavior, separate from read-only bundled JSON.
+
+Minimal validation:
+
+- Focused packaging and Logger tests passed. The PowerShell parser accepted `build.ps1`; targeted Ruff and Pyright passed for the changed test.
+- Propagated the five intended packaging/test/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 14 focused tests, PowerShell parse, Ruff and Pyright checks passed there, and SHA-256 equality was verified.
+- A full PyInstaller build was not run, so packaged-EXE startup and physical inspection of the completed distribution remain separate acceptance steps.

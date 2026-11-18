@@ -12,6 +12,7 @@ from typing import Literal
 from PySide6.QtCore import QObject, QProcess, QThread, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 
+from app_logging import LogLevel, get_logger
 from portable_runtime import app_base_dir, bundled_base_dir
 from preview.static_snapshot import SnapshotCancelled, write_snapshot
 from preview.wordpress_runtime import (
@@ -56,6 +57,12 @@ class RuntimePreparation(QThread):
         except PreparationCancelled:
             pass
         except Exception as error:  # noqa: BLE001 - report all failures at the QThread boundary.
+            get_logger()(
+                error,
+                "WordPress preview runtime preparation failed",
+                action="prepare_wordpress_preview_runtime",
+                context={"runtime_root": self.runtime_root},
+            )
             self.failed.emit(str(error))
         finally:
             _update_cleanup_inventory(self.runtime_root, node)
@@ -77,6 +84,12 @@ class SnapshotExport(QThread):
         except SnapshotCancelled:
             pass
         except Exception as error:  # noqa: BLE001 - report errors across the Qt thread boundary.
+            get_logger()(
+                error,
+                "WordPress preview snapshot export failed",
+                action="export_wordpress_preview_snapshot",
+                context={"save_file_path": self.save_file_path},
+            )
             self.error = str(error)
         finally:
             _update_cleanup_inventory()
@@ -219,6 +232,12 @@ class WordPressPreview(QObject):
                     message = json.loads(line[len(PROTOCOL_PREFIX):])
                     self._handle_message(message)
                 except (ValueError, TypeError, AttributeError) as error:
+                    get_logger().exception(
+                        error,
+                        "Invalid WordPress preview response",
+                        level=LogLevel.WARNING,
+                        action="parse_wordpress_preview_response",
+                    )
                     self._fail(f"Invalid preview response: {error}")
 
     def _handle_message(self, message: dict[str, object]) -> None:
@@ -250,6 +269,12 @@ class WordPressPreview(QObject):
                     if not html:
                         raise ValueError("WordPress returned an empty snapshot")
                 except ValueError as error:
+                    get_logger().exception(
+                        error,
+                        "Invalid WordPress preview snapshot",
+                        level=LogLevel.WARNING,
+                        action="decode_wordpress_preview_snapshot",
+                    )
                     self._fail(str(error))
                     return
                 self._report_progress("export")
