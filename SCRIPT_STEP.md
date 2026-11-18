@@ -4491,3 +4491,20 @@ Minimal validation:
 
 - Parsed the new file as Python and confirmed the module contains only its Docstring. Targeted Ruff and Pyright passed; no pytest or runtime operation was performed.
 - Propagated the placeholder and this record to canonical `D:\PC\Python\regex_pad_project`; the same checks passed there, and SHA-256 equality was verified for both intended files.
+
+## Step15-section58 Pseudo-macro JSON Dataclass Properties
+
+Date: 2026-11-18
+
+Request: implement the dataclasses, getters and setters in `macro/json_data_model.py` so later macro modules share one variable-name and type boundary.
+
+- Added mutable, slotted `MacroJsonStepData` and `MacroJsonData` dataclasses matching every field in `macro_format_v1.json`.
+- Used Python properties as getters and `@property-name.setter` methods as setters. Constructors expose the stable public English names that future Bridges, Validators and Managers should reuse.
+- Setters enforce only structural Python types. They deliberately do not validate regex syntax, normalization forms, empty values or mutually exclusive settings; those remain the future Validator's responsibility.
+- Stored ordered steps as an immutable tuple and copied constructor sequences into that tuple, preventing callers from changing the model by mutating the original list.
+- Added focused tests for every getter/setter, dataclass identity, wrong-type rejection, Boolean-versus-integer separation, step-content enforcement and defensive step-sequence copying.
+
+Minimal validation:
+
+- Focused model tests passed. Targeted Ruff and Pyright passed for the model and its tests; no full pytest, Bridge, Validator, GUI, Runner or PyInstaller operation was performed.
+- Propagated the model, focused tests and this record onto clean canonical commit `fe0df7e` at `D:\PC\Python\regex_pad_project`. The same 12 focused cases, Ruff and Pyright checks passed there, and SHA-256 equality was verified for all three intended files.
