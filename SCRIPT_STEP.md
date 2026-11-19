@@ -4678,3 +4678,71 @@ Minimal validation:
 - Focused Macro Normalizer, Validator, JSON I/O and data-model tests passed. Targeted Ruff and Pyright passed.
 - Propagated the nine intended Macro source/test/specification/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 42 focused tests, Ruff and Pyright checks passed there, and SHA-256 equality was verified.
 - Full pytest, MacroManager/Runner/Linter integration, GUI wiring, packaged EXE rebuild and physical GUI acceptance were not performed.
+
+## Step15-section68 XML-like Pseudo-macro Editor GUI Design
+
+Date: 2026-11-19
+
+Request: design the file boundaries and GUI layout for an XML-like editor that safely edits pseudo-macro JSON files.
+
+- Added `MACRO_XML_LIKE_EDITOR_GUI_DESIGN.md` as the implementation baseline. “XML-like” is defined as a hierarchical `<macro>`/`<step>` outline plus forms; persistence remains Version 1 JSON and no XML parser is introduced.
+- Designed a modeless independent `QMainWindow` with toolbar, file path and metadata header, horizontal Tree/form Splitter, diagnostics panel and status bar. Minimum-size policy avoids repeating the earlier oversized dialog geometry problem.
+- Defined exact controls for step name, enablement, regex, Unicode normalization, normalization form, circled-number period option and multiline search/exclusion/replacement fields using the existing `RegexInputEdit`.
+- Preserved the critical distinction between JSON `null` and an empty string through explicit “use exclusion/replacement” Checkboxes.
+- Split the planned implementation across GUI editor dataclasses, GUI Bridge, edit session, step Widget, diagnostic table, editor window and Qt Controller. Widgets do not read JSON, save files, validate regex or call Logger directly.
+- Documented Loader/Normalizer/Validator/Saver flows, Error/Warning gating, unsaved-change handling, Logger boundaries, future settings, PyInstaller registration and a seven-step incremental implementation order.
+- Explicitly deferred macro execution, article mutation, Preview, raw JSON/XML editing, drag-and-drop ordering, advanced document Undo and GUI implementation itself.
+
+Validation:
+
+- Reviewed every referenced existing Macro, dialog, translation, settings and MainWindow path and confirmed the proposed files do not collide with current modules.
+- Propagated the three intended design/documentation files to canonical `D:\PC\Python\regex_pad_project`; UTF-8 decoding, required section markers and SHA-256 equality were verified.
+- Documentation-only change: no Python, JSON, GUI, runtime behavior, pytest, Ruff, Pyright or PyInstaller operation was performed.
+
+## Step15-section69 Macro Editor ValueError GUI Fallback Design
+
+Date: 2026-11-19
+
+Request: route `ValueError` raised after XML-like macro-editor input back to the GUI and prompt the user to correct the affected value.
+
+- Defined the Qt Controller as the exception boundary for input-derived `ValueError`. The editor must keep the user's raw input visible, stop model replacement, saving and execution, and convert the exception into a field-addressable Error diagnostic.
+- Specified the GUI fallback sequence: select the affected step, display its form, highlight the field, show a tooltip/status message and return keyboard focus so the user can re-enter the value.
+- Preserved the distinction between the last valid model and uncommitted Widget text. A failed conversion must not silently restore an old value, replace the value with `None` or discard the current edit.
+- Avoided modal dialogs and Error-log spam during ordinary typing. A dialog may additionally explain a failed explicit Save; only a `ValueError` that cannot be mapped to a step and field is treated as unexpected and recorded by Logger.
+- Updated both the GUI implementation baseline and the overall pseudo-macro architecture so future Controller, GUI Bridge and Session work use the same fallback rule.
+
+Validation:
+
+- Documentation-only design refinement. Reviewed the updated error path, save gate and Logger boundary; no Python, JSON, GUI, runtime behavior, pytest, Ruff, Pyright or PyInstaller operation was performed.
+
+## Step15-section70 Closed-value Dropdown Policy for the Macro Editor
+
+Date: 2026-11-19
+
+Request: use GUI dropdown selection for predefined string values so that typing habits and spelling mistakes cannot create avoidable input errors.
+
+- Standardized closed string sets such as `Literal` and `Enum` values on non-editable `QComboBox` controls rather than free-text fields.
+- Defined the Unicode normalization form choices as `未指定`, `NFC`, `NFD`, `NFKC` and `NFKD`. The visible label is separated from `currentData()` values of `None`, `"NFC"`, `"NFD"`, `"NFKC"` and `"NFKD"`, preventing translated labels from entering the JSON model.
+- Required the ComboBox to pass `currentData()` through the GUI Bridge and to obtain its choices from a model-side constant or dedicated option definition rather than duplicating the accepted values inside the Widget.
+- Kept runtime setter and Validator checks as defense for directly edited JSON and programmatic input. Unknown loaded values must not be silently added to the dropdown or replaced by the first valid value.
+- Clarified that disabling Unicode normalization disables its format selector and stores `None`; a previous screen selection may be retained only as unsaved UI state.
+
+Validation:
+
+- Documentation-only design refinement. Checked the control matrix, JSON/model mapping and fallback relationship; no Python, JSON, GUI, runtime behavior, pytest, Ruff, Pyright or PyInstaller operation was performed.
+
+## Step15-section71 Boolean Dropdown Policy for the Macro Editor
+
+Date: 2026-11-19
+
+Request: make Boolean macro-editor inputs selection-based as well.
+
+- Replaced the planned Checkboxes for step enablement, regular-expression use, Unicode normalization and circled-number period addition with non-editable Boolean `QComboBox` controls.
+- Replaced the GUI-only exclusion/replacement nullable Checkboxes with selection controls using `使用しない` and `使用する`, preserving the distinction between JSON `null` and an enabled empty string.
+- Defined context-sensitive labels such as `無効／有効`, `使用しない／使用する` and `追加しない／追加する`, while requiring `currentData()` to contain actual Python `False` and `True` values.
+- Explicitly prohibited string `"true"`／`"false"` and integer `0`／`1` substitutions. Model-to-GUI selection uses `findData(bool_value)` and must diagnose a missing choice rather than silently selecting the first item.
+- Updated the GUI wireframe, Widget matrix, GUI Bridge responsibility and implementation steps. This supersedes the Checkbox controls described in the earlier initial GUI-design record.
+
+Validation:
+
+- Documentation-only design refinement. Checked all current Boolean and nullable GUI fields plus their model mappings; no Python, JSON, GUI, runtime behavior, pytest, Ruff, Pyright or PyInstaller operation was performed.

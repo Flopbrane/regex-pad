@@ -1,5 +1,7 @@
 # RegexPad 疑似マクロ・アーキテクチャ
 
+XMLライクJSONエディターのGUI配置、ファイル責務、Signal、読込・保存フローは`MACRO_XML_LIKE_EDITOR_GUI_DESIGN.md`を基準とする。
+
 更新日: 2026-11-18  
 状態: 設計確定・段階実装中
 
@@ -117,6 +119,10 @@ MacroJsonData
 
 setterはPythonの構造型に加え、既存の`NormalizationForm` Literalで定義された`NFC`、`NFD`、`NFKC`、`NFKD`または`None`だけを保証する。正規表現や項目間の排他条件はValidatorの責務である。
 
+GUIでは、`NormalizationForm`のように許可文字列が規定されている値を自由入力させない。編集不可のドロップダウンを使用し、表示名とは別の内部値として`None`、`NFC`、`NFD`、`NFKC`、`NFKD`をGUI Bridgeへ渡す。今後追加される`Literal`や`Enum`項目も同じ選択方式とし、人間のタイプミスによる`ValueError`を入力時点で防ぐ。Validatorとsetterは、直接編集されたJSONやプログラム経由の入力に対する防御として残す。
+
+Boolean項目もチェックボックスではなく、編集不可のドロップダウンから選択する。表示は項目に合わせて「無効／有効」「使用しない／使用する」「追加しない／追加する」とし、GUI Bridgeへは`currentData()`から得たPythonの`False`／`True`を渡す。文字列の`"true"`／`"false"`や整数の`0`／`1`へ変換しない。
+
 丸数字のUnicode正規化後に`.`を付ける設定は、既存の検索・置換機能と同じ`append_dot_to_circled_number: bool`を使用する。JSONキーは`丸数字変換後ピリオド追加`とする。この値が有効になる条件（Unicode正規化が有効で、形式がNFKCまたはNFKDであること）はValidatorが確認する。
 
 ### 将来の実行用モデル
@@ -163,6 +169,11 @@ NormalizerとValidatorは、直接編集されたJSONに対する任意の保険
 XMLライクエディター
   ↓
 GUI Bridge
+  ├─ ValueError: 入力値を保持してGUIへ戻す
+  │              診断表示・対象項目を強調・フォーカス
+  │              再入力を促し、保存しない
+  │
+  └─ 変換成功
   ↓
 MacroJsonData
   ↓
@@ -182,6 +193,8 @@ MacroManager
 XMLライクエディター
   ↓
 GUI Bridge
+  ├─ ValueError: 入力値を保持してGUIへ戻し、再入力を促す
+  └─ 変換成功
   ↓
 MacroJsonData
   ↓
@@ -195,6 +208,8 @@ Validator
        ↓
        JSON Saver
 ```
+
+エディター入力後の`ValueError`は、Controllerが修正可能な入力診断へ変換する。入力文字列を消したり前回の正常値へ黙って戻したりせず、該当手順と入力項目へフォーカスを戻して再入力を促す。変換に成功するまで保存用モデルは更新せず、Runnerにも渡さない。入力項目へ対応付けられない`ValueError`だけを想定外例外としてLoggerへ記録する。
 
 ## 6. JSON読み込み・実行経路
 
@@ -249,6 +264,8 @@ XMLライクエディター
 XMLライクエディター
   ↓
 GUI Bridge
+  ├─ ValueError: 入力値を保持してGUIへ戻し、再入力を促す
+  └─ 変換成功
   ↓
 MacroJsonData
   ↓
