@@ -392,11 +392,14 @@ File Bridgeは、既に確定した`MacroJsonData`のproperty名を基準にで�
 - 丸数字変換後ピリオド追加のBoolean property
 - 手順のtuple保持
 - JSONデータモデルの集中テスト
+- File Bridge（`dict ↔ MacroJsonData`）
+- UTF-8 JSON Loader（重複キー検出を含む）
+- 原子的なUTF-8 JSON Saver
+- `app_base_dir()/macro`の既定保存場所と変更可能な保存フォルダ
 
 ### 未実装
 
-- JSON Loader / Saver
-- File Bridge / GUI Bridge
+- GUI Bridge
 - Normalizer
 - Validator
 - Linter

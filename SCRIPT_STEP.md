@@ -4637,3 +4637,23 @@ Minimal validation:
 - Focused Find/Replace dialog and main-window search tests passed: 96 cases. Both translation JSON files loaded successfully.
 - Targeted Ruff and Pyright passed. Full pytest, packaged EXE rebuild and physical GUI acceptance were not performed.
 - Propagated the seven intended source/resource/test/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 96 focused cases, translation JSON loading, Ruff and Pyright checks passed there, and SHA-256 equality was verified.
+
+## Step15-section66 Pseudo-macro JSON Loader and Saver
+
+Date: 2026-11-19
+
+Request: load and save JSON files that conform to the configured pseudo-macro file data model, using the `macro` folder as the default location while allowing a later user-selected folder.
+
+- Added `MacroJsonBridge` as the structural conversion boundary between Japanese-keyed JSON dictionaries and `MacroJsonData`/`MacroJsonStepData`. It preserves step order, `null`/`None`, empty replacement strings and Unicode text.
+- The Bridge requires the exact Version 1 structural key set. Unknown keys are rejected instead of silently disappearing during a load/save round trip; semantic and cross-field validation remains the future Validator's responsibility.
+- Added `MacroJsonLoader`, which reads UTF-8 JSON, rejects duplicate JSON keys, resolves relative paths inside the configured macro folder and returns `MacroJsonData`. Syntax, decoding, I/O and structural failures are exposed as `MacroJsonLoadError`; they are not swallowed or logged at this lower layer.
+- Added `MacroJsonSaver`, which converts a model through the Bridge and writes indented UTF-8 JSON with a final newline. It writes a temporary file in the destination folder and replaces the destination only after a successful write; failures raise `MacroJsonSaveError` and preserve the previous file.
+- Added shared path resolution. The default is `app_base_dir() / "macro"`; callers may inject another `Path` when constructing Loader or Saver. Relative paths cannot escape that folder, while an explicitly selected absolute path is accepted for future file-dialog use.
+- Exported the public Loader/Saver/Bridge/model types from the `macro` package and added the new modules to PyInstaller hidden imports.
+- Added focused regressions for the default/custom folders, Version 1 reference load, Unicode/null/newline round trip, duplicate and unknown keys, path traversal and failed atomic replacement.
+
+Minimal validation:
+
+- Focused macro model and JSON I/O tests passed. Targeted Ruff and Pyright passed.
+- Propagated the ten intended Macro source/test/specification/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 35 focused tests, Ruff and Pyright checks passed there, and SHA-256 equality was verified.
+- Full pytest, GUI integration, Validator/Normalizer execution, packaged EXE rebuild and physical GUI acceptance were not performed.

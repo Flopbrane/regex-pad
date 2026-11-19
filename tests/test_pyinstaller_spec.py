@@ -17,7 +17,10 @@ def test_pyinstaller_spec_collects_project_json_files() -> None:
     assert "*_project_json_datas()," in spec_text
     assert "hiddenimports=APP_HIDDEN_IMPORTS" in spec_text
     assert '"app_logging.app_logger"' in spec_text
+    assert '"macro.json_bridge"' in spec_text
     assert '"macro.json_data_model"' in spec_text
+    assert '"macro.json_loader"' in spec_text
+    assert '"macro.json_saver"' in spec_text
     assert '"build"' in spec_text
     assert '"dist"' in spec_text
     assert '"_internal"' in spec_text
