@@ -51,13 +51,13 @@ class MacroJsonBridge:
     @classmethod
     def from_dict(cls, load_data: object) -> MacroJsonData:
         """Convert a decoded JSON object into ``MacroJsonData``."""
-        root = cls._require_mapping(load_data, "root")
+        root: Mapping[str, object] = cls._require_mapping(load_data, "root")
         cls._require_exact_keys(root, ROOT_KEYS, "root")
-        raw_steps = root[STEPS_KEY]
+        raw_steps: object = root[STEPS_KEY]
         if not isinstance(raw_steps, list):
             raise MacroJsonBridgeError(f"{STEPS_KEY} must be list")
 
-        steps = tuple(
+        steps: tuple[MacroJsonStepData, ...] = tuple(
             cls._step_from_dict(step_data, step_index)
             for step_index, step_data in enumerate(raw_steps)
         )
@@ -89,7 +89,7 @@ class MacroJsonBridge:
         step_data: object,
         step_index: int,
     ) -> MacroJsonStepData:
-        step = cls._require_mapping(step_data, f"{STEPS_KEY}[{step_index}]")
+        step: Mapping[str, object] = cls._require_mapping(step_data, f"{STEPS_KEY}[{step_index}]")
         cls._require_exact_keys(step, STEP_KEYS, f"{STEPS_KEY}[{step_index}]")
         try:
             return MacroJsonStepData(
@@ -141,9 +141,9 @@ class MacroJsonBridge:
         expected_keys: frozenset[str],
         location: str,
     ) -> None:
-        actual_keys = frozenset(value)
-        missing_keys = expected_keys - actual_keys
-        unknown_keys = actual_keys - expected_keys
+        actual_keys: frozenset[str] = frozenset(value)
+        missing_keys: frozenset[str] = expected_keys - actual_keys
+        unknown_keys: frozenset[str] = actual_keys - expected_keys
         if missing_keys:
             raise MacroJsonBridgeError(
                 f"{location} is missing keys: {', '.join(sorted(missing_keys))}"

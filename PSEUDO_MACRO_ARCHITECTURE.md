@@ -396,13 +396,14 @@ File Bridgeは、既に確定した`MacroJsonData`のproperty名を基準にで�
 - UTF-8 JSON Loader（重複キー検出を含む）
 - 原子的なUTF-8 JSON Saver
 - `app_base_dir()/macro`の既定保存場所と変更可能な保存フォルダ
+- 文字列を変更しないVersion 1 Normalizer
+- Error／Warning／Information診断モデル
+- Version 1の意味規則と正規表現を検査するValidator
 
 ### 未実装
 
 - GUI Bridge
-- Normalizer
-- Validator
-- Linter
+- Linterの翻訳・GUI表示
 - MacroManager
 - Runner
 - Preview

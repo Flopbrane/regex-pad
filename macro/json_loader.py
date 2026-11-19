@@ -19,16 +19,16 @@ class MacroJsonLoader:
     """Read UTF-8 JSON from a configurable pseudo-macro folder."""
 
     def __init__(self, macro_folder: Path | None = None) -> None:
-        self.macro_folder = macro_folder or default_macro_folder()
+        self.macro_folder: Path = macro_folder or default_macro_folder()
 
     def load(self, load_file_path: str | Path) -> MacroJsonData:
         """Load one absolute path or a path relative to ``macro_folder``."""
         try:
-            resolved_load_file_path = resolve_macro_file_path(
+            resolved_load_file_path: Path = resolve_macro_file_path(
                 load_file_path,
                 self.macro_folder,
             )
-            load_text = resolved_load_file_path.read_text(encoding="utf-8")
+            load_text: str = resolved_load_file_path.read_text(encoding="utf-8")
             load_data = json.loads(
                 load_text,
                 object_pairs_hook=self._object_without_duplicate_keys,

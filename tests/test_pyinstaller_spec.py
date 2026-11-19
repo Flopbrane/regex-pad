@@ -21,6 +21,9 @@ def test_pyinstaller_spec_collects_project_json_files() -> None:
     assert '"macro.json_data_model"' in spec_text
     assert '"macro.json_loader"' in spec_text
     assert '"macro.json_saver"' in spec_text
+    assert '"macro.macro_normalizer"' in spec_text
+    assert '"macro.macro_validator"' in spec_text
+    assert '"macro.validation_types"' in spec_text
     assert '"build"' in spec_text
     assert '"dist"' in spec_text
     assert '"_internal"' in spec_text

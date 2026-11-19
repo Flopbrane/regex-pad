@@ -4657,3 +4657,24 @@ Minimal validation:
 - Focused macro model and JSON I/O tests passed. Targeted Ruff and Pyright passed.
 - Propagated the ten intended Macro source/test/specification/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 35 focused tests, Ruff and Pyright checks passed there, and SHA-256 equality was verified.
 - Full pytest, GUI integration, Validator/Normalizer execution, packaged EXE rebuild and physical GUI acceptance were not performed.
+
+## Step15-section67 Pseudo-macro Normalizer and Validator
+
+Date: 2026-11-19
+
+Request: implement the planned Normalizer, Validator, diagnostic model and focused boundary tests while deferring concentrated integration testing until GUI wiring is complete.
+
+- Added frozen `MacroDiagnostic` and `MacroValidationResult` data models plus `MacroDiagnosticSeverity` values for Error, Warning and Information. Validation results expose grouped diagnostics and an `is_valid` execution gate.
+- Implemented a deliberately thin Version 1 `MacroNormalizer`. It verifies the input model type and returns a detached deep model copy while preserving search, exclusion and replacement strings, whitespace, newlines, backslashes, full-width characters, empty strings and `None` exactly.
+- Implemented `MacroValidator` without mutating its input. Confirmed rules cover supported format version, non-empty macro/step names, non-empty step collection, enabled-step availability, duplicate step names, non-empty enabled search text, Python regex compilation for search/exclusion, Unicode normalization form presence, replacement-route exclusivity and the circled-number period option's NFKC/NFKD requirement.
+- Disabled steps retain name/duplicate checks but skip execution-only checks. A macro with no enabled steps receives a Warning rather than an Error; it remains structurally valid but performs no transformation until a step is enabled.
+- Kept regular-expression matching compatible with Unicode normalization because the Version 1 reference intentionally uses both: regex selects the text and normalization transforms the match.
+- Added stable diagnostic codes, future localization keys, step indexes, field names and formatting values. GUI translation/presentation remains the future Linter's responsibility.
+- Exported the new public types from the `macro` package and added `validation_types` to explicit PyInstaller hidden imports alongside the existing Normalizer and Validator entries.
+- Added focused tests for lossless normalization, reference-fixture acceptance, root-error aggregation, disabled steps, duplicate names, invalid search/exclusion regex and replacement-route relationships.
+
+Minimal validation:
+
+- Focused Macro Normalizer, Validator, JSON I/O and data-model tests passed. Targeted Ruff and Pyright passed.
+- Propagated the nine intended Macro source/test/specification/documentation files to canonical `D:\PC\Python\regex_pad_project`; the same 42 focused tests, Ruff and Pyright checks passed there, and SHA-256 equality was verified.
+- Full pytest, MacroManager/Runner/Linter integration, GUI wiring, packaged EXE rebuild and physical GUI acceptance were not performed.

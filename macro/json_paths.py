@@ -21,8 +21,8 @@ def resolve_macro_file_path(
     if requested_path.is_absolute():
         return requested_path.resolve()
 
-    resolved_folder = macro_folder.resolve()
-    resolved_path = (resolved_folder / requested_path).resolve()
+    resolved_folder: Path = macro_folder.resolve()
+    resolved_path: Path = (resolved_folder / requested_path).resolve()
     if not resolved_path.is_relative_to(resolved_folder):
         raise ValueError(
             f"relative macro path must stay inside the macro folder: {file_path}"

@@ -42,6 +42,7 @@ APP_HIDDEN_IMPORTS = [
     "macro.macro_preview",
     "macro.macro_runner",
     "macro.macro_validator",
+    "macro.validation_types",
 ]
 
 ICON_FILE = PROJECT_DIR / "assets" / "icons" / "regex_pad_icon.ico"
