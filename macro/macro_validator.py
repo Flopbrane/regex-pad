@@ -12,6 +12,7 @@ from macro.validation_types import (
     MacroDiagnosticSeverity,
     MacroValidationResult,
 )
+from search.search_engine import SearchEngine, SearchOptions
 
 SUPPORTED_FORMAT_VERSIONS: Final = frozenset({1})
 APPEND_DOT_NORMALIZATION_FORMS: Final = frozenset({"NFKC", "NFKD"})
@@ -118,6 +119,23 @@ class MacroValidator:
             diagnostics.extend(cls._validate_regular_expressions(step, step_index))
 
         diagnostics.extend(cls._validate_replacement_route(step, step_index))
+        if not any(d.severity is MacroDiagnosticSeverity.ERROR for d in diagnostics):
+            options = SearchOptions(regular_expression=step.regular_expression)
+            engine = SearchEngine()
+            if engine.analyze_matches("", step.search_text, options).zero_width:
+                diagnostics.append(cls._error(
+                    "zero_width_search", "macro.validation.zero_width_search",
+                    step_index=step_index, field_name="search_text",
+                ))
+            if not step.unicode_normalize and step.replacement_text is not None:
+                try:
+                    engine.validate_replacement(step.search_text, step.replacement_text, options)
+                except (re.error, IndexError) as error:
+                    diagnostics.append(cls._error(
+                        "invalid_replacement", "macro.validation.invalid_replacement",
+                        step_index=step_index, field_name="replacement_text",
+                        values={"error": str(error)},
+                    ))
         return diagnostics
 
     @classmethod

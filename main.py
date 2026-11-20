@@ -31,7 +31,12 @@ from app_logging import LogLevel, get_logger, install_exception_hooks
 LOGGER = get_logger()
 
 # PySide6 exposes Qt modules dynamically; Pylint may report false no-name-in-module.
-from PySide6.QtCore import QPoint, Qt, QTimer  # pylint: disable=no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=no-name-in-module
+    QByteArray,
+    QPoint,
+    Qt,
+    QTimer,
+)
 from PySide6.QtGui import (  # pylint: disable=no-name-in-module
     QAction,
     QActionGroup,
@@ -62,6 +67,9 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 from config import default_config_path, migrate_legacy_settings_if_needed
 from dialogs.find_replace_dialog import FindReplaceDialog
 from dialogs.grammar_check_dialog import GrammarCheckDialog
+from dialogs.macro_editor_controller import MacroEditorController
+from dialogs.macro_editor_window import MacroEditorWindow
+from dialogs.macro_execution_controller import MacroExecutionController
 from dialogs.options_dialog import OptionsDialog
 from dialogs.regex_help_dialog import RegexHelpDialog
 from dialogs.schema_reference_dialog import SchemaReferenceDialog
@@ -257,6 +265,12 @@ class MainWindow(QMainWindow):
         self.current_encoding = settings.default_encoding
         self.newline_code = settings.newline_code
         self.find_replace_dialog: FindReplaceDialog | None = None
+        self.macro_editor_window: MacroEditorWindow | None = None
+        self.macro_editor_controller: MacroEditorController | None = None
+        self.macro_execution_controller: MacroExecutionController | None = None
+        self.macro_folder = settings.macro_folder
+        self.macro_editor_geometry = settings.macro_editor_geometry
+        self.macro_editor_splitter_state = settings.macro_editor_splitter_state
         self.grammar_check_dialog: GrammarCheckDialog | None = None
         self.regex_help_dialog: RegexHelpDialog | None = None
         self.tag_insert_dialog: TagInsertDialog | None = None
@@ -365,6 +379,9 @@ class MainWindow(QMainWindow):
             if not self._confirm_save_or_discard_editor(editor):
                 event.ignore()
                 return
+        if self.macro_editor_window is not None and not self.macro_editor_window.close():
+            event.ignore()
+            return
         self._save_settings()
         self._clear_grammar_lint_results_on_window_close()
         self.stop_wordpress_preview()
@@ -651,6 +668,12 @@ class MainWindow(QMainWindow):
         self.search_menu.addAction(self.find_action)
         self.search_menu.addAction(self.grammar_check_action)
         menu_bar.addMenu(self.search_menu)
+
+        self.macro_menu = QMenu(self)
+        self.macro_editor_action = QAction(self)
+        self.macro_editor_action.triggered.connect(self.show_macro_editor)
+        self.macro_menu.addAction(self.macro_editor_action)
+        menu_bar.addMenu(self.macro_menu)
 
         self.view_menu = QMenu(self)
         self.view_menu.addAction(self.line_numbers_action)
@@ -1069,7 +1092,14 @@ class MainWindow(QMainWindow):
 
     def _save_settings(self) -> None:
         """Save the current main window and editor settings to the settings manager."""
+        if self.macro_editor_window is not None and self.macro_editor_controller is not None:
+            self.macro_folder = str(self.macro_editor_controller.session.macro_folder)
+            self.macro_editor_geometry = bytes(self.macro_editor_window.saveGeometry().toBase64().data()).decode("ascii")
+            self.macro_editor_splitter_state = bytes(self.macro_editor_window.splitter.saveState().toBase64().data()).decode("ascii")
         self.settings_manager.save(
+            macro_folder=self.macro_folder,
+            macro_editor_geometry=self.macro_editor_geometry,
+            macro_editor_splitter_state=self.macro_editor_splitter_state,
             word_wrap_enabled=self.word_wrap_action.isChecked(),
             line_numbers_enabled=self.line_numbers_action.isChecked(),
             ruler_enabled=self.ruler_action.isChecked(),
@@ -1125,6 +1155,12 @@ class MainWindow(QMainWindow):
 
     def _apply_language(self) -> None:
         """Apply the current language to all UI elements."""
+        self.macro_menu.setTitle(self.translator.text("menu.macro"))
+        self.macro_editor_action.setText(self.translator.text("macro.editor.title"))
+        if self.macro_editor_window is not None:
+            self.macro_editor_window.retranslate_ui()
+            if self.macro_editor_controller is not None:
+                self.macro_editor_controller.validate()
         self.file_menu.setTitle(self.translator.text("menu.file"))
         self.edit_menu.setTitle(self.translator.text("menu.edit"))
         self.search_menu.setTitle(self.translator.text("menu.search"))
@@ -1370,6 +1406,32 @@ class MainWindow(QMainWindow):
         html_transform_menu.addAction(self.wordpress_code_block_action)
         context_menu.addMenu(html_transform_menu)
         return context_menu
+
+    def show_macro_editor(self) -> None:
+        """Open or raise the independent structured macro editor."""
+        if self.macro_editor_window is None:
+            self.macro_editor_window = MacroEditorWindow(self.translator, self)
+            self.macro_editor_controller = MacroEditorController(self.macro_editor_window, LOGGER)
+            self.macro_execution_controller = MacroExecutionController(
+                self.translator, LOGGER,
+                lambda: self.editor,
+                lambda target: target in self.tab_file_paths and any(
+                    self._editor_at(index) is target for index in range(self.tab_widget.count())
+                ),
+                lambda target: str(self.tab_file_paths.get(target) or self._draft_title(target)),
+                self.macro_editor_window,
+            )
+            self.macro_editor_controller.execution_requested.connect(self.macro_execution_controller.preview_and_apply)
+            if self.macro_folder:
+                self.macro_editor_controller.session.macro_folder = Path(self.macro_folder)
+            if self.macro_editor_geometry:
+                self.macro_editor_window.restoreGeometry(QByteArray.fromBase64(self.macro_editor_geometry.encode("ascii", errors="ignore")))
+            if self.macro_editor_splitter_state:
+                self.macro_editor_window.splitter.restoreState(QByteArray.fromBase64(self.macro_editor_splitter_state.encode("ascii", errors="ignore")))
+            self.macro_editor_window.update_status(self.macro_editor_controller.session)
+        self.macro_editor_window.show()
+        self.macro_editor_window.raise_()
+        self.macro_editor_window.activateWindow()
 
     def show_tag_insert_dialog(self) -> None:
         """Show the tag insert dialog, allowing the user to select and insert a tag snippet."""

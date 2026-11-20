@@ -52,6 +52,9 @@ class EditorSettings:
     frame_outer_spacing: str = "1.5em 0 2em 0"
     frame_background_color: str = "#fffaf0"
     frame_text_color: str = "#333333"
+    macro_folder: str = ""
+    macro_editor_geometry: str = ""
+    macro_editor_splitter_state: str = ""
 
 
 class SettingsManager:
@@ -163,6 +166,9 @@ class SettingsManager:
                 load_data, "frame_background_color", "#fffaf0"
             ),
             frame_text_color=_setting_str(load_data, "frame_text_color", "#333333"),
+            macro_folder=_setting_str(load_data, "macro_folder", ""),
+            macro_editor_geometry=_setting_str(load_data, "macro_editor_geometry", ""),
+            macro_editor_splitter_state=_setting_str(load_data, "macro_editor_splitter_state", ""),
         )
 
     def save(
@@ -211,6 +217,9 @@ class SettingsManager:
         frame_outer_spacing: str = "1.5em 0 2em 0",
         frame_background_color: str = "#fffaf0",
         frame_text_color: str = "#333333",
+        macro_folder: str = "",
+        macro_editor_geometry: str = "",
+        macro_editor_splitter_state: str = "",
     ) -> None:
         save_data = {
             "word_wrap_enabled": word_wrap_enabled,
@@ -256,6 +265,9 @@ class SettingsManager:
             "frame_outer_spacing": frame_outer_spacing,
             "frame_background_color": frame_background_color,
             "frame_text_color": frame_text_color,
+            "macro_folder": macro_folder,
+            "macro_editor_geometry": macro_editor_geometry,
+            "macro_editor_splitter_state": macro_editor_splitter_state,
         }
         self.settings_path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(

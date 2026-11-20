@@ -37,12 +37,22 @@ APP_HIDDEN_IMPORTS = [
     "macro.json_saver",
     "macro.macro_linter",
     "macro.macro_model",
+    "macro.macro_manager",
     "macro.macro_normalizer",
     "macro.macro_parser",
     "macro.macro_preview",
     "macro.macro_runner",
     "macro.macro_validator",
     "macro.validation_types",
+    "macro.editor_data_model",
+    "macro.editor_bridge",
+    "macro.editor_session",
+    "dialogs.macro_step_editor_widget",
+    "dialogs.macro_diagnostic_table",
+    "dialogs.macro_editor_window",
+    "dialogs.macro_editor_controller",
+    "dialogs.macro_execution_controller",
+    "dialogs.macro_run_preview_dialog",
 ]
 
 ICON_FILE = PROJECT_DIR / "assets" / "icons" / "regex_pad_icon.ico"

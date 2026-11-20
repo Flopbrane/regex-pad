@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any
 
-from macro.json_bridge import MacroJsonBridge, MacroJsonBridgeError
 from macro.json_data_model import MacroJsonData
 from macro.json_paths import default_macro_folder, resolve_macro_file_path
+from macro.macro_parser import MacroParser
 
 
 class MacroJsonLoadError(ValueError):
@@ -29,31 +27,14 @@ class MacroJsonLoader:
                 self.macro_folder,
             )
             load_text: str = resolved_load_file_path.read_text(encoding="utf-8")
-            load_data = json.loads(
-                load_text,
-                object_pairs_hook=self._object_without_duplicate_keys,
-            )
-            return MacroJsonBridge.from_dict(load_data)
+            return MacroParser.parse(load_text)
         except (
             MacroJsonLoadError,
             OSError,
             UnicodeError,
-            json.JSONDecodeError,
-            MacroJsonBridgeError,
             TypeError,
             ValueError,
         ) as error:
             raise MacroJsonLoadError(
                 f"cannot load pseudo-macro JSON {load_file_path}: {error}"
             ) from error
-
-    @staticmethod
-    def _object_without_duplicate_keys(
-        pairs: list[tuple[str, Any]],
-    ) -> dict[str, Any]:
-        load_data: dict[str, Any] = {}
-        for key, value in pairs:
-            if key in load_data:
-                raise MacroJsonLoadError(f"duplicate JSON key: {key}")
-            load_data[key] = value
-        return load_data

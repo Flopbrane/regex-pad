@@ -4746,3 +4746,98 @@ Request: make Boolean macro-editor inputs selection-based as well.
 Validation:
 
 - Documentation-only design refinement. Checked all current Boolean and nullable GUI fields plus their model mappings; no Python, JSON, GUI, runtime behavior, pytest, Ruff, Pyright or PyInstaller operation was performed.
+
+
+## Step15-section72 XML-like Pseudo-macro GUI Editor
+
+Date: 2026-11-20
+
+Request: implement the XML-like GUI editor window using the existing design and macro JSON boundaries.
+
+- Added editable dataclasses, a lossless GUI/file bridge, and a session separate from the persisted MacroJsonData model.
+- Added an independent modeless QMainWindow with an XML-like step tree, scrollable RegexInputEdit form, typed non-editable ComboBoxes, metadata, toolbar, diagnostic table and read-only JSON view.
+- Connected New/Open/Save/Save As, Add/Duplicate/Delete/Up/Down, debounced validation and field navigation. Error diagnostics block saving; warnings allow it. Existing atomic MacroJsonSaver handles writes.
+- Preserved null versus enabled empty strings, exact search/replacement text, failed-I/O edits and dirty state. Unicode normalization and regular-expression selection are independent; normalization disables replacement.
+- Added Save/Discard/Cancel confirmation for new/open/close and main-window shutdown. Input-derived ValueError diagnostics retain raw form text and identify the affected step/field; unexpected validation exceptions are logged and block saving.
+- Added Macro > Pseudo-macro editor to MainWindow, single-window reuse, live Japanese/English labels, portable macro-folder/geometry/splitter settings and PyInstaller hidden imports.
+- Updated MACRO_XML_LIKE_EDITOR_GUI_DESIGN.md and PSEUDO_MACRO_ARCHITECTURE.md. Macro execution, article application and an execution preview remain outside this editor scope.
+
+Changed files:
+
+- macro/editor_data_model.py, macro/editor_bridge.py, macro/editor_session.py
+- dialogs/macro_step_editor_widget.py, dialogs/macro_diagnostic_table.py, dialogs/macro_editor_window.py, dialogs/macro_editor_controller.py
+- main.py, settings/settings_manager.py, resources/app_text_ja.json, resources/app_text_en.json, regex-pad.spec
+- tests/test_macro_editor.py, MACRO_XML_LIKE_EDITOR_GUI_DESIGN.md, PSEUDO_MACRO_ARCHITECTURE.md, SCRIPT_STEP.md
+
+Worktree validation with D:/Dev/venvs/venv_txt_edit312/Scripts/python.exe:
+
+- Focused macro editor, macro JSON/model/validation, settings and packaging checks: 67 passed (including 21 new editor cases).
+- Ruff whole project: passed. Pyright whole project with explicit --pythonpath to the specified interpreter: 0 errors. The initial plain Pyright invocation did not locate PySide6/pytest; explicitly selecting the required interpreter resolved import discovery.
+- Full suite: 860 passed / 18 failed. Eleven Gutenberg content-loss tests fail because required fixtures are absent from this worktree. The other seven failures match the canonical pre-change failures (one paragraph class/style expectation, four tag insertion expectations, two visible-whitespace marker expectations).
+- Canonical pre-change full-suite baseline: 850 passed / 7 failed; the exact failure set is recorded above and is compared after propagation.
+- Offscreen Qt rendering inspected with a Windows Japanese font explicitly loaded for the preview. This does not constitute physical GUI acceptance.
+
+Canonical propagation and final checks: appended below after execution.
+
+EXE rebuilding and physical Windows GUI acceptance were not performed.
+
+Canonical final validation (D:/PC/Python/regex_pad_project):
+
+- All 8 existing destination files were compared with the worktree HEAD base before transfer and matched after newline normalization. The 8 added files had no destination collision. Copied only the 16 intended implementation/resource/test/documentation files; existing untracked log files and local configuration were preserved. AGENTS.md already matched and required no transfer.
+- Focused pytest: 67 passed, including 21 macro-editor cases. Ruff whole project: passed. Pyright whole project using the specified interpreter through --pythonpath: 0 errors, 0 warnings. git diff --check: passed.
+- Final whole-suite pytest: 871 passed / 7 failed in 12.02s. Automatically compared the exact failing test IDs with the pre-change baseline (850 passed / 7 failed): identical set; no newly failing tests. Existing failures are in test_html_typo_lint.py (1), test_tag_insert.py (4), and test_text_editor_visible_whitespace.py (2).
+- Verified SHA-256 equality for all 16 changed files between worktree and canonical, plus unchanged AGENTS.md (17 files total). Rechecked after appending this final record.
+- Confirmed offscreen rendering from the canonical project. The editor is available from the Macro menu when running the canonical Python source. Packaged EXE rebuilding and physical Windows GUI acceptance remain unperformed.
+
+
+## Step15-section73 Macro Editor Form Order
+
+Date: 2026-11-20
+
+- Moved the search text, exclusion toggle/text and replacement toggle/text together directly below step enablement, as requested from the marked screenshot. Regex and Unicode options now follow these fields.
+- Changed only the GUI field order in dialogs/macro_step_editor_widget.py; the persisted data model order is unchanged.
+- Compared the canonical widget and SCRIPT_STEP.md with the previous worktree content before transferring this update; both matched and had no conflict.
+- Worktree and canonical: existing macro-editor tests 21 passed; Ruff whole project passed; Pyright whole project with the required interpreter selected via --pythonpath reported 0 errors. Also inspected the actual QFormLayout field sequence in canonical offscreen Qt and confirmed the requested five rows immediately follow enabled.
+- SHA-256 equality verified for the widget and this record after transfer. Packaged EXE rebuilding and physical GUI acceptance were not performed for this layout change.
+
+
+## Step15-section74 MacroManager, Runner and Approved Document Application
+
+Date: 2026-11-20
+
+Request: complete the remaining Manager-related macro implementation after aligning the GUI form order with Find/Replace.
+
+- Implemented MacroManager, MacroCompiler and frozen execution dataclasses, MacroRunner, MacroLinter, MacroPreview and shared JSON-text MacroParser. Loader now delegates JSON parsing to Parser; duplicate-key errors remain visible.
+- Routed editor validation/loading/saving through Manager. Added Run preview to the editor toolbar/menu and an execution controller connected to the owning MainWindow.
+- Runs use the existing SearchEngine sequentially on a detached text snapshot. Reports contain match/exclusion/replacement counts and skipped steps. Regex replacement references are validated even with no matches. Zero-width search is rejected statically when possible and against the actual input of each step. Failed runs never expose partially transformed text for application.
+- Added a read-only Before/After execution preview, per-step count table and translated static/runtime diagnostics. Apply is disabled for errors and unchanged results. Explicit approval applies the already reviewed output exactly once, through one QTextCursor edit block for single-step Undo/Redo; it does not rerun the macro or save an article.
+- Bound preview approval to the original editor, document object, revision, source text, active tab and writable state. Removed/moved tabs and stale snapshots block application. Unexpected engine exceptions are logged and shown without changing the document.
+- Added SearchEngine analysis/template-validation entry points. Fixed literal replacement backslashes so ordinary paths and backreference-looking strings stay literal, including exclusion and preview routes; regex replacement handling is retained.
+- Updated Japanese/English resources, PyInstaller hidden imports and PSEUDO_MACRO_ARCHITECTURE.md. Version 1 execution uses the existing case-insensitive SearchOptions defaults and full-document scope; this is documented explicitly.
+
+Files changed in this step:
+
+- macro/macro_manager.py (new), macro/macro_model.py, macro/macro_runner.py, macro/macro_linter.py, macro/macro_preview.py, macro/macro_parser.py, macro/json_loader.py, macro/macro_validator.py
+- dialogs/macro_execution_controller.py (new), dialogs/macro_run_preview_dialog.py (new), dialogs/macro_editor_window.py, dialogs/macro_editor_controller.py
+- main.py, search/search_engine.py, resources/app_text_ja.json, resources/app_text_en.json, regex-pad.spec
+- tests/test_macro_runtime.py (new), tests/test_macro_execution_gui.py (new), PSEUDO_MACRO_ARCHITECTURE.md, SCRIPT_STEP.md
+
+Worktree validation using D:/Dev/venvs/venv_txt_edit312/Scripts/python.exe:
+
+- Focused macro/model/IO/validation/editor/execution/search/packaging suite: 139 passed, including 28 new runtime/GUI cases.
+- Ruff whole project: passed. Pyright whole project with --pythonpath selecting the required interpreter: 0 errors, 0 warnings. git diff --check: passed.
+- Whole suite: 888 passed / 18 failed. Existing failures match the preceding worktree run: eleven missing Gutenberg fixtures plus seven existing paragraph/tag/whitespace expectations. Canonical pre-change baseline was rerun: 871 passed / 7 failed.
+- Inspected an offscreen Japanese execution-preview rendering with the reference two-step WordPress macro. This is not physical Windows GUI acceptance.
+
+Canonical propagation and validation follow below after execution. EXE rebuilding and physical GUI acceptance are not included in this step.
+
+Canonical propagation and final validation:
+
+- Compared all existing destinations with the current worktree state captured before this step (including earlier authorized, uncommitted GUI work). The 17 existing files matched; five new files had no destination collision. Transferred only these 22 selected files. Preserved local configuration, builds and the pre-existing untracked log.
+- Also exported the supported runtime classes from macro/__init__.py and verified public package imports. Existing callers can now import MacroManager, MacroRunner, MacroParser, MacroCompiler, MacroLinter and MacroPreview from macro.
+- Canonical focused pytest: 139 passed. Canonical whole-project Ruff: passed. Canonical whole-project Pyright with the specified interpreter selected by --pythonpath: 0 errors, 0 warnings. git diff --check: passed.
+- Canonical whole-suite pytest: 899 passed / 7 failed in 16.30s. Compared exact failure IDs with the freshly rerun pre-change baseline (871 passed / 7 failed): identical set, no newly failing tests. The existing failures are paragraph class/style (1), tag insertion expectations (4), and visible-whitespace marker expectations (2).
+- Worktree full-suite failure IDs also match the preceding 18-failure worktree run; the additional eleven failures are missing Gutenberg fixtures in this worktree.
+- SHA-256 equality verified for all 22 files between worktree and D:/PC/Python/regex_pad_project after adding this final record.
+- The source application now provides Macro > Pseudo-macro editor > Run preview > Apply to document. Full-document transformations are previewed; source changes or target switches invalidate approval. Applying does not save the article automatically.
+- EXE rebuilding, physical Windows GUI acceptance and live WordPress acceptance were not performed. No new third-party dependency was introduced; shiboken6 is supplied with the existing PySide6 installation.

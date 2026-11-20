@@ -440,3 +440,34 @@ File Bridgeは、既に確定した`MacroJsonData`のproperty名を基準にで�
 - ParserをManagerの別名として扱わない。
 
 この文書を疑似マクロ設計の基準とし、後続実装で設計を変更する場合は、先にこの文書と作業記録を更新する。
+
+
+## 15. Structured editor implementation (2026-11-20)
+
+This status supersedes the earlier unimplemented GUI/GUI Bridge list. The XML-like editor is now available from Macro > Pseudo-macro editor. It edits Version 1 JSON through an independent modeless window; it does not execute macros or modify article text.
+
+- `macro/editor_data_model.py`, `editor_bridge.py`, and `editor_session.py` separate editable state from file models and preserve nullable strings.
+- `dialogs/macro_step_editor_widget.py`, `macro_diagnostic_table.py`, and `macro_editor_window.py` provide the form, XML-like outline, step operations and diagnostic navigation.
+- `dialogs/macro_editor_controller.py` coordinates existing Loader, Normalizer, Validator and atomic Saver, debounced diagnostics, JSON preview and Save/Discard/Cancel handling.
+- Closed values use non-editable ComboBoxes with typed item data. Normalization and regular-expression use remain independent. Unicode normalization disables replacement and writes null; an empty enabled replacement writes an empty string.
+- Input-derived `MacroEditorInputError` includes the step/field and returns focus to that input. Unexpected validation exceptions are logged and block saving. File failures preserve the current document and dirty state.
+- MainWindow keeps one editor per main window and checks unsaved macro changes before closing. Local settings retain the macro folder, editor geometry and horizontal splitter state. Japanese and English UI text is included.
+- MacroManager, Runner, execution preview, article application, XML import/export and document-wide Undo/Redo remain future work. EXE rebuilding and physical Windows GUI acceptance are separate from source validation.
+
+
+## 16. Manager and execution implementation (2026-11-20)
+
+This section supersedes the previous deferred Manager/Runner/Preview and execution status. The editor now provides Run preview, followed by explicit Apply to document or Cancel.
+
+- MacroParser is the shared JSON text parsing boundary, including duplicate-key rejection. MacroJsonLoader performs UTF-8 file I/O and delegates parsing; no parallel JSON parsing path was added.
+- MacroCompiler normalizes and validates file models, then creates frozen MacroDefinition/MacroStep tuples with frozen SearchOptions. GUI edits cannot alter an in-progress run.
+- MacroManager exposes prepare_macro, load_macro, validate_macro, save_macro, execute_macro and preview_macro. It delegates parsing, validation, running and atomic JSON saving. Its execute operation returns an in-memory result and never writes an article or a file.
+- MacroRunner applies each enabled step to the previous step's output through the existing SearchEngine. Reports include candidate matches, exclusions and replacements per completed step. Disabled steps have zero counts. MacroLinter combines static and runtime diagnostics, including no eligible matches.
+- Regex replacement templates are validated even when there are no matches. Zero-width searches on the empty string are rejected before saving/execution; context-dependent zero-width matches are rejected on each step's actual input. Any failed run returns the original text, with no partial result eligible for application.
+- Version 1 has no case-sensitivity field: execution follows the existing SearchOptions defaults (case insensitive; regex MULTILINE; no whole-word or selection-only restriction). A run covers the complete active document. Explicit inline regex flags remain supported. Null/empty strings and regex text are never normalized by the preparation boundary.
+- SearchEngine now exposes analyze_matches and validate_replacement, so macro code does not duplicate search/replacement logic. Literal replacement backslashes are escaped before passing to Python re.sub, preventing literal Windows paths or backreference-like text from being interpreted as regex replacements. This also corrects the same literal replacement behavior in normal search/replace.
+- MacroRunPreviewDialog displays source/output, step counts and diagnostics. The output fields are read-only. Error, unchanged and all-disabled results cannot be applied. MacroExecutionController binds approval to the original editor, QTextDocument, revision and text; closed/moved targets, another active tab, changed text/revision or read-only state block application.
+- Approval applies the exact reviewed output without rerunning the macro, using one QTextCursor edit block. Existing Undo/Redo and normal article saving remain in charge afterward. Cancelling a preview changes neither text nor Undo state.
+- Logger records unexpected execution exceptions at the GUI boundary; ordinary validation and dry-run diagnostics stay in the diagnostic UI.
+
+Source implementation and canonical verification are recorded in SCRIPT_STEP.md Step15-section74. XML import/export, drag-and-drop ordering and document-wide macro-definition Undo remain outside this Version 1 implementation. Packaged EXE rebuilding and physical Windows GUI acceptance are separate checks.

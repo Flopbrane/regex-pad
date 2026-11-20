@@ -733,3 +733,12 @@ Qtを使用せず、最初にデータ境界だけを完成させる。
 - 未保存のまま閉じようとした場合に確認する。
 - MainWindowを閉じずにMacro Editorを開閉できる。
 - EXEでも既定`macro`フォルダとユーザー指定フォルダを使用できる。
+
+
+## 22. Implementation status (2026-11-20)
+
+The initial editor described above is implemented. Open it through the main window's Macro menu. The toolbar provides New/Open/Save/Save As, Validate and a read-only JSON view. Step editing, nullable fields, structural operations, diagnostic navigation, unsaved confirmation and portable editor settings are connected to the existing JSON boundaries.
+
+The minimum window size is 640 x 480, with scrollable step fields. Add/Duplicate/Delete and Up/Down occupy separate rows so the outline can remain narrow. The JSON view is a read-only dialog. Macro execution and article changes are intentionally outside this editor implementation.
+
+Validation and canonical propagation results are recorded in SCRIPT_STEP.md, Step15-section72. Packaged EXE and physical GUI acceptance have not been performed.

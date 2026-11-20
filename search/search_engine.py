@@ -34,7 +34,39 @@ class ReplaceResult:
     count: int
 
 
+@dataclass(frozen=True)
+class SearchAnalysis:
+    """Counts before replacement, including protected and zero-width matches."""
+
+    matches: int
+    excluded: int
+    zero_width: int
+
+
 class SearchEngine:
+    def analyze_matches(
+        self, source_text: str, search_text: str, options: SearchOptions,
+    ) -> SearchAnalysis:
+        pattern = self._compile_pattern(search_text, options)
+        excluded_ranges = self._excluded_ranges(source_text, options)
+        matches = excluded = zero_width = 0
+        for match in pattern.finditer(source_text):
+            if match.start() == match.end():
+                zero_width += 1
+            else:
+                matches += 1
+                if self._is_excluded(match, excluded_ranges):
+                    excluded += 1
+        return SearchAnalysis(matches, excluded, zero_width)
+
+    def validate_replacement(
+        self, search_text: str, replace_text: str, options: SearchOptions,
+    ) -> None:
+        """Validate a template even when the document has no matching text."""
+        if not options.unicode_normalize:
+            pattern = self._compile_pattern(search_text, options)
+            pattern.sub(self._replacement_text_for_options(replace_text, options), "")
+
     def find_all(
         self,
         source_text: str,
@@ -269,8 +301,11 @@ class SearchEngine:
         replace_text: str,
         options: SearchOptions,
     ) -> str:
-        if options.unicode_normalize or not options.regular_expression:
+        if options.unicode_normalize:
             return replace_text
+        if not options.regular_expression:
+            # A literal replacement must not become a re.sub backreference.
+            return replace_text.replace("\\", "\\\\")
         return convert_dollar_replacement_references(replace_text)
 
     @staticmethod
