@@ -51,6 +51,8 @@ APP_HIDDEN_IMPORTS = [
     "dialogs.macro_diagnostic_table",
     "dialogs.macro_editor_window",
     "dialogs.macro_editor_controller",
+    "dialogs.macro_editor_history",
+    "dialogs.macro_step_tree",
     "dialogs.macro_execution_controller",
     "dialogs.macro_run_preview_dialog",
 ]

@@ -4841,3 +4841,55 @@ Canonical propagation and final validation:
 - SHA-256 equality verified for all 22 files between worktree and D:/PC/Python/regex_pad_project after adding this final record.
 - The source application now provides Macro > Pseudo-macro editor > Run preview > Apply to document. Full-document transformations are previewed; source changes or target switches invalidate approval. Applying does not save the article automatically.
 - EXE rebuilding, physical Windows GUI acceptance and live WordPress acceptance were not performed. No new third-party dependency was introduced; shiboken6 is supplied with the existing PySide6 installation.
+
+
+## Step15-section75 Macro Definition Undo/Redo, Drag Ordering and Concentrated Tests
+
+Date: 2026-11-21
+
+User priority: complete macro-related work first, followed by Unicode character information, Core Block Check/repair UI, multilingual dictionary plugins, then full rectangular selection. The current implementation unit completes the planned Version 1 macro editing operations and performs concentrated macro tests before moving to another feature.
+
+- Added MacroEditorHistory/QUndoStack with detached document/selection snapshots. Metadata, step text/options, nullable controls, Add/Duplicate/Delete, Up/Down and drag moves participate in the same definition history. Adjacent typing in the same field coalesces within 750 ms, separated by structural changes, selection changes and saving.
+- Added independent macro-definition Undo/Redo actions in the toolbar/Edit menu, standard keyboard shortcuts and actual native text-input context menus. Article Undo remains separate and is still one edit block for a reviewed macro application.
+- Added MacroStepTree for internal flat reordering. Only steps can be dragged; the root cannot move, external drops are ignored and drops cannot nest steps. Custom drag/drop delegates model changes to the controller and prevents Qt from separately deleting/moving rebuilt source items.
+- Saving retains history and records the exact saved definition. Undo to that definition clears the dirty marker; Undo past it marks it dirty. New/successful Open resets history. Failed/cancelled operations preserve it. Discard-on-close restores the saved definition and clears discarded history before the reused modeless window can be reopened.
+- Restored models are revalidated before Save/Run preview is enabled. The same null/empty/raw-text and snapshot-bound application rules remain in force.
+- Added explicit hidden imports for both GUI helper modules and updated architecture/GUI status documents. No JSON format or dependency change.
+
+Files changed in this step:
+
+- dialogs/macro_editor_history.py (new), dialogs/macro_step_tree.py (new)
+- dialogs/macro_editor_controller.py, dialogs/macro_editor_window.py
+- tests/test_macro_editor_history.py (new), regex-pad.spec
+- PSEUDO_MACRO_ARCHITECTURE.md, MACRO_XML_LIKE_EDITOR_GUI_DESIGN.md, SCRIPT_STEP.md
+
+Concentrated worktree validation using D:/Dev/venvs/venv_txt_edit312/Scripts/python.exe:
+
+- Macro history/editor/runtime/execution/model/IO/validation, SearchEngine and packaging suite: 174 passed, including 35 new history/drag/UI cases.
+- Covered structure Undo/Redo, exact field restoration, dependent Unicode/nullable controls, savepoints, failed saves/loads, cancelled New, successful history resets, native context-menu Undo, keyboard routing, native internal drop events, external/no-op rejection, flat hierarchy, all-step deletion, language switching, redo-branch invalidation, saved/reloaded execution order, independent article Undo and close/discard/reopen.
+- Ruff whole project: passed. Pyright whole project with explicit --pythonpath to the required interpreter: passed. Final full-suite/canonical results follow below after execution.
+- Tests operate through Qt offscreen; physical Windows mouse dragging and packaged-EXE acceptance remain separate.
+
+Canonical propagation and final concentrated-test results:
+
+- Before transfer, compared the current captured worktree/canonical state for all touched destinations. Six existing files had no intervening change and three new files had no destination collision. Propagated only these nine files; unchanged resources, step widgets, settings and unrelated local files were preserved.
+- Canonical concentrated suite: 174 passed in 5.02s. Includes 35 new history/drag/UI regression cases and the existing runtime, execution-preview, snapshot protection, model/IO/validation, search and packaging tests. Worktree final concentrated suite also passed all 174.
+- Whole-project Ruff and Pyright (explicit required --pythonpath) passed in both trees. Canonical Pyright reported 0 errors, 0 warnings. git diff --check passed; only informational pre-existing line-ending notices were emitted.
+- Canonical full suite: 934 passed / 7 failed in 23.06s. Re-ran the pre-change baseline (899 passed / 7 failed) and compared exact failure IDs: unchanged, with no new failures. Existing failures remain one paragraph class/style expectation, four tag-insertion expectations and two whitespace-marker expectations.
+- Worktree final full suite: 923 passed / 18 failed in 22.13s. Exact failure IDs match the preceding worktree run; the extra eleven Gutenberg failures are absent fixture files, not macro regressions.
+- Audited macro package modules for docstring-only placeholders: none remained. Inspected a canonical offscreen Japanese rendering with definition Undo enabled and reordered steps. These checks do not constitute physical Windows mouse-drag or packaged EXE acceptance.
+- Verified SHA-256 equality for all nine intended files after appending this record. Canonical location: D:/PC/Python/regex_pad_project.
+- The planned Version 1 macro editor/runtime scope, including the formerly deferred drag ordering and definition-wide Undo/Redo, is implemented and has received the requested concentrated tests. EXE rebuilding and physical GUI acceptance were not performed. The next feature in the user's requested order is Unicode character information.
+
+## 2026-11-21 Documentation archive cleanup
+
+- Moved six superseded, one-off Markdown instructions from the project root into the existing `.depricated/` directory: `ADD_LINE_BREAK_METHOD.md`, `CODEX_regex-pad.md`, `CODEX_regex-pad_linter_HTMLタグ閉じ忘れ診断_改修指示書.md`, `CODEX_regex-pad_囲み枠挿入機能_改修指示書.md`, `EmagencyPatch.md`, and `README_Dialog_focus_error.md`.
+- Kept current project instructions, active design and linter evidence, user guides, license notices, and the build-required deletion inventory in place. Existing uncommitted macro work was left intact.
+- Verified that each archived file's SHA-256 matched its source after moving. This was a documentation-only change; no Python tests, Ruff, or Pyright checks were run for this cleanup.
+
+## 2026-11-21 Documentation update requirement for planned features
+
+- As each planned feature reaches its stated implementation scope, update all four user-facing documents in the same implementation step: `README.md`, `README_jp.md`, `docs/HOW_TO_USE.md`, and `docs_jp/HOW_TO_USE_jp.md`. The Japanese guide is under `docs_jp/`, not `docs/`.
+- This applies to macro editor operations (step drag reordering and definition-wide Undo/Redo), Unicode character information (code point, name, category, NFKC result), the Core Block Check/repair window (candidates, selection, preview, one-Undo application), multilingual dictionary plugin expansion, and full rectangular selection (mouse/keyboard selection and highlighting).
+- Describe only behavior verified in the source and, where relevant, distinguish source implementation from packaged-EXE and physical GUI acceptance. Keep English and Japanese descriptions, examples, limitations, and navigation links consistent. Change a published version or release date only when that release has actually been prepared and verified.
+- Record the documentation changes and validation in this file when each feature is completed. The four documents are not rewritten by this planning note alone.

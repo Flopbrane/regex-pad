@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 from macro.macro_linter import MacroLinter
 from macro.macro_model import MacroDefinition
@@ -40,7 +41,13 @@ class MacroRunner:
     def __init__(self, search_engine: SearchEngine | None = None) -> None:
         self.search_engine = search_engine or SearchEngine()
 
-    def run(self, definition: MacroDefinition, source_text: str) -> MacroRunResult:
+    def run(
+        self,
+        definition: MacroDefinition,
+        source_text: str,
+        selected_scope: tuple[int, int] | None = None,
+        visible_scope: tuple[int, int] | None = None,
+    ) -> MacroRunResult:
         current_text = source_text
         reports: list[MacroStepResult] = []
         diagnostics: list[MacroDiagnostic] = []
@@ -49,8 +56,20 @@ class MacroRunner:
                 reports.append(MacroStepResult(step.step_index, step.step_name, False))
                 continue
             try:
+                scope = self._scope_for_step(
+                    step.options.selected_only,
+                    step.options.visible_only,
+                    selected_scope,
+                    visible_scope,
+                    len(current_text),
+                )
+                if scope is None:
+                    reports.append(MacroStepResult(step.step_index, step.step_name, True))
+                    continue
+                scope_start, scope_end = scope
+                source_part = current_text[scope_start:scope_end]
                 analysis = self.search_engine.analyze_matches(
-                    current_text, step.search_text, step.options
+                    source_part, step.search_text, step.options
                 )
                 if analysis.zero_width:
                     diagnostics.append(
@@ -66,7 +85,7 @@ class MacroRunner:
                         False,
                     )
                 result = self.search_engine.replace_all(
-                    current_text,
+                    source_part,
                     step.search_text,
                     step.replacement_text,
                     step.options,
@@ -105,7 +124,13 @@ class MacroRunner:
                         severity=MacroDiagnosticSeverity.INFORMATION,
                     )
                 )
-            current_text = result.text
+            previous_text = current_text
+            current_text = (
+                previous_text[:scope_start] + result.text + previous_text[scope_end:]
+            )
+            if current_text != previous_text:
+                selected_scope = self._map_scope(previous_text, current_text, selected_scope)
+                visible_scope = self._map_scope(previous_text, current_text, visible_scope)
         return MacroRunResult(
             source_text,
             current_text,
@@ -113,3 +138,49 @@ class MacroRunner:
             MacroValidationResult(tuple(diagnostics)),
             True,
         )
+
+    @staticmethod
+    def _scope_for_step(
+        selected_only: bool,
+        visible_only: bool,
+        selected_scope: tuple[int, int] | None,
+        visible_scope: tuple[int, int] | None,
+        text_length: int,
+    ) -> tuple[int, int] | None:
+        if selected_only and selected_scope is None:
+            return None
+        if visible_only and visible_scope is None:
+            return None
+        start, end = 0, text_length
+        for bounds in (
+            selected_scope if selected_only else None,
+            visible_scope if visible_only else None,
+        ):
+            if bounds is not None:
+                start, end = max(start, bounds[0]), min(end, bounds[1])
+        start, end = max(0, start), min(text_length, end)
+        return (start, end) if start < end else None
+
+    @staticmethod
+    def _map_scope(
+        before: str, after: str, bounds: tuple[int, int] | None
+    ) -> tuple[int, int] | None:
+        if bounds is None:
+            return None
+        opcodes = SequenceMatcher(None, before, after).get_opcodes()
+
+        def map_offset(offset: int, *, end: bool) -> int:
+            for tag, old_start, old_end, new_start, new_end in opcodes:
+                if offset < old_start:
+                    return new_start - (old_start - offset)
+                if old_start <= offset <= old_end:
+                    if tag == "equal":
+                        return new_start + offset - old_start
+                    if offset == old_start:
+                        return new_start
+                    if offset == old_end or end:
+                        return new_end
+                    return new_start
+            return len(after)
+
+        return map_offset(bounds[0], end=False), map_offset(bounds[1], end=True)

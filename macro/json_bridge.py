@@ -22,6 +22,11 @@ APPEND_DOT_KEY: Final = "丸数字変換後ピリオド追加"
 SEARCH_TEXT_KEY: Final = "検索文字列"
 EXCLUSION_TEXT_KEY: Final = "除外文字列"
 REPLACEMENT_TEXT_KEY: Final = "置換文字列"
+CASE_SENSITIVE_KEY: Final = "大文字小文字を区別"
+WHOLE_WORD_KEY: Final = "単語単位"
+SELECTED_ONLY_KEY: Final = "選択範囲のみ"
+VISIBLE_ONLY_KEY: Final = "表示範囲のみ"
+REPLACEMENT_INPUT_KEY: Final = "置換欄の入力"
 
 ROOT_KEYS: Final = frozenset(
     {FORMAT_VERSION_KEY, MACRO_NAME_KEY, DESCRIPTION_KEY, STEPS_KEY}
@@ -38,6 +43,9 @@ STEP_KEYS: Final = frozenset(
         EXCLUSION_TEXT_KEY,
         REPLACEMENT_TEXT_KEY,
     }
+)
+STEP_KEYS_V2: Final = STEP_KEYS | frozenset(
+    {CASE_SENSITIVE_KEY, WHOLE_WORD_KEY, SELECTED_ONLY_KEY, VISIBLE_ONLY_KEY, REPLACEMENT_INPUT_KEY}
 )
 
 
@@ -58,7 +66,7 @@ class MacroJsonBridge:
             raise MacroJsonBridgeError(f"{STEPS_KEY} must be list")
 
         steps: tuple[MacroJsonStepData, ...] = tuple(
-            cls._step_from_dict(step_data, step_index)
+            cls._step_from_dict(step_data, step_index, root[FORMAT_VERSION_KEY] == 2)
             for step_index, step_data in enumerate(raw_steps)
         )
         try:
@@ -80,7 +88,10 @@ class MacroJsonBridge:
             FORMAT_VERSION_KEY: save_data.format_version,
             MACRO_NAME_KEY: save_data.macro_name,
             DESCRIPTION_KEY: save_data.description,
-            STEPS_KEY: [cls._step_to_dict(step) for step in save_data.steps],
+            STEPS_KEY: [
+                cls._step_to_dict(step, save_data.format_version == 2)
+                for step in save_data.steps
+            ],
         }
 
     @classmethod
@@ -88,9 +99,12 @@ class MacroJsonBridge:
         cls,
         step_data: object,
         step_index: int,
+        version_two: bool,
     ) -> MacroJsonStepData:
         step: Mapping[str, object] = cls._require_mapping(step_data, f"{STEPS_KEY}[{step_index}]")
-        cls._require_exact_keys(step, STEP_KEYS, f"{STEPS_KEY}[{step_index}]")
+        cls._require_exact_keys(
+            step, STEP_KEYS_V2 if version_two else STEP_KEYS, f"{STEPS_KEY}[{step_index}]"
+        )
         try:
             return MacroJsonStepData(
                 step_name=cast(str, step[STEP_NAME_KEY]),
@@ -105,6 +119,11 @@ class MacroJsonBridge:
                 search_text=cast(str, step[SEARCH_TEXT_KEY]),
                 exclusion_text=cast(str | None, step[EXCLUSION_TEXT_KEY]),
                 replacement_text=cast(str | None, step[REPLACEMENT_TEXT_KEY]),
+                case_sensitive=cast(bool, step[CASE_SENSITIVE_KEY]) if version_two else False,
+                whole_word=cast(bool, step[WHOLE_WORD_KEY]) if version_two else False,
+                selected_only=cast(bool, step[SELECTED_ONLY_KEY]) if version_two else False,
+                visible_only=cast(bool, step[VISIBLE_ONLY_KEY]) if version_two else False,
+                replacement_input_text=cast(str, step[REPLACEMENT_INPUT_KEY]) if version_two else None,
             )
         except (TypeError, ValueError) as error:
             raise MacroJsonBridgeError(
@@ -112,10 +131,10 @@ class MacroJsonBridge:
             ) from error
 
     @staticmethod
-    def _step_to_dict(step: MacroJsonStepData) -> dict[str, object]:
+    def _step_to_dict(step: MacroJsonStepData, version_two: bool) -> dict[str, object]:
         if not isinstance(step, MacroJsonStepData):
             raise TypeError("steps must contain only MacroJsonStepData")
-        return {
+        result: dict[str, object] = {
             STEP_NAME_KEY: step.step_name,
             ENABLED_KEY: step.enabled,
             REGULAR_EXPRESSION_KEY: step.regular_expression,
@@ -126,6 +145,16 @@ class MacroJsonBridge:
             EXCLUSION_TEXT_KEY: step.exclusion_text,
             REPLACEMENT_TEXT_KEY: step.replacement_text,
         }
+        if version_two:
+            result.update({
+                CASE_SENSITIVE_KEY: step.case_sensitive,
+                WHOLE_WORD_KEY: step.whole_word,
+                SELECTED_ONLY_KEY: step.selected_only,
+                VISIBLE_ONLY_KEY: step.visible_only,
+                REPLACEMENT_INPUT_KEY: step.replacement_input_text
+                if step.replacement_input_text is not None else (step.replacement_text or ""),
+            })
+        return result
 
     @staticmethod
     def _require_mapping(value: object, location: str) -> Mapping[str, object]:

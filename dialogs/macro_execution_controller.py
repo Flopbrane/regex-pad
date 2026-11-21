@@ -24,6 +24,8 @@ class MacroExecutionController:
         editor_exists: Callable[[TextEditor], bool],
         target_label: Callable[[TextEditor], str],
         parent: QWidget,
+        selected_bounds: Callable[[TextEditor], tuple[int, int] | None] | None = None,
+        visible_bounds: Callable[[TextEditor], tuple[int, int] | None] | None = None,
     ) -> None:
         self.translator = translator
         self.logger = logger
@@ -31,6 +33,8 @@ class MacroExecutionController:
         self.editor_exists = editor_exists
         self.target_label = target_label
         self.parent = parent
+        self.selected_bounds = selected_bounds or (lambda _editor: None)
+        self.visible_bounds = visible_bounds or (lambda _editor: None)
         self.manager = MacroManager()
 
     def preview_and_apply(self, model: MacroJsonData) -> bool:
@@ -41,7 +45,12 @@ class MacroExecutionController:
         revision = document.revision()
         source_text = editor.toPlainText()
         try:
-            preview = self.manager.preview_macro(model, source_text)
+            preview = self.manager.preview_macro(
+                model,
+                source_text,
+                self.selected_bounds(editor),
+                self.visible_bounds(editor),
+            )
         except Exception as error:  # noqa: BLE001 - Preserve the document at the Qt boundary.
             self._unexpected(error)
             return False

@@ -42,17 +42,30 @@ class MacroManager:
             raise MacroValidationError(prepared.validation)
         return self.saver.save(prepared.model, save_file_path)
 
-    def execute_macro(self, model: MacroJsonData, source_text: str) -> MacroRunResult:
+    def execute_macro(
+        self, model: MacroJsonData, source_text: str,
+        selected_scope: tuple[int, int] | None = None,
+        visible_scope: tuple[int, int] | None = None,
+    ) -> MacroRunResult:
         prepared = self.prepare_macro(model)
         if prepared.definition is None:
             return MacroRunResult(
                 source_text, source_text, (), prepared.validation, False
             )
-        result = self.runner.run(prepared.definition, source_text)
+        result = self.runner.run(
+            prepared.definition, source_text, selected_scope, visible_scope
+        )
         return replace(
             result,
             validation=MacroLinter.combine(prepared.validation, result.validation),
         )
 
-    def preview_macro(self, model: MacroJsonData, source_text: str) -> MacroPreview:
-        return MacroPreview(model.macro_name, self.execute_macro(model, source_text))
+    def preview_macro(
+        self, model: MacroJsonData, source_text: str,
+        selected_scope: tuple[int, int] | None = None,
+        visible_scope: tuple[int, int] | None = None,
+    ) -> MacroPreview:
+        return MacroPreview(
+            model.macro_name,
+            self.execute_macro(model, source_text, selected_scope, visible_scope),
+        )

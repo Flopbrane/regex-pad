@@ -58,6 +58,11 @@ class MacroJsonStepData:
     _search_text: str
     _exclusion_text: str | None
     _replacement_text: str | None
+    _case_sensitive: bool
+    _whole_word: bool
+    _selected_only: bool
+    _visible_only: bool
+    _replacement_input_text: str | None
 
     def __init__(
         self,
@@ -70,6 +75,11 @@ class MacroJsonStepData:
         search_text: str,
         exclusion_text: str | None,
         replacement_text: str | None,
+        case_sensitive: bool = False,
+        whole_word: bool = False,
+        selected_only: bool = False,
+        visible_only: bool = False,
+        replacement_input_text: str | None = None,
     ) -> None:
         self.step_name = step_name
         self.enabled = enabled
@@ -80,6 +90,51 @@ class MacroJsonStepData:
         self.search_text = search_text
         self.exclusion_text = exclusion_text
         self.replacement_text = replacement_text
+        self.case_sensitive = case_sensitive
+        self.whole_word = whole_word
+        self.selected_only = selected_only
+        self.visible_only = visible_only
+        self.replacement_input_text = replacement_input_text
+
+    @property
+    def replacement_input_text(self) -> str | None:
+        return self._replacement_input_text
+
+    @replacement_input_text.setter
+    def replacement_input_text(self, value: str | None) -> None:
+        self._replacement_input_text = _optional_string_value("replacement_input_text", value)
+
+    @property
+    def case_sensitive(self) -> bool:
+        return self._case_sensitive
+
+    @case_sensitive.setter
+    def case_sensitive(self, value: bool) -> None:
+        self._case_sensitive = _boolean_value("case_sensitive", value)
+
+    @property
+    def whole_word(self) -> bool:
+        return self._whole_word
+
+    @whole_word.setter
+    def whole_word(self, value: bool) -> None:
+        self._whole_word = _boolean_value("whole_word", value)
+
+    @property
+    def selected_only(self) -> bool:
+        return self._selected_only
+
+    @selected_only.setter
+    def selected_only(self, value: bool) -> None:
+        self._selected_only = _boolean_value("selected_only", value)
+
+    @property
+    def visible_only(self) -> bool:
+        return self._visible_only
+
+    @visible_only.setter
+    def visible_only(self, value: bool) -> None:
+        self._visible_only = _boolean_value("visible_only", value)
 
     @property
     def step_name(self) -> str:

@@ -33,7 +33,13 @@ class MacroEditorBridge:
                     step.exclusion_text is not None,
                     step.exclusion_text or "",
                     step.replacement_text is not None,
-                    step.replacement_text or "",
+                    step.replacement_input_text
+                    if step.replacement_input_text is not None else (step.replacement_text or ""),
+                    step.case_sensitive,
+                    step.whole_word,
+                    step.selected_only,
+                    step.visible_only,
+                    step.replacement_text,
                 )
                 for step in model.steps
             ],
@@ -41,6 +47,11 @@ class MacroEditorBridge:
 
     @staticmethod
     def to_json_model(document: MacroEditorDocumentData) -> MacroJsonData:
+        if document.format_version == 1 and any(
+            step.case_sensitive or step.whole_word or step.selected_only or step.visible_only
+            for step in document.steps
+        ):
+            raise MacroEditorInputError(-1, "format_version", "Search scope options require format version 2")
         for index, step in enumerate(document.steps):
             if (
                 step.unicode_normalize_form is not None
@@ -64,6 +75,10 @@ class MacroEditorBridge:
                     step.search_text,
                     step.exclusion_text if step.exclusion_enabled else None,
                     step.replacement_text if step.replacement_enabled else None,
+                    step.case_sensitive,
+                    step.whole_word,
+                    step.selected_only,
+                    step.visible_only,
                 )
                 for step in document.steps
             ],

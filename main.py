@@ -70,6 +70,8 @@ from dialogs.grammar_check_dialog import GrammarCheckDialog
 from dialogs.macro_editor_controller import MacroEditorController
 from dialogs.macro_editor_window import MacroEditorWindow
 from dialogs.macro_execution_controller import MacroExecutionController
+from macro.editor_data_model import MacroEditorDocumentData, MacroEditorStepData
+from macro.json_loader import MacroJsonLoader, MacroJsonLoadError
 from dialogs.options_dialog import OptionsDialog
 from dialogs.regex_help_dialog import RegexHelpDialog
 from dialogs.schema_reference_dialog import SchemaReferenceDialog
@@ -667,13 +669,23 @@ class MainWindow(QMainWindow):
         self.search_menu = QMenu(self)
         self.search_menu.addAction(self.find_action)
         self.search_menu.addAction(self.grammar_check_action)
+        self.preset_menu = QMenu(self)
+        self.preset_new_action = QAction(self)
+        self.preset_run_action = QAction(self)
+        self.preset_edit_action = QAction(self)
+        self.preset_delete_action = QAction(self)
+        self.preset_new_action.triggered.connect(self.new_search_preset)
+        self.preset_run_action.triggered.connect(self.run_search_preset)
+        self.preset_edit_action.triggered.connect(self.edit_search_preset)
+        self.preset_delete_action.triggered.connect(self.delete_search_preset)
+        for action in (
+            self.preset_new_action, self.preset_run_action,
+            self.preset_edit_action, self.preset_delete_action,
+        ):
+            self.preset_menu.addAction(action)
+        self.search_menu.addSeparator()
+        self.search_menu.addMenu(self.preset_menu)
         menu_bar.addMenu(self.search_menu)
-
-        self.macro_menu = QMenu(self)
-        self.macro_editor_action = QAction(self)
-        self.macro_editor_action.triggered.connect(self.show_macro_editor)
-        self.macro_menu.addAction(self.macro_editor_action)
-        menu_bar.addMenu(self.macro_menu)
 
         self.view_menu = QMenu(self)
         self.view_menu.addAction(self.line_numbers_action)
@@ -1155,8 +1167,11 @@ class MainWindow(QMainWindow):
 
     def _apply_language(self) -> None:
         """Apply the current language to all UI elements."""
-        self.macro_menu.setTitle(self.translator.text("menu.macro"))
-        self.macro_editor_action.setText(self.translator.text("macro.editor.title"))
+        self.preset_menu.setTitle(self.translator.text("preset.menu"))
+        self.preset_new_action.setText(self.translator.text("preset.new"))
+        self.preset_run_action.setText(self.translator.text("preset.run"))
+        self.preset_edit_action.setText(self.translator.text("preset.edit"))
+        self.preset_delete_action.setText(self.translator.text("preset.delete"))
         if self.macro_editor_window is not None:
             self.macro_editor_window.retranslate_ui()
             if self.macro_editor_controller is not None:
@@ -1420,6 +1435,8 @@ class MainWindow(QMainWindow):
                 ),
                 lambda target: str(self.tab_file_paths.get(target) or self._draft_title(target)),
                 self.macro_editor_window,
+                lambda target: self._preset_selected_scope(target),
+                lambda target: self._visible_search_bounds(len(target.toPlainText())),
             )
             self.macro_editor_controller.execution_requested.connect(self.macro_execution_controller.preview_and_apply)
             if self.macro_folder:
@@ -1432,6 +1449,111 @@ class MainWindow(QMainWindow):
         self.macro_editor_window.show()
         self.macro_editor_window.raise_()
         self.macro_editor_window.activateWindow()
+
+    def new_search_preset(self) -> None:
+        self.show_macro_editor()
+        if self.macro_editor_controller is not None:
+            self.macro_editor_controller.new_document()
+            self.macro_editor_window.macro_name.setFocus()  # type: ignore[union-attr]
+
+    def run_search_preset(self) -> None:
+        """Open a saved preset for inspection before its Run Preview action."""
+        self.show_macro_editor()
+        if self.macro_editor_controller is not None:
+            self.macro_editor_controller.open_document()
+
+    def edit_search_preset(self) -> None:
+        self.run_search_preset()
+
+    def capture_search_preset(
+        self, find_text: str, replacement_text: str, options: SearchOptions
+    ) -> None:
+        """Start a new editable preset from the current Find/Replace controls."""
+        self.show_macro_editor()
+        controller = self.macro_editor_controller
+        if controller is None or not controller.confirm_discard():
+            return
+        step = MacroEditorStepData(
+            search_text=find_text,
+            exclusion_enabled=bool(options.exclusion_text),
+            exclusion_text=options.exclusion_text,
+            replacement_enabled=not options.unicode_normalize,
+            replacement_text=replacement_text,
+            regular_expression=options.regular_expression,
+            unicode_normalize=options.unicode_normalize,
+            unicode_normalize_form=(
+                options.unicode_normalize_form if options.unicode_normalize else None
+            ),
+            append_dot_to_circled_number=options.append_dot_to_circled_number,
+            case_sensitive=options.case_sensitive,
+            whole_word=options.whole_word,
+            selected_only=options.selected_only,
+            visible_only=options.visible_only,
+        )
+        controller.start_document(
+            MacroEditorDocumentData(format_version=2, steps=[step])
+        )
+        self.macro_editor_window.macro_name.setFocus()  # type: ignore[union-attr]
+
+    def delete_search_preset(self) -> None:
+        """Remove a validated preset from the picker with a reversible move."""
+        from datetime import datetime
+
+        folder = (
+            self.macro_editor_controller.session.macro_folder
+            if self.macro_editor_controller is not None
+            else Path(self.macro_folder) if self.macro_folder else app_base_dir() / "macro"
+        )
+        name, _ = QFileDialog.getOpenFileName(
+            self, self.translator.text("preset.delete"), str(folder), "JSON (*.json)"
+        )
+        if not name:
+            return
+        load_file_path = Path(name)
+        try:
+            MacroJsonLoader(folder).load(load_file_path)
+        except (MacroJsonLoadError, OSError) as error:
+            QMessageBox.warning(
+                self, self.translator.text("preset.delete"),
+                self.translator.text("preset.load_failed", error=str(error)),
+            )
+            return
+        if QMessageBox.question(
+            self, self.translator.text("preset.delete"),
+            self.translator.text("preset.confirm_delete", path=str(load_file_path)),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            deleted_folder = load_file_path.parent / ".deleted_presets"
+            deleted_folder.mkdir(exist_ok=True)
+            archived_name = (
+                f"{load_file_path.stem}.{datetime.now().strftime('%Y%m%d%H%M%S')}."
+                f"{uuid.uuid4().hex[:8]}.json"
+            )
+            load_file_path.rename(deleted_folder / archived_name)
+        except OSError as error:
+            QMessageBox.critical(
+                self, self.translator.text("preset.delete"),
+                self.translator.text("preset.delete_failed", error=str(error)),
+            )
+            return
+        controller = self.macro_editor_controller
+        if controller is not None and controller.session.save_file_path == load_file_path:
+            controller.session.save_file_path = None
+            controller.session.load_file_path = None
+            controller.window.update_status(controller.session)
+
+    @staticmethod
+    def _preset_selected_scope(editor: TextEditor) -> tuple[int, int] | None:
+        cursor = editor.textCursor()
+        if not cursor.hasSelection():
+            return None
+        return (
+            editor.cursor_position_to_text_position(cursor.selectionStart()),
+            editor.cursor_position_to_text_position(cursor.selectionEnd()),
+        )
 
     def show_tag_insert_dialog(self) -> None:
         """Show the tag insert dialog, allowing the user to select and insert a tag snippet."""
@@ -3348,6 +3470,9 @@ class MainWindow(QMainWindow):
             self.find_replace_dialog.regex_help_requested.connect(self.show_regex_help_dialog)
             self.find_replace_dialog.normalise_requested.connect(
                 self.apply_regex_normalise_operation
+            )
+            self.find_replace_dialog.preset_requested.connect(
+                self.capture_search_preset
             )
 
         selected_text = self.editor.textCursor().selectedText()

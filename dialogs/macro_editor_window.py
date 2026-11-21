@@ -3,8 +3,16 @@
 from collections.abc import Callable
 from html import escape
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QCloseEvent, QColor
+from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtGui import (
+    QAction,
+    QBrush,
+    QCloseEvent,
+    QColor,
+    QContextMenuEvent,
+    QKeyEvent,
+    QKeySequence,
+)
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -15,7 +23,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSplitter,
-    QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
@@ -23,6 +30,8 @@ from PySide6.QtWidgets import (
 
 from dialogs.macro_diagnostic_table import MacroDiagnosticTable
 from dialogs.macro_step_editor_widget import MacroStepEditorWidget
+from dialogs.macro_step_tree import MacroStepTree
+from dialogs.regex_input_edit import RegexInputEdit
 from localization.translator import Translator
 from macro.editor_session import MacroEditorSession
 
@@ -40,6 +49,8 @@ class MacroEditorWindow(QMainWindow):
     step_duplicate_requested = Signal(int)
     step_delete_requested = Signal(int)
     step_move_requested = Signal(int, int)
+    undo_requested = Signal()
+    redo_requested = Signal()
 
     def __init__(self, translator: Translator, parent: QWidget | None = None) -> None:
         super().__init__(parent, Qt.WindowType.Window)
@@ -52,6 +63,18 @@ class MacroEditorWindow(QMainWindow):
         file_menu = self.menuBar().addMenu(translator.text("menu.file"))
         self.file_menu = file_menu
         self.toolbar = toolbar
+        self.edit_menu = self.menuBar().addMenu(translator.text("menu.edit"))
+        self.undo_action = QAction(translator.text("action.undo"), self)
+        self.redo_action = QAction(translator.text("action.redo"), self)
+        self.undo_action.setShortcuts(QKeySequence.StandardKey.Undo)
+        self.redo_action.setShortcuts(QKeySequence.StandardKey.Redo)
+        self.undo_action.triggered.connect(self.undo_requested.emit)
+        self.redo_action.triggered.connect(self.redo_requested.emit)
+        self.undo_action.setEnabled(False)
+        self.redo_action.setEnabled(False)
+        self.edit_menu.addActions([self.undo_action, self.redo_action])
+        toolbar.addActions([self.undo_action, self.redo_action])
+        toolbar.addSeparator()
         for name, signal, shortcut in (
             ("new", self.new_requested, "Ctrl+N"),
             ("open", self.open_requested, "Ctrl+O"),
@@ -87,6 +110,7 @@ class MacroEditorWindow(QMainWindow):
         self.version = QComboBox()
         self.version.setEditable(False)
         self.version.addItem("1", 1)
+        self.version.addItem("2", 2)
         self.macro_name = QLineEdit()
         self.description = QLineEdit()
         form = QFormLayout()
@@ -98,7 +122,7 @@ class MacroEditorWindow(QMainWindow):
         ):
             form.addRow(translator.text("macro.editor." + name), widget)
         layout.addLayout(form)
-        self.tree = QTreeWidget()
+        self.tree = MacroStepTree()
         self.tree.setHeaderLabel(translator.text("macro.editor.outline"))
         left = QWidget()
         left_layout = QVBoxLayout(left)
@@ -141,10 +165,56 @@ class MacroEditorWindow(QMainWindow):
         self.vertical_splitter.setSizes([440, 150])
         layout.addWidget(self.vertical_splitter, 1)
         self.setCentralWidget(central)
+        for widget in (
+            self.macro_name,
+            self.description,
+            *self.step_editor.fields.values(),
+        ):
+            if isinstance(widget, (QLineEdit, RegexInputEdit)):
+                widget.installEventFilter(self)
+                if isinstance(widget, RegexInputEdit):
+                    widget.viewport().installEventFilter(self)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if isinstance(event, QKeyEvent) and event.type() in (
+            QEvent.Type.ShortcutOverride,
+            QEvent.Type.KeyPress,
+        ):
+            undo = event.matches(QKeySequence.StandardKey.Undo)
+            redo = event.matches(QKeySequence.StandardKey.Redo)
+            if undo or redo:
+                event.accept()
+                if event.type() == QEvent.Type.KeyPress:
+                    (self.undo_action if undo else self.redo_action).trigger()
+                return True
+        if isinstance(event, QContextMenuEvent):
+            widget = (
+                watched.parent()
+                if isinstance(watched, QWidget)
+                and not isinstance(watched, (QLineEdit, RegexInputEdit))
+                else watched
+            )
+            if isinstance(widget, (QLineEdit, RegexInputEdit)):
+                menu = widget.createStandardContextMenu()
+                for action in menu.actions()[:2]:
+                    menu.removeAction(action)
+                anchor = menu.actions()[0] if menu.actions() else None
+                if anchor is not None:
+                    menu.insertAction(anchor, self.undo_action)
+                    menu.insertAction(anchor, self.redo_action)
+                else:
+                    menu.addActions([self.undo_action, self.redo_action])
+                menu.exec(event.globalPos())
+                menu.deleteLater()
+                return True
+        return super().eventFilter(watched, event)
 
     def retranslate_ui(self) -> None:
         text = self.translator.text
         self.file_menu.setTitle(text("menu.file"))
+        self.edit_menu.setTitle(text("menu.edit"))
+        self.undo_action.setText(text("action.undo"))
+        self.redo_action.setText(text("action.redo"))
         self.toolbar.setWindowTitle(text("macro.editor.title"))
         for name, action in self.editor_actions.items():
             action.setText(text("macro.editor." + name))
@@ -183,6 +253,7 @@ class MacroEditorWindow(QMainWindow):
             [f'<macro name="{escape(session.document.macro_name, quote=True)}">']
         )
         self.tree.addTopLevelItem(root)
+        root.setFlags(root.flags() & ~Qt.ItemFlag.ItemIsDragEnabled)
         for index, step in enumerate(session.document.steps):
             item = QTreeWidgetItem(
                 [
@@ -193,6 +264,7 @@ class MacroEditorWindow(QMainWindow):
                 ]
             )
             root.addChild(item)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsDropEnabled)
             item.setToolTip(0, item.text(0))
             findings = [
                 d

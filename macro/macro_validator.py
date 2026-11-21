@@ -14,7 +14,7 @@ from macro.validation_types import (
 )
 from search.search_engine import SearchEngine, SearchOptions
 
-SUPPORTED_FORMAT_VERSIONS: Final = frozenset({1})
+SUPPORTED_FORMAT_VERSIONS: Final = frozenset({1, 2})
 APPEND_DOT_NORMALIZATION_FORMS: Final = frozenset({"NFKC", "NFKD"})
 
 
@@ -120,7 +120,11 @@ class MacroValidator:
 
         diagnostics.extend(cls._validate_replacement_route(step, step_index))
         if not any(d.severity is MacroDiagnosticSeverity.ERROR for d in diagnostics):
-            options = SearchOptions(regular_expression=step.regular_expression)
+            options = SearchOptions(
+                regular_expression=step.regular_expression,
+                case_sensitive=step.case_sensitive,
+                whole_word=step.whole_word,
+            )
             engine = SearchEngine()
             if engine.analyze_matches("", step.search_text, options).zero_width:
                 diagnostics.append(cls._error(
@@ -218,9 +222,8 @@ class MacroValidator:
                     )
                 )
 
-        if step.append_dot_to_circled_number and (
-            not step.unicode_normalize
-            or step.unicode_normalize_form not in APPEND_DOT_NORMALIZATION_FORMS
+        if step.append_dot_to_circled_number and step.unicode_normalize and (
+            step.unicode_normalize_form not in APPEND_DOT_NORMALIZATION_FORMS
         ):
             diagnostics.append(
                 cls._error(

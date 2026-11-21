@@ -48,7 +48,11 @@ class MacroCompiler:
                 step.search_text,
                 step.replacement_text or "",
                 SearchOptions(
+                    case_sensitive=step.case_sensitive,
                     regular_expression=step.regular_expression,
+                    whole_word=step.whole_word,
+                    selected_only=step.selected_only,
+                    visible_only=step.visible_only,
                     exclusion_text=step.exclusion_text or "",
                     unicode_normalize=step.unicode_normalize,
                     unicode_normalize_form=step.unicode_normalize_form or "NFKC",

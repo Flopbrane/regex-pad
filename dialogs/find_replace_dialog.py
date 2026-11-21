@@ -42,6 +42,7 @@ class FindReplaceDialog(QDialog):
     selection_scope_reset_requested = Signal()
     regex_help_requested = Signal()
     normalise_requested = Signal(str)
+    preset_requested = Signal(str, str, SearchOptions)
     REGEX_INPUT_TEXT_COLOR: QColor = REGEX_TOKEN_COLOR
 
     def __init__(self, translator: Translator, parent: QWidget | None = None) -> None:
@@ -95,6 +96,10 @@ class FindReplaceDialog(QDialog):
         self.preview_button = QPushButton("Preview", self)
         self.regex_help_button = QPushButton("Regex Help", self)
         self.close_button = QPushButton("Close", self)
+        self.preset_separator = QFrame(self)
+        self.preset_separator.setFrameShape(QFrame.Shape.HLine)
+        self.preset_separator.setFrameShadow(QFrame.Shadow.Sunken)
+        self.preset_button = QPushButton(self)
         self.reset_selection_scope_button = QPushButton(
             "Reset selection reference",
             self,
@@ -248,6 +253,7 @@ class FindReplaceDialog(QDialog):
         self.preview_button.setText(self.translator.text("find.preview"))
         self.regex_help_button.setText(self.translator.text("find.regex_help"))
         self.close_button.setText(self.translator.text("find.close"))
+        self.preset_button.setText(self.translator.text("preset.capture"))
         self.preview_table.setHorizontalHeaderLabels(
             [
                 self.translator.text("find.preview.line"),
@@ -310,12 +316,14 @@ class FindReplaceDialog(QDialog):
         root_layout = QVBoxLayout()
         root_layout.addLayout(form_layout)
         root_layout.addLayout(button_layout)
+        root_layout.addWidget(self.preset_separator)
+        root_layout.addWidget(self.preset_button)
         root_layout.addWidget(self.warning_label)
         root_layout.addWidget(self.error_label)
         root_layout.addWidget(self.preview_summary_label)
         root_layout.addWidget(self.preview_table)
         root_layout.setStretch(0, 1)
-        root_layout.setStretch(4, 2)
+        root_layout.setStretch(6, 2)
         self.setLayout(root_layout)
 
     def _create_regex_insert_menu(self) -> None:
@@ -464,6 +472,13 @@ class FindReplaceDialog(QDialog):
         self.regex_help_button.clicked.connect(self.regex_help_requested.emit)
         self.normalise_button.clicked.connect(self._choose_normalise_operation)
         self.close_button.clicked.connect(self.close)
+        self.preset_button.clicked.connect(
+            lambda: self.preset_requested.emit(
+                self.find_text_edit.text(),
+                self.replace_text_edit.text(),
+                self._search_options(),
+            )
+        )
         self.find_text_edit.textChanged.connect(self._update_regex_lint)
         self.find_text_edit.textChanged.connect(self._emit_search_parameters_changed)
         self.replace_text_edit.textChanged.connect(self._update_regex_lint)

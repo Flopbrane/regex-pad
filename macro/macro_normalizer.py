@@ -31,6 +31,11 @@ class MacroNormalizer:
                 search_text=step.search_text,
                 exclusion_text=step.exclusion_text,
                 replacement_text=step.replacement_text,
+                case_sensitive=step.case_sensitive,
+                whole_word=step.whole_word,
+                selected_only=step.selected_only,
+                visible_only=step.visible_only,
+                replacement_input_text=step.replacement_input_text,
             )
             for step in load_data.steps
         )

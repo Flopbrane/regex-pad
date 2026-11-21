@@ -471,3 +471,14 @@ This section supersedes the previous deferred Manager/Runner/Preview and executi
 - Logger records unexpected execution exceptions at the GUI boundary; ordinary validation and dry-run diagnostics stay in the diagnostic UI.
 
 Source implementation and canonical verification are recorded in SCRIPT_STEP.md Step15-section74. XML import/export, drag-and-drop ordering and document-wide macro-definition Undo remain outside this Version 1 implementation. Packaged EXE rebuilding and physical Windows GUI acceptance are separate checks.
+
+
+## 17. Macro definition history and drag ordering (2026-11-21)
+
+The planned macro-definition Undo/Redo and drag ordering are now implemented. MacroStepTree accepts only internal flat-step moves and sends a source/destination request to the controller. The controller changes the model once, then rebuilds the outline; the root cannot be dragged and steps cannot acquire child steps.
+
+MacroEditorHistory uses QUndoStack with detached before/after documents and selection snapshots. It covers metadata, all step fields and nullable controls, Add/Duplicate/Delete, Up/Down and drag moves. Consecutive edits to the same field coalesce within a short typing interval, separated by selection changes, structural edits or saving. Undo/Redo is available through the Edit menu, toolbar, standard keyboard shortcuts and input context menus. It is independent of article-text Undo.
+
+Saving records the exact saved definition for dirty-state comparisons while retaining history. Returning to that definition clears the unsaved marker; undoing past a save marks it dirty again. New/successful Open resets history. Cancelled or failed operations preserve it. Discard-on-close restores the saved definition and clears discarded history so reopening the reused window cannot revive edits. Restored definitions are revalidated before Save or Run preview becomes available.
+
+The original XML-like editor's Version 1 planned macro functionality is implemented. XML import/export, a branch language with IF/ELSE, and execution-format extensions remain separate specifications, not stubs in the current runtime. Focused and canonical validation is recorded under SCRIPT_STEP.md Step15-section75.

@@ -18,11 +18,15 @@ class MacroEditorStepData:
     exclusion_text: str = ""
     replacement_enabled: bool = True
     replacement_text: str = ""
+    case_sensitive: bool = False
+    whole_word: bool = False
+    selected_only: bool = False
+    visible_only: bool = False
 
 
 @dataclass(slots=True)
 class MacroEditorDocumentData:
-    format_version: int = 1
+    format_version: int = 2
     macro_name: str = ""
     description: str = ""
     steps: list[MacroEditorStepData] = field(

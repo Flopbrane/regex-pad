@@ -742,3 +742,13 @@ The initial editor described above is implemented. Open it through the main wind
 The minimum window size is 640 x 480, with scrollable step fields. Add/Duplicate/Delete and Up/Down occupy separate rows so the outline can remain narrow. The JSON view is a read-only dialog. Macro execution and article changes are intentionally outside this editor implementation.
 
 Validation and canonical propagation results are recorded in SCRIPT_STEP.md, Step15-section72. Packaged EXE and physical GUI acceptance have not been performed.
+
+
+## 23. Completed macro editing operations (2026-11-21)
+
+This section supersedes the Phase 2 deferral for drag ordering and document-wide macro-definition Undo/Redo. Both operations are implemented, alongside the execution preview/application described in the latest architecture section.
+
+- Only step nodes can be dragged, within the same outline. Drops before/after steps, onto the root (first position) and into empty space (last position) preserve the flat step hierarchy.
+- A shared QUndoStack records the entire definition, including metadata and every step field, structural changes and selection restoration. Toolbar/Edit-menu actions, keyboard shortcuts and text-input context menus address the same stack.
+- Undoing to the saved definition clears the dirty marker. New/Open resets history only after confirmation/success; failed Open/Save and cancelled operations retain history.
+- Article application still uses its own one-edit-block Undo, separately from macro-definition editing.

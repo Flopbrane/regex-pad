@@ -4,12 +4,14 @@ from copy import deepcopy
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from app_logging import AppLogger
+from dialogs.macro_editor_history import MacroEditorHistory
 from dialogs.macro_editor_window import MacroEditorWindow
 from macro.editor_bridge import MacroEditorBridge, MacroEditorInputError
-from macro.editor_data_model import MacroEditorStepData
+from macro.editor_data_model import MacroEditorDocumentData, MacroEditorStepData
 from macro.editor_session import MacroEditorSession
 from macro.json_bridge import MacroJsonBridge
 from macro.json_data_model import MacroJsonData
@@ -31,12 +33,21 @@ class MacroEditorController(QObject):
         self.window = window
         self.logger = logger
         self.session = MacroEditorSession()
+        self._saved_document = deepcopy(self.session.document)
+        self.undo_stack = QUndoStack(self)
+        self.history = MacroEditorHistory(self.undo_stack, self._restore_history)
+        self.undo_stack.canUndoChanged.connect(window.undo_action.setEnabled)
+        self.undo_stack.canRedoChanged.connect(window.redo_action.setEnabled)
+        self.undo_stack.indexChanged.connect(self._update_dirty)
+        window.undo_requested.connect(self.undo_stack.undo)
+        window.redo_requested.connect(self.undo_stack.redo)
+        window.tree.step_reorder_requested.connect(self.reorder_step)
         self._loading = False
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.setInterval(300)
         self.timer.timeout.connect(self.validate)
-        window.confirm_close = self.confirm_discard
+        window.confirm_close = self._confirm_close
         window.new_requested.connect(self.new_document)
         window.open_requested.connect(self.open_document)
         window.save_requested.connect(self.save)
@@ -73,6 +84,7 @@ class MacroEditorController(QObject):
         self._loading = False
 
     def _selection_changed(self, *_args: object) -> None:
+        self.history.break_merge()
         index = self.window.selected_step()
         valid = 0 <= index < len(self.session.document.steps)
         self.window.step_editor.setEnabled(valid)
@@ -84,18 +96,56 @@ class MacroEditorController(QObject):
     def _metadata_changed(self, *_args: object) -> None:
         if self._loading:
             return
+        before = deepcopy(self.session.document)
         self.session.document.macro_name = self.window.macro_name.text()
         self.session.document.description = self.window.description.text()
+        key = (
+            "macro_name"
+            if before.macro_name != self.session.document.macro_name
+            else "description"
+        )
+        selected = self.window.selected_step()
+        self.history.record(before, self.session.document, selected, selected, key)
         self._modified()
 
     def _step_changed(self, step: MacroEditorStepData) -> None:
         index = self.window.selected_step()
-        if index >= 0:
+        if index >= 0 and not self._loading:
+            before = deepcopy(self.session.document)
+            changed = [
+                name
+                for name in step.__dataclass_fields__
+                if getattr(before.steps[index], name) != getattr(step, name)
+            ]
             self.session.document.steps[index] = step
+            if any((step.case_sensitive, step.whole_word, step.selected_only, step.visible_only)):
+                self.session.document.format_version = 2
+                self.window.version.setCurrentIndex(self.window.version.findData(2))
+            key = f"step:{index}:{','.join(changed)}"
+            self.history.record(before, self.session.document, index, index, key)
             self._modified()
 
+    def _restore_history(
+        self, document: MacroEditorDocumentData, selected: int
+    ) -> None:
+        self.timer.stop()
+        self.session.document = document
+        self.session.modified = document != self._saved_document
+        self._render_document(selected)
+
+    def _update_dirty(self, *_args: object) -> None:
+        self.session.modified = self.session.document != self._saved_document
+        self.window.update_status(self.session)
+
+    def _reset_history(self) -> None:
+        self._saved_document = deepcopy(self.session.document)
+        self.history.break_merge()
+        self.undo_stack.clear()
+        self.undo_stack.setClean()
+        self.session.modified = False
+
     def _modified(self) -> None:
-        self.session.modified = True
+        self.session.modified = self.session.document != self._saved_document
         self.window.render_tree(self.session, self.window.selected_step())
         # Disable saving until the current input has passed validation.
         self.window.editor_actions["save"].setEnabled(False)
@@ -106,7 +156,9 @@ class MacroEditorController(QObject):
     def validate(self) -> MacroJsonData | None:
         self.timer.stop()
         try:
-            prepared = self._manager().prepare_macro(MacroEditorBridge.to_json_model(self.session.document))
+            prepared = self._manager().prepare_macro(
+                MacroEditorBridge.to_json_model(self.session.document)
+            )
             model = prepared.model
             self.session.validation_result = prepared.validation
         except MacroEditorInputError as error:
@@ -165,24 +217,28 @@ class MacroEditorController(QObject):
             self.window.step_editor.focus_field(field_name)
 
     def add_step(self) -> None:
+        before = deepcopy(self.session.document)
+        selected = self.window.selected_step()
         steps = self.session.document.steps
         position = self.window.selected_step() + 1
         number = len(steps) + 1
         while any(step.step_name == f"step_{number}" for step in steps):
             number += 1
         steps.insert(position, MacroEditorStepData(step_name=f"step_{number}"))
-        self._structural_change(position)
+        self._structural_change(before, selected, position)
 
     def duplicate_step(self, index: int) -> None:
         steps = self.session.document.steps
         if not 0 <= index < len(steps):
             return
+        before = deepcopy(self.session.document)
+        selected = self.window.selected_step()
         step = deepcopy(steps[index])
         step.step_name += "_copy"
         while any(other.step_name == step.step_name for other in steps):
             step.step_name += "_copy"
         steps.insert(index + 1, step)
-        self._structural_change(index + 1)
+        self._structural_change(before, selected, index + 1)
 
     def delete_step(self, index: int) -> None:
         steps = self.session.document.steps
@@ -199,18 +255,31 @@ class MacroEditorController(QObject):
             != QMessageBox.StandardButton.Yes
         ):
             return
+        before = deepcopy(self.session.document)
+        selected = self.window.selected_step()
         del steps[index]
-        self._structural_change(min(index, len(steps) - 1))
+        self._structural_change(before, selected, min(index, len(steps) - 1))
 
     def move_step(self, index: int, offset: int) -> None:
-        steps = self.session.document.steps
-        destination = index + offset
-        if 0 <= index < len(steps) and 0 <= destination < len(steps):
-            steps.insert(destination, steps.pop(index))
-            self._structural_change(destination)
+        self.reorder_step(index, index + offset)
 
-    def _structural_change(self, selected: int) -> None:
-        self.session.modified = True
+    def reorder_step(self, index: int, destination: int) -> None:
+        steps = self.session.document.steps
+        if (
+            0 <= index < len(steps)
+            and 0 <= destination < len(steps)
+            and index != destination
+        ):
+            before = deepcopy(self.session.document)
+            selected = self.window.selected_step()
+            steps.insert(destination, steps.pop(index))
+            self._structural_change(before, selected, destination)
+
+    def _structural_change(
+        self, before: MacroEditorDocumentData, before_selection: int, selected: int
+    ) -> None:
+        self.history.record(before, self.session.document, before_selection, selected)
+        self.session.modified = self.session.document != self._saved_document
         self._render_document(selected)
 
     def confirm_discard(self) -> bool:
@@ -229,10 +298,28 @@ class MacroEditorController(QObject):
             return self.save()
         return answer == QMessageBox.StandardButton.Discard
 
+    def _confirm_close(self) -> bool:
+        if not self.confirm_discard():
+            return False
+        if self.session.modified:
+            # The main window reuses this modeless editor after it is hidden.
+            # Discard must not revive unsaved edits/history on the next Show.
+            self.session.document = deepcopy(self._saved_document)
+            self._reset_history()
+            self._render_document()
+        return True
+
     def new_document(self) -> None:
         if self.confirm_discard():
-            self.session = MacroEditorSession(macro_folder=self.session.macro_folder)
-            self._render_document()
+            self.start_document(MacroEditorDocumentData())
+
+    def start_document(self, document: MacroEditorDocumentData) -> None:
+        """Start an unsaved definition without writing a JSON file yet."""
+        self.session = MacroEditorSession(
+            document=deepcopy(document), macro_folder=self.session.macro_folder
+        )
+        self._reset_history()
+        self._render_document()
 
     def open_document(self, load_file_path: Path | None = None) -> bool:
         if not self.confirm_discard():
@@ -259,6 +346,7 @@ class MacroEditorController(QObject):
             save_file_path=load_file_path,
             macro_folder=self.session.macro_folder,
         )
+        self._reset_history()
         self._render_document()
         return True
 
@@ -298,6 +386,9 @@ class MacroEditorController(QObject):
             self._io_error(error)
             return False
         self.session.save_file_path = destination
+        self._saved_document = deepcopy(self.session.document)
+        self.history.break_merge()
+        self.undo_stack.setClean()
         self.session.modified = False
         self.window.update_status(self.session)
         return True
