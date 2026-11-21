@@ -59,6 +59,8 @@ Qt Virtual Keyboardを含む場合はGPLv3経路で扱い、
 | プレビュー | WordPress経由の簡易HTML書き出し、Twenty Twenty-Fiveによる本格表示 |
 | 復元・表示設定 | 自動バックアップ、保存前の世代バックアップ、復元、ルーラー、折り返し、空白可視化、配色 |
 
+正規表現による検索・置換には、Python標準モジュールの`re`を使用しています。
+
 詳しい操作とショートカットは[日本語の使い方](docs_jp/HOW_TO_USE_jp.md)をご覧ください。
 
 ## Unicode正規化置換

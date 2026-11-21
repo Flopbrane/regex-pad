@@ -27,13 +27,13 @@ def test_regex_help_loads_examples(app: QApplication) -> None:
     translator = Translator(Path("resources"), "en")
     dialog = RegexHelpDialog(Path("resources/regex_help_en.json"), translator)
 
-    assert dialog.table.rowCount() >= 20
+    assert dialog.table.rowCount() >= 30
     assert dialog.table.columnCount() == 8
     assert dialog.table.item(0, 0) is not None
     assert dialog.table.item(0, 3) is not None
     usage_item = dialog.table.item(0, 5)
     assert usage_item is not None
-    assert usage_item.text() == "^TODO"
+    assert usage_item.text() == "cat"
 
 
 def test_regex_help_columns_are_resizable_and_wide_enough(app: QApplication) -> None:
@@ -47,10 +47,10 @@ def test_regex_help_columns_are_resizable_and_wide_enough(app: QApplication) -> 
     assert dialog.table.wordWrap() is False
     for column in range(dialog.table.columnCount()):
         assert header.sectionResizeMode(column) == QHeaderView.ResizeMode.Interactive
-    assert dialog.table.columnWidth(3) >= 320
-    assert dialog.table.columnWidth(4) >= 220
-    assert dialog.table.columnWidth(6) >= 220
-    assert dialog.table.columnWidth(7) >= 260
+    assert dialog.table.columnWidth(2) >= 220
+    assert dialog.table.columnWidth(3) >= 170
+    assert dialog.table.columnWidth(6) >= 190
+    assert dialog.table.columnWidth(7) >= 380
 
 
 def test_regex_help_can_switch_between_english_and_japanese(app: QApplication) -> None:
@@ -72,11 +72,11 @@ def test_regex_help_can_switch_between_english_and_japanese(app: QApplication) -
     category_item = dialog.table.item(0, 0)
     assert header_item is not None
     assert category_item is not None
-    assert header_item.text() == "種類"
-    assert category_item.text() == "位置"
+    assert header_item.text() == "区分"
+    assert category_item.text() == "検索：基本形"
     usage_header_item = dialog.table.horizontalHeaderItem(5)
     assert usage_header_item is not None
-    assert usage_header_item.text() == "記述例"
+    assert usage_header_item.text() == "一致部分"
 
 
 def test_help_headers_follow_help_language_not_app_language(app: QApplication) -> None:
@@ -94,7 +94,7 @@ def test_help_headers_follow_help_language_not_app_language(app: QApplication) -
 
     header_item = dialog.table.horizontalHeaderItem(0)
     assert header_item is not None
-    assert header_item.text() == "種類"
+    assert header_item.text() == "区分"
 
 
 def test_regex_help_emits_selected_pattern(app: QApplication) -> None:
@@ -107,7 +107,7 @@ def test_regex_help_emits_selected_pattern(app: QApplication) -> None:
 
     dialog._emit_selected_pattern()
 
-    assert emitted_patterns == ["^"]
+    assert emitted_patterns == ["cat"]
 
 
 def test_regex_help_double_click_emits_pattern_column(app: QApplication) -> None:
@@ -121,4 +121,4 @@ def test_regex_help_double_click_emits_pattern_column(app: QApplication) -> None
 
     dialog._emit_item_pattern(item)
 
-    assert emitted_patterns == ["$"]
+    assert emitted_patterns == [r"^cat"]

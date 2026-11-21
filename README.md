@@ -58,6 +58,8 @@ No commercial Qt entitlement or completed dependency-source delivery is assumed.
 | Preview | Neutral, exported simple pages and live Twenty Twenty-Five pages rendered by local WordPress |
 | Recovery and appearance | Automatic session backups, saved-file generations, restore, ruler, wrapping, visible whitespace, colors |
 
+Regular expression search and replacement use Python's standard-library `re` module.
+
 See the [user guide](docs/HOW_TO_USE.md) for step-by-step instructions and shortcuts.
 
 ## Unicode normalization replacement

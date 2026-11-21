@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import Signal
@@ -20,44 +19,26 @@ from PySide6.QtWidgets import (
 
 from localization.translator import Translator
 
-PATTERN_COLUMN = 2
-REGEX_HELP_MIN_COLUMN_WIDTHS = (120, 170, 220, 320, 220, 220, 220, 260)
-
-HELP_HEADERS = {
-    "EN_Ver.": [
-        "Category",
-        "Use",
-        "Pattern",
-        "Plain meaning",
-        "Example text",
-        "Usage example",
-        "Matches",
-        "Replace with / Result",
-    ],
-    "JP_Ver.": [
-        "種類",
-        "用途",
-        "パターン",
-        "平文での意味",
-        "例文",
-        "記述例",
-        "対象になる部分",
-        "置換文字 / 結果",
-    ],
+SEARCH_COLUMN = 2
+MIN_COLUMN_WIDTHS = (140, 180, 220, 170, 190, 150, 190, 380)
+HEADERS = {
+    "EN_Ver.": ["Section", "Topic", "Search pattern", "Replacement text", "Input example", "Matched text", "Result", "Explanation"],
+    "JP_Ver.": ["区分", "項目", "検索文字列", "置換文字列", "入力例", "一致部分", "置換結果", "説明"],
 }
-
-
-@dataclass(frozen=True)
-class RegexHelpItem:
-    category: str
-    label: str
-    pattern: str
-    description: str
-    example_text: str
-    usage_example: str
-    matches: str
-    replace_with: str
-    replacement_result: str
+NOTES = {
+    "EN_Ver.": (
+        "Turn on Regular Expression in Find/Replace to use these patterns and "
+        "replacement references. \\d searches for a digit; \\1 or \\g<1> reuses "
+        "a captured group in the replacement field. Double-click a row to "
+        "insert its search pattern."
+    ),
+    "JP_Ver.": (
+        "検索/置換画面で「正規表現として検索する」を有効にしてください。"
+        "\\d は数字を探す検索記法、\\1・\\g<1> は括弧で保存した文字列を"
+        "置換欄で再利用する記法です。行をダブルクリックすると検索文字列を挿入します。"
+    ),
+}
+COLUMNS = ("section", "topic", "search", "replacement", "input", "match", "result", "explanation")
 
 
 class RegexHelpDialog(QDialog):
@@ -71,41 +52,42 @@ class RegexHelpDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.translator = translator
-        self.resize(980, 520)
-        self.regex_help_paths = self._normalize_help_paths(regex_help_path)
-
+        self.resize(1100, 620)
+        self.regex_help_paths = (
+            {"EN_Ver.": regex_help_path}
+            if isinstance(regex_help_path, Path)
+            else regex_help_path
+        )
         self.language_combo_box = QComboBox(self)
         for language_name in self.regex_help_paths:
             self.language_combo_box.addItem(language_name)
 
         self.table = QTableWidget(self)
-        self.table.setColumnCount(8)
+        self.table.setColumnCount(len(COLUMNS))
         header = self.table.horizontalHeader()
         header.setSectionsMovable(True)
-        for column in range(self.table.columnCount()):
+        for column, width in enumerate(MIN_COLUMN_WIDTHS):
             header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
-            self.table.setColumnWidth(column, REGEX_HELP_MIN_COLUMN_WIDTHS[column])
+            self.table.setColumnWidth(column, width)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setWordWrap(False)
 
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Close,
-            self,
-        )
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, self)
         self.insert_button = button_box.addButton(
             self.translator.text("regex_help.insert"),
             QDialogButtonBox.ButtonRole.ActionRole,
         )
-
         self.language_label = QLabel(self)
+        self.instructions_label = QLabel(self)
+        self.instructions_label.setWordWrap(True)
         language_layout = QHBoxLayout()
         language_layout.addWidget(self.language_label)
         language_layout.addWidget(self.language_combo_box)
         language_layout.addStretch()
-
         layout = QVBoxLayout()
         layout.addLayout(language_layout)
+        layout.addWidget(self.instructions_label)
         layout.addWidget(self.table)
         layout.addWidget(button_box)
         self.setLayout(layout)
@@ -117,83 +99,38 @@ class RegexHelpDialog(QDialog):
         self.language_combo_box.currentTextChanged.connect(self._load_current_language)
         self.apply_language()
 
-    def _normalize_help_paths(
-        self,
-        regex_help_path: Path | dict[str, Path],
-    ) -> dict[str, Path]:
-        if isinstance(regex_help_path, Path):
-            return {"EN_Ver.": regex_help_path}
-        return regex_help_path
-
-    def _set_headers(self) -> None:
-        headers = HELP_HEADERS.get(
-            self.language_combo_box.currentText(),
-            HELP_HEADERS["EN_Ver."],
-        )
-        self.table.setHorizontalHeaderLabels(headers)
-
     def apply_language(self) -> None:
         self.setWindowTitle(self.translator.text("regex_help.title"))
         self.language_label.setText(self.translator.text("regex_help.language"))
         self.insert_button.setText(self.translator.text("regex_help.insert"))
         self._set_headers()
 
+    def _set_headers(self) -> None:
+        language = self.language_combo_box.currentText()
+        self.table.setHorizontalHeaderLabels(HEADERS.get(language, HEADERS["EN_Ver."]))
+        self.instructions_label.setText(NOTES.get(language, NOTES["EN_Ver."]))
+
     def _load_current_language(self) -> None:
         self._set_headers()
-        self._load_items(self.regex_help_paths[self.language_combo_box.currentText()])
-
-    def _load_items(self, regex_help_path: Path) -> None:
-        load_data = json.loads(regex_help_path.read_text(encoding="utf-8"))
-        items = [
-            RegexHelpItem(
-                category=str(item.get("category", "")),
-                label=str(item["label"]),
-                pattern=str(item["pattern"]),
-                description=str(item["description"]),
-                example_text=str(item.get("example_text", "")),
-                usage_example=str(item.get("usage_example", "")),
-                matches=str(item.get("matches", "")),
-                replace_with=str(item.get("replace_with", "")),
-                replacement_result=str(item.get("replacement_result", "")),
-            )
-            for item in load_data
-        ]
-        self.table.setRowCount(len(items))
-        for row, item in enumerate(items):
-            replace_summary = self._replace_summary(item)
-            self.table.setItem(row, 0, QTableWidgetItem(item.category))
-            self.table.setItem(row, 1, QTableWidgetItem(item.label))
-            self.table.setItem(row, 2, QTableWidgetItem(item.pattern))
-            self.table.setItem(row, 3, QTableWidgetItem(item.description))
-            self.table.setItem(row, 4, QTableWidgetItem(item.example_text))
-            self.table.setItem(row, 5, QTableWidgetItem(item.usage_example))
-            self.table.setItem(row, 6, QTableWidgetItem(item.matches))
-            self.table.setItem(row, 7, QTableWidgetItem(replace_summary))
-        self._fit_columns_to_contents()
-        self.table.resizeRowsToContents()
-
-    def _fit_columns_to_contents(self) -> None:
+        load_file_path = self.regex_help_paths[self.language_combo_box.currentText()]
+        load_data = json.loads(load_file_path.read_text(encoding="utf-8"))
+        self.table.setRowCount(len(load_data))
+        for row, item in enumerate(load_data):
+            for column, key in enumerate(COLUMNS):
+                self.table.setItem(row, column, QTableWidgetItem(str(item[key])))
         self.table.resizeColumnsToContents()
-        for column, minimum_width in enumerate(REGEX_HELP_MIN_COLUMN_WIDTHS):
-            current_width = self.table.columnWidth(column)
-            self.table.setColumnWidth(column, max(current_width, minimum_width))
-
-    def _replace_summary(self, item: RegexHelpItem) -> str:
-        if not item.replace_with and not item.replacement_result:
-            return ""
-        if item.replace_with and item.replacement_result:
-            return f"{item.replace_with} -> {item.replacement_result}"
-        return item.replace_with or item.replacement_result
+        for column, minimum_width in enumerate(MIN_COLUMN_WIDTHS):
+            self.table.setColumnWidth(
+                column, max(self.table.columnWidth(column), minimum_width)
+            )
+        self.table.resizeRowsToContents()
 
     def _emit_selected_pattern(self) -> None:
         selected_items = self.table.selectedItems()
-        if not selected_items:
-            return
-        pattern_item = self.table.item(selected_items[0].row(), PATTERN_COLUMN)
-        if pattern_item is not None:
-            self.pattern_insert_requested.emit(pattern_item.text())
+        if selected_items:
+            self._emit_item_pattern(selected_items[0])
 
     def _emit_item_pattern(self, item: QTableWidgetItem) -> None:
-        pattern_item = self.table.item(item.row(), PATTERN_COLUMN)
+        pattern_item = self.table.item(item.row(), SEARCH_COLUMN)
         if pattern_item is not None:
             self.pattern_insert_requested.emit(pattern_item.text())

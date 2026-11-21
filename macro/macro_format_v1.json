@@ -15,13 +15,13 @@
       "置換文字列": "<!-- wp:spacer {\"height\":\"30px\"} -->\n<div style=\"height:30px\" aria-hidden=\"true\" class=\"wp-block-spacer\"></div>\n<!-- /wp:spacer -->"
     },
     {
-      "手順名": "normalize_fullwidth_alphanumeric",
+      "手順名": "①-⑳replace",
       "有効": true,
       "正規表現": true,
       "Unicode正規化": true,
       "Unicode正規化形式": "NFKC",
-      "丸数字変換後ピリオド追加": false,
-      "検索文字列": "[Ａ-Ｚａ-ｚ０-９]+",
+      "丸数字変換後ピリオド追加": true,
+      "検索文字列": "[①-⑳]",
       "除外文字列": null,
       "置換文字列": null
     }

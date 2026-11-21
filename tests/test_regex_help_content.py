@@ -1,89 +1,92 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
-from typing import Any
 
-REQUIRED_KEYS = {
-    "category",
-    "label",
-    "pattern",
-    "description",
-    "example_text",
-    "usage_example",
-    "matches",
-    "replace_with",
-    "replacement_result",
+import pytest
+
+from search.search_engine import SearchEngine, SearchOptions
+
+FIELDS = {
+    "section", "topic", "search", "replacement", "input",
+    "match", "result", "explanation", "mode",
 }
+SECTIONS_EN = [
+    "Search: basics", "Search: advanced", "Replacement: basics",
+    "Replacement: advanced", "Search + replacement examples",
+]
+SECTIONS_JA = [
+    "検索：基本形", "検索：応用形", "置換：基本形",
+    "置換：応用形", "検索と置換の組み合わせ例",
+]
 
 
-def load_help_items(path: Path) -> list[dict[str, Any]]:
-    return json.loads(path.read_text(encoding="utf-8"))
+def load_items(language: str) -> list[dict[str, str]]:
+    load_file_path = Path(f"resources/regex_help_{language}.json")
+    return json.loads(load_file_path.read_text(encoding="utf-8"))
 
 
-def test_english_and_japanese_help_have_matching_structure() -> None:
-    english_items = load_help_items(Path("resources/regex_help_en.json"))
-    japanese_items = load_help_items(Path("resources/regex_help_ja.json"))
-
-    assert len(english_items) == len(japanese_items)
-    for english_item, japanese_item in zip(english_items, japanese_items, strict=True):
-        assert set(english_item) == REQUIRED_KEYS
-        assert set(japanese_item) == REQUIRED_KEYS
-
-
-def test_english_and_japanese_help_keep_same_regex_patterns() -> None:
-    english_items = load_help_items(Path("resources/regex_help_en.json"))
-    japanese_items = load_help_items(Path("resources/regex_help_ja.json"))
-
-    english_patterns = [item["pattern"] for item in english_items]
-    japanese_patterns = [item["pattern"] for item in japanese_items]
-
-    assert japanese_patterns == english_patterns
+def test_languages_have_matching_examples_and_five_sections() -> None:
+    english_items = load_items("en")
+    japanese_items = load_items("ja")
+    assert len(english_items) == len(japanese_items) >= 30
+    assert list(dict.fromkeys(item["section"] for item in english_items)) == SECTIONS_EN
+    assert list(dict.fromkeys(item["section"] for item in japanese_items)) == SECTIONS_JA
+    for english, japanese in zip(english_items, japanese_items, strict=True):
+        assert set(english) == set(japanese) == FIELDS
+        for field in ("search", "replacement", "input", "match", "result", "mode"):
+            assert english[field] == japanese[field]
+        assert english["topic"] and japanese["topic"]
+        assert english["explanation"] and japanese["explanation"]
+        re.compile(english["search"], re.MULTILINE)
 
 
-def test_japanese_help_contains_readable_japanese_text() -> None:
-    japanese_items = load_help_items(Path("resources/regex_help_ja.json"))
-
-    assert japanese_items[0]["category"] == "位置"
-    assert japanese_items[0]["label"] == "行の先頭"
-    assert "位置" in japanese_items[0]["description"]
-
-
-def test_help_contains_complex_and_office_samples() -> None:
-    japanese_items = load_help_items(Path("resources/regex_help_ja.json"))
-    labels_by_category = {
-        str(item["category"]): {
-            str(other_item["label"])
-            for other_item in japanese_items
-            if other_item["category"] == item["category"]
-        }
-        for item in japanese_items
-    }
-
-    assert "同じ単語が続く場所" in labels_by_category["複雑な組み合わせサンプル"]
-    assert "電話番号" in labels_by_category["事務・計算・住所"]
-    assert "CSVの列を並べ替える" in labels_by_category["置換サンプル"]
-    assert "全角文字のみ" in labels_by_category["文字"]
-    assert "日本語の句読点を全角スペースへ" in labels_by_category["組み合わせ"]
-    assert "全角アルファベットを半角へ" in labels_by_category["組み合わせ"]
-    assert "丸数字を通常の数字へ" in labels_by_category["Unicode正規化"]
+def test_every_replacement_example_matches_actual_regex_pad_result() -> None:
+    engine = SearchEngine()
+    for item in load_items("en"):
+        if item["mode"] != "replace":
+            continue
+        result = engine.replace_all(
+            item["input"],
+            item["search"],
+            item["replacement"],
+            SearchOptions(regular_expression=True),
+        )
+        assert result.text == item["result"], item["topic"]
 
 
-def test_unicode_normalization_help_and_readmes_explain_the_dedicated_route() -> None:
-    english_items = load_help_items(Path("resources/regex_help_en.json"))
-    japanese_items = load_help_items(Path("resources/regex_help_ja.json"))
-    english_item = next(
-        item for item in english_items if item["pattern"] == "[①-⑳]"
+def test_invalid_replacement_and_normalization_are_explained_accurately() -> None:
+    items = load_items("en")
+    invalid = next(item for item in items if item["mode"] == "invalid")
+    with pytest.raises(re.error, match="bad escape"):
+        SearchEngine().replace_all(
+            invalid["input"], invalid["search"], invalid["replacement"],
+            SearchOptions(regular_expression=True),
+        )
+    normalized = next(item for item in items if item["mode"] == "normalization")
+    result = SearchEngine().replace_all(
+        normalized["input"], normalized["search"], "",
+        SearchOptions(regular_expression=True, unicode_normalize=True),
     )
-    japanese_item = next(
-        item for item in japanese_items if item["pattern"] == "[①-⑳]"
-    )
+    assert result.text == normalized["result"]
 
-    assert "NFKC" in english_item["description"]
-    assert "NFKD" in english_item["description"]
-    assert "Unicode正規化置換" in japanese_item["description"]
-    assert japanese_item["replacement_result"] == "1.朝 2.昼 10.まとめ"
 
+def test_capture_reuse_and_headings_are_explicit_in_both_languages() -> None:
+    english_items = load_items("en")
+    japanese_items = load_items("ja")
+    for items, marker in ((english_items, "reuse"), (japanese_items, "再利用")):
+        group_row = next(item for item in items if item["replacement"] == r"## \1")
+        assert marker in group_row["explanation"]
+        assert group_row["result"].startswith("## 12")
+        heading_row = next(item for item in items if item["input"].startswith("1. Plan"))
+        assert heading_row["result"] == "## 1. Plan\n## 2. Review"
+        invalid_row = next(item for item in items if item["mode"] == "invalid")
+        assert r"\d" in invalid_row["explanation"]
+        assert r"\g<1>" in invalid_row["explanation"]
+
+
+def test_unicode_normalization_guides_still_describe_the_dedicated_route() -> None:
     english_readme = Path("README.md").read_text(encoding="utf-8")
     japanese_readme = Path("README_jp.md").read_text(encoding="utf-8")
     for form in ("NFC", "NFD", "NFKC", "NFKD"):
