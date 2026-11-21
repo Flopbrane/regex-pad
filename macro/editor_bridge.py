@@ -39,7 +39,6 @@ class MacroEditorBridge:
                     step.whole_word,
                     step.selected_only,
                     step.visible_only,
-                    step.replacement_text,
                 )
                 for step in model.steps
             ],
@@ -79,6 +78,7 @@ class MacroEditorBridge:
                     step.whole_word,
                     step.selected_only,
                     step.visible_only,
+                    step.replacement_text if document.format_version == 2 else None,
                 )
                 for step in document.steps
             ],

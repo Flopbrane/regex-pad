@@ -752,3 +752,7 @@ This section supersedes the Phase 2 deferral for drag ordering and document-wide
 - A shared QUndoStack records the entire definition, including metadata and every step field, structural changes and selection restoration. Toolbar/Edit-menu actions, keyboard shortcuts and text-input context menus address the same stack.
 - Undoing to the saved definition clears the dirty marker. New/Open resets history only after confirmation/success; failed Open/Save and cancelled operations retain history.
 - Article application still uses its own one-edit-block Undo, separately from macro-definition editing.
+
+## 24. User-facing Search/Replace Presets (2026-11-21)
+
+The window title is Search/Replace Presets / 検索/置換プリセット. It is reached from a four-action submenu under Search rather than a top-level Macro menu. Open and Run first loads the preset into this editor; the user checks the steps and presses Run Preview here. The Find/Replace dialog's Save Current Search/Replace Conditions as Preset button creates an unsaved, one-step format-2 definition. The user enters a name and chooses Save to write the new JSON. Format-2 step fields include case, whole-word, selected-only and visible-only options. The definition history and safe preview/application flow remain in charge of edits and article changes.

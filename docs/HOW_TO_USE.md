@@ -96,6 +96,31 @@ or replacement references produce an error. After a replacement, use Undo if
 the result is unwanted. Selection/visible options constrain searches to that
 scope; clear them to return to a whole-document operation.
 
+### Search/Replace Presets in the current source build
+
+The **Search > Search/Replace Presets** submenu has **Create New Preset**,
+**Open and Run Preset**, **Edit Preset**, and **Delete Preset**. A saved preset
+is a local JSON file. **Open and Run Preset** opens that file in the preset
+editor for inspection; it does not change the article immediately.
+
+To capture the current search, exclusion, replacement and checkbox settings,
+click **Save Current Search/Replace Conditions as Preset** below the Find/Replace
+buttons. The preset editor opens with one populated step. Enter a preset name,
+adjust the step if needed, then click **Save** to choose a new JSON file. You
+can add, duplicate, delete and reorder steps; definition Undo/Redo is separate
+from the article's Undo. The ordinary replacement field is retained in JSON
+even when Unicode normalization makes it temporarily inactive.
+
+To run a saved preset, open it, inspect the steps and diagnostics, then press
+**Run Preview**. The preview applies enabled steps in order to a detached copy
+of the active article. Selected/visible options use the selection and visible
+area at preview time. **Apply to document** commits the reviewed result as one
+Undo operation; Cancel leaves the article unchanged. **Delete Preset** asks
+before moving the JSON into `.deleted_presets` beside the original file.
+
+The Python source build has been checked. A new packaged EXE has not yet been
+built or accepted for these preset changes.
+
 ### Regex examples
 
 | Goal | Find text | Replace with |

@@ -82,6 +82,21 @@ the original match is one circled number from `①` through `⑳`, and only with
 NFKC or NFKD. Compatibility normalization can change visual distinctions, so
 preview the matches and use Undo if the selected form is not appropriate.
 
+## Search/Replace Presets (current source build)
+
+Use **Search > Search/Replace Presets** to create, open and run, edit, or delete
+saved presets. In **Search > Find / Replace**, **Save Current Search/Replace
+Conditions as Preset** copies the current text fields and options into one new
+step. Name it in the preset editor and choose **Save** to create a JSON file.
+Add or reorder steps there for a sequence. Opening a saved preset displays it
+for inspection; **Run Preview** shows the combined result, and **Apply to
+document** makes one undoable change. Selected/visible scopes use the target
+editor's selection and viewport when Run Preview is pressed. Deleted presets
+are retained in a `.deleted_presets` folder beside their JSON files.
+
+This feature has been verified in the Python source build. The packaged EXE
+has not yet been rebuilt or checked for this change.
+
 ## Check article source before pasting
 
 Choose **Search > Grammar Check** (`F7`) to see **Error**, **Warning**, and **Info**

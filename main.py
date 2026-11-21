@@ -70,8 +70,6 @@ from dialogs.grammar_check_dialog import GrammarCheckDialog
 from dialogs.macro_editor_controller import MacroEditorController
 from dialogs.macro_editor_window import MacroEditorWindow
 from dialogs.macro_execution_controller import MacroExecutionController
-from macro.editor_data_model import MacroEditorDocumentData, MacroEditorStepData
-from macro.json_loader import MacroJsonLoader, MacroJsonLoadError
 from dialogs.options_dialog import OptionsDialog
 from dialogs.regex_help_dialog import RegexHelpDialog
 from dialogs.schema_reference_dialog import SchemaReferenceDialog
@@ -122,6 +120,8 @@ from fileio.unsaved_backup_manager import (
     UnsavedBackupSession,
 )
 from localization.translator import Translator
+from macro.editor_data_model import MacroEditorDocumentData, MacroEditorStepData
+from macro.json_loader import MacroJsonLoader, MacroJsonLoadError
 from normalise import apply_normalise_operation
 from preview.wordpress_preview import WordPressPreview
 from preview.wordpress_runtime import default_runtime_root
@@ -1491,14 +1491,12 @@ class MainWindow(QMainWindow):
             visible_only=options.visible_only,
         )
         controller.start_document(
-            MacroEditorDocumentData(format_version=2, steps=[step])
+            MacroEditorDocumentData(format_version=2, steps=[step]), needs_save=True
         )
         self.macro_editor_window.macro_name.setFocus()  # type: ignore[union-attr]
 
     def delete_search_preset(self) -> None:
         """Remove a validated preset from the picker with a reversible move."""
-        from datetime import datetime
-
         folder = (
             self.macro_editor_controller.session.macro_folder
             if self.macro_editor_controller is not None
@@ -1529,7 +1527,7 @@ class MainWindow(QMainWindow):
             deleted_folder = load_file_path.parent / ".deleted_presets"
             deleted_folder.mkdir(exist_ok=True)
             archived_name = (
-                f"{load_file_path.stem}.{datetime.now().strftime('%Y%m%d%H%M%S')}."
+                f"{load_file_path.stem}.{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}."
                 f"{uuid.uuid4().hex[:8]}.json"
             )
             load_file_path.rename(deleted_folder / archived_name)

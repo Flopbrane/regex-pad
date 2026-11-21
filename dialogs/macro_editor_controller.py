@@ -313,12 +313,17 @@ class MacroEditorController(QObject):
         if self.confirm_discard():
             self.start_document(MacroEditorDocumentData())
 
-    def start_document(self, document: MacroEditorDocumentData) -> None:
+    def start_document(
+        self, document: MacroEditorDocumentData, *, needs_save: bool = False
+    ) -> None:
         """Start an unsaved definition without writing a JSON file yet."""
         self.session = MacroEditorSession(
             document=deepcopy(document), macro_folder=self.session.macro_folder
         )
         self._reset_history()
+        if needs_save:
+            self._saved_document = MacroEditorDocumentData()
+            self.session.modified = self.session.document != self._saved_document
         self._render_document()
 
     def open_document(self, load_file_path: Path | None = None) -> bool:

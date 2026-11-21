@@ -323,7 +323,7 @@ class FindReplaceDialog(QDialog):
         root_layout.addWidget(self.preview_summary_label)
         root_layout.addWidget(self.preview_table)
         root_layout.setStretch(0, 1)
-        root_layout.setStretch(6, 2)
+        root_layout.setStretch(7, 2)
         self.setLayout(root_layout)
 
     def _create_regex_insert_menu(self) -> None:

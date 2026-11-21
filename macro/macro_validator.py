@@ -71,6 +71,7 @@ class MacroValidator:
                     step,
                     step_index,
                     step_name_counts,
+                    load_data.format_version,
                 )
             )
         return MacroValidationResult(tuple(diagnostics))
@@ -81,6 +82,7 @@ class MacroValidator:
         step: MacroJsonStepData,
         step_index: int,
         step_name_counts: Counter[str],
+        format_version: int,
     ) -> list[MacroDiagnostic]:
         diagnostics: list[MacroDiagnostic] = []
         if not step.step_name.strip():
@@ -118,7 +120,9 @@ class MacroValidator:
         elif step.regular_expression:
             diagnostics.extend(cls._validate_regular_expressions(step, step_index))
 
-        diagnostics.extend(cls._validate_replacement_route(step, step_index))
+        diagnostics.extend(
+            cls._validate_replacement_route(step, step_index, format_version)
+        )
         if not any(d.severity is MacroDiagnosticSeverity.ERROR for d in diagnostics):
             options = SearchOptions(
                 regular_expression=step.regular_expression,
@@ -181,6 +185,7 @@ class MacroValidator:
         cls,
         step: MacroJsonStepData,
         step_index: int,
+        format_version: int,
     ) -> list[MacroDiagnostic]:
         diagnostics: list[MacroDiagnostic] = []
         if step.unicode_normalize:
@@ -222,8 +227,9 @@ class MacroValidator:
                     )
                 )
 
-        if step.append_dot_to_circled_number and step.unicode_normalize and (
-            step.unicode_normalize_form not in APPEND_DOT_NORMALIZATION_FORMS
+        if step.append_dot_to_circled_number and (
+            (format_version == 1 and not step.unicode_normalize)
+            or (step.unicode_normalize and step.unicode_normalize_form not in APPEND_DOT_NORMALIZATION_FORMS)
         ):
             diagnostics.append(
                 cls._error(

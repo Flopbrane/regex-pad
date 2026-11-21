@@ -111,6 +111,7 @@ class MacroEditorWindow(QMainWindow):
         self.version.setEditable(False)
         self.version.addItem("1", 1)
         self.version.addItem("2", 2)
+        self.version.setEnabled(False)
         self.macro_name = QLineEdit()
         self.description = QLineEdit()
         form = QFormLayout()
