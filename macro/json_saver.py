@@ -1,4 +1,4 @@
-"""Safely save pseudo-macro file data models as UTF-8 JSON."""
+"""擬似マクロファイルデータモデルを、UTF-8形式のJSONとして安全に保存する。"""
 
 from __future__ import annotations
 
@@ -12,28 +12,29 @@ from macro.json_paths import default_macro_folder, resolve_macro_file_path
 
 
 class MacroJsonSaveError(OSError):
-    """Raised when a pseudo-macro JSON file cannot be saved safely."""
+    """擬似マクロのJSONファイルを安全に保存できない場合に発生します。"""
 
 
 class MacroJsonSaver:
-    """Write UTF-8 JSON atomically to a configurable pseudo-macro folder."""
+    """UTF-8 JSONを設定可能な擬似マクロフォルダにアトミックに書き込む。"""
 
     def __init__(self, macro_folder: Path | None = None) -> None:
-        self.macro_folder = macro_folder or default_macro_folder()
+        self.macro_folder: Path = macro_folder or default_macro_folder()
 
     def save(
         self,
         save_data: MacroJsonData,
         save_file_path: str | Path,
     ) -> Path:
-        """Save a model and return the resolved destination path."""
+        """モデルを保存し、確定した保存先パスを返す。"""
+
         temporary_file_path: Path | None = None
         try:
-            resolved_save_file_path = resolve_macro_file_path(
+            resolved_save_file_path: Path = resolve_macro_file_path(
                 save_file_path,
                 self.macro_folder,
             )
-            json_data = MacroJsonBridge.to_dict(save_data)
+            json_data: dict[str, object] = MacroJsonBridge.to_dict(save_data)
             resolved_save_file_path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
                 "w",
@@ -56,5 +57,5 @@ class MacroJsonSaver:
                 except OSError:
                     pass
             raise MacroJsonSaveError(
-                f"cannot save pseudo-macro JSON {save_file_path}: {error}"
+                f"検索/置換プリセットのJSONを保存できません {save_file_path}: {error}"
             ) from error

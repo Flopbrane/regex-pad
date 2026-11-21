@@ -1,4 +1,5 @@
-"""File-I/O dataclasses that mirror the pseudo-macro JSON version 1 format."""
+"""擬似マクロJSONバージョン1形式を反映した、ファイルI/O用データクラス."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -9,30 +10,35 @@ from unicode_normalize import NORMALIZATION_FORMS, NormalizationForm
 
 
 def _string_value(field_name: str, value: object) -> str:
+    """文字列かどうかを検証し、文字列であれば返す。"""
     if not isinstance(value, str):
         raise TypeError(f"{field_name} must be str")
     return value
 
 
 def _boolean_value(field_name: str, value: object) -> bool:
+    """ブール値かどうかを検証し、ブール値であれば返す。"""
     if not isinstance(value, bool):
         raise TypeError(f"{field_name} must be bool")
     return value
 
 
 def _integer_value(field_name: str, value: object) -> int:
+    """整数かどうかを検証し、整数であれば返す。"""
     if not isinstance(value, int) or isinstance(value, bool):
         raise TypeError(f"{field_name} must be int")
     return value
 
 
 def _optional_string_value(field_name: str, value: object) -> str | None:
+    """文字列かNoneかを検証し、文字列またはNoneであれば返す。"""
     if value is not None and not isinstance(value, str):
         raise TypeError(f"{field_name} must be str or None")
     return value
 
 
 def _optional_normalization_form_value(value: object) -> NormalizationForm | None:
+    """Unicode正規化形式かNoneかを検証し、正規化形式またはNoneであれば返す。"""
     if value is None:
         return None
     if not isinstance(value, str):
@@ -47,7 +53,7 @@ def _optional_normalization_form_value(value: object) -> NormalizationForm | Non
 
 @dataclass(slots=True, init=False)
 class MacroJsonStepData:
-    """Represent one step in a pseudo-macro JSON file."""
+    """擬似マクロJSONの個々のステップを表すデータクラス."""
 
     _step_name: str
     _enabled: bool
@@ -98,14 +104,18 @@ class MacroJsonStepData:
 
     @property
     def replacement_input_text(self) -> str | None:
+        """置き換え後の入力テキストを返す。使用しない場合は None を返す。"""
+
         return self._replacement_input_text
 
     @replacement_input_text.setter
     def replacement_input_text(self, value: str | None) -> None:
+        """置き換え後の入力テキストを設定する。使用しない場合は None を設定する。"""
         self._replacement_input_text = _optional_string_value("replacement_input_text", value)
 
     @property
     def case_sensitive(self) -> bool:
+        """大文字と小文字を区別するかどうかを返す。"""
         return self._case_sensitive
 
     @case_sensitive.setter
@@ -114,6 +124,7 @@ class MacroJsonStepData:
 
     @property
     def whole_word(self) -> bool:
+        """単語全体のみを対象とするかどうかを返す。"""
         return self._whole_word
 
     @whole_word.setter
@@ -122,6 +133,7 @@ class MacroJsonStepData:
 
     @property
     def selected_only(self) -> bool:
+        """選択されたテキストのみを対象とするかどうかを返す。"""
         return self._selected_only
 
     @selected_only.setter
@@ -130,6 +142,7 @@ class MacroJsonStepData:
 
     @property
     def visible_only(self) -> bool:
+        """表示されたテキストのみを対象とするかどうかを返す。"""
         return self._visible_only
 
     @visible_only.setter
@@ -138,7 +151,8 @@ class MacroJsonStepData:
 
     @property
     def step_name(self) -> str:
-        """Return the step name."""
+        """JSONデータで提供された通りのステップ名を返す。"""
+
         return self._step_name
 
     @step_name.setter
@@ -147,7 +161,7 @@ class MacroJsonStepData:
 
     @property
     def enabled(self) -> bool:
-        """Return whether the step is enabled."""
+        """JSONデータで提供された通りのステップが有効かどうかを返す。"""
         return self._enabled
 
     @enabled.setter
@@ -156,7 +170,7 @@ class MacroJsonStepData:
 
     @property
     def regular_expression(self) -> bool:
-        """Return whether search and exclusion text use regular expressions."""
+        """JSONデータで提供された通りの検索と除外テキストが正規表現を使用するかどうかを返す。"""
         return self._regular_expression
 
     @regular_expression.setter
@@ -165,7 +179,7 @@ class MacroJsonStepData:
 
     @property
     def unicode_normalize(self) -> bool:
-        """Return whether matched text is Unicode-normalized."""
+        """JSONデータで提供された通りの一致したテキストがUnicode正規化されるかどうかを返す。"""
         return self._unicode_normalize
 
     @unicode_normalize.setter
@@ -174,7 +188,7 @@ class MacroJsonStepData:
 
     @property
     def unicode_normalize_form(self) -> NormalizationForm | None:
-        """Return the requested Unicode normalization form."""
+        """JSONデータで提供された通りのUnicode正規化形式を返す 。"""
         return self._unicode_normalize_form
 
     @unicode_normalize_form.setter
@@ -183,7 +197,7 @@ class MacroJsonStepData:
 
     @property
     def append_dot_to_circled_number(self) -> bool:
-        """Return whether converted circled numbers receive a trailing dot."""
+        """JSONデータで提供された通りの変換された丸数字が末尾にドットを受けるかどうかを返す。"""
         return self._append_dot_to_circled_number
 
     @append_dot_to_circled_number.setter
@@ -195,7 +209,7 @@ class MacroJsonStepData:
 
     @property
     def search_text(self) -> str:
-        """Return the search text exactly as supplied by the JSON data."""
+        """JSONデータで提供された通りの検索テキストを返す。"""
         return self._search_text
 
     @search_text.setter
@@ -204,7 +218,7 @@ class MacroJsonStepData:
 
     @property
     def exclusion_text(self) -> str | None:
-        """Return the exclusion text, or None when exclusion is unused."""
+        """JSONデータで提供された通りの除外テキストを返す、または除外が使用されていない場合は None を返す。"""
         return self._exclusion_text
 
     @exclusion_text.setter
@@ -213,7 +227,7 @@ class MacroJsonStepData:
 
     @property
     def replacement_text(self) -> str | None:
-        """Return replacement text, or None when Unicode normalization is used."""
+        """JSONデータで提供された通りの置き換え後の入力テキストを返す、または使用しない場合は None を返す。"""
         return self._replacement_text
 
     @replacement_text.setter
@@ -223,7 +237,7 @@ class MacroJsonStepData:
 
 @dataclass(slots=True, init=False)
 class MacroJsonData:
-    """Represent a complete pseudo-macro JSON file."""
+    """完全な擬似マクロJSONファイルを表す。"""
 
     _format_version: int
     _macro_name: str
@@ -244,7 +258,7 @@ class MacroJsonData:
 
     @property
     def format_version(self) -> int:
-        """Return the pseudo-macro JSON format version."""
+        """JSONデータで提供された通りの擬似マクロJSONフォーマットバージョンを返す。"""
         return self._format_version
 
     @format_version.setter
@@ -253,7 +267,7 @@ class MacroJsonData:
 
     @property
     def macro_name(self) -> str:
-        """Return the macro name."""
+        """JSONデータで提供された通りのマクロ名を返す。"""
         return self._macro_name
 
     @macro_name.setter
@@ -262,7 +276,7 @@ class MacroJsonData:
 
     @property
     def description(self) -> str:
-        """Return the macro description."""
+        """JSONデータで提供された通りのマクロの説明を返す。"""
         return self._description
 
     @description.setter
@@ -271,7 +285,7 @@ class MacroJsonData:
 
     @property
     def steps(self) -> tuple[MacroJsonStepData, ...]:
-        """Return the ordered macro steps as an immutable tuple."""
+        """JSONデータで提供された通りの順序付きマクロステップを不変タプルとして返す。"""
         return self._steps
 
     @steps.setter

@@ -1,4 +1,4 @@
-"""Run immutable macro steps on a detached text snapshot using SearchEngine."""
+"""SearchEngineを使用して、切り離されたテキストスナップショット上で、不変のマクロステップを実行。"""
 
 import re
 from dataclasses import dataclass
@@ -11,11 +11,12 @@ from macro.validation_types import (
     MacroDiagnosticSeverity,
     MacroValidationResult,
 )
-from search.search_engine import SearchEngine
+from search.search_engine import ReplaceResult, SearchAnalysis, SearchEngine
 
 
 @dataclass(frozen=True, slots=True)
 class MacroStepResult:
+    """マクロステップの実行結果を表す。"""
     step_index: int
     step_name: str
     enabled: bool
@@ -26,6 +27,7 @@ class MacroStepResult:
 
 @dataclass(frozen=True, slots=True)
 class MacroRunResult:
+    """マクロの実行結果を表す。"""
     original_text: str
     text: str
     steps: tuple[MacroStepResult, ...]
@@ -34,12 +36,14 @@ class MacroRunResult:
 
     @property
     def succeeded(self) -> bool:
+        """マクロの実行が完了し、かつすべてのステップが成功したかどうかを返す。"""
         return self.completed and self.validation.is_valid
 
 
 class MacroRunner:
+    """SearchEngineを使用して、切り離されたテキストスナップショット上で、不変のマクロステップを実行。"""
     def __init__(self, search_engine: SearchEngine | None = None) -> None:
-        self.search_engine = search_engine or SearchEngine()
+        self.search_engine: SearchEngine = search_engine or SearchEngine()
 
     def run(
         self,
@@ -48,7 +52,10 @@ class MacroRunner:
         selected_scope: tuple[int, int] | None = None,
         visible_scope: tuple[int, int] | None = None,
     ) -> MacroRunResult:
-        current_text = source_text
+        """マクロを実行し、結果を返す。"""
+        current_text: str = source_text
+        current_selected_scope = selected_scope
+        current_visible_scope = visible_scope
         reports: list[MacroStepResult] = []
         diagnostics: list[MacroDiagnostic] = []
         for step in definition.steps:
@@ -56,19 +63,19 @@ class MacroRunner:
                 reports.append(MacroStepResult(step.step_index, step.step_name, False))
                 continue
             try:
-                scope = self._scope_for_step(
+                scope: tuple[int, int] | None = self._scope_for_step(
                     step.options.selected_only,
                     step.options.visible_only,
-                    selected_scope,
-                    visible_scope,
+                    current_selected_scope,
+                    current_visible_scope,
                     len(current_text),
                 )
                 if scope is None:
                     reports.append(MacroStepResult(step.step_index, step.step_name, True))
                     continue
                 scope_start, scope_end = scope
-                source_part = current_text[scope_start:scope_end]
-                analysis = self.search_engine.analyze_matches(
+                source_part: str = current_text[scope_start:scope_end]
+                analysis: SearchAnalysis = self.search_engine.analyze_matches(
                     source_part, step.search_text, step.options
                 )
                 if analysis.zero_width:
@@ -84,7 +91,7 @@ class MacroRunner:
                         MacroValidationResult(tuple(diagnostics)),
                         False,
                     )
-                result = self.search_engine.replace_all(
+                result: ReplaceResult = self.search_engine.replace_all(
                     source_part,
                     step.search_text,
                     step.replacement_text,
@@ -124,13 +131,17 @@ class MacroRunner:
                         severity=MacroDiagnosticSeverity.INFORMATION,
                     )
                 )
-            previous_text = current_text
-            current_text = (
+            previous_text: str = current_text
+            current_text: str = (
                 previous_text[:scope_start] + result.text + previous_text[scope_end:]
             )
             if current_text != previous_text:
-                selected_scope = self._map_scope(previous_text, current_text, selected_scope)
-                visible_scope = self._map_scope(previous_text, current_text, visible_scope)
+                current_selected_scope: tuple[int, int] | None = self._map_scope(
+                    previous_text, current_text, current_selected_scope
+                )
+                current_visible_scope: tuple[int, int] | None = self._map_scope(
+                    previous_text, current_text, current_visible_scope
+                )
         return MacroRunResult(
             source_text,
             current_text,
@@ -147,6 +158,7 @@ class MacroRunner:
         visible_scope: tuple[int, int] | None,
         text_length: int,
     ) -> tuple[int, int] | None:
+        """マクロステップの実行に使用する、ソーステキストのスコープを決定する。"""
         if selected_only and selected_scope is None:
             return None
         if visible_only and visible_scope is None:
@@ -165,6 +177,7 @@ class MacroRunner:
     def _map_scope(
         before: str, after: str, bounds: tuple[int, int] | None
     ) -> tuple[int, int] | None:
+        """マクロステップの実行後に、ソーステキストのスコープをマッピングする。"""
         if bounds is None:
             return None
         opcodes = SequenceMatcher(None, before, after).get_opcodes()

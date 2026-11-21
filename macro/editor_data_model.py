@@ -1,4 +1,4 @@
-"""Editable GUI data, separate from the persisted macro model."""
+"""永続化されたマクロモデルとは分離された、編集可能なGUIデータ。"""
 
 from dataclasses import dataclass, field
 
@@ -7,6 +7,7 @@ from unicode_normalize import NormalizationForm
 
 @dataclass(slots=True)
 class MacroEditorStepData:
+    """エディターで編集可能な、単一のマクロステップのデータ。"""
     step_name: str = "step_1"
     enabled: bool = True
     regular_expression: bool = False
@@ -26,6 +27,7 @@ class MacroEditorStepData:
 
 @dataclass(slots=True)
 class MacroEditorDocumentData:
+    """エディターで編集可能な、マクロ全体のデータ。"""
     format_version: int = 2
     macro_name: str = ""
     description: str = ""

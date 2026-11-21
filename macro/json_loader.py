@@ -1,4 +1,4 @@
-"""Load pseudo-macro JSON files into the configured file data model."""
+"""設定済みのファイルデータモデルに、擬似マクロのJSONファイルを読み込む。"""
 
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ from macro.macro_parser import MacroParser
 
 
 class MacroJsonLoadError(ValueError):
-    """Raised when a pseudo-macro JSON file cannot be loaded safely."""
-
+    """擬似マクロのJSONファイルを安全に読み込めない場合に発生します。"""
 
 class MacroJsonLoader:
-    """Read UTF-8 JSON from a configurable pseudo-macro folder."""
+    """設定済みのフォルダからUTF-8 JSONを読み込む。"""
 
     def __init__(self, macro_folder: Path | None = None) -> None:
         self.macro_folder: Path = macro_folder or default_macro_folder()
 
     def load(self, load_file_path: str | Path) -> MacroJsonData:
-        """Load one absolute path or a path relative to ``macro_folder``."""
+        """絶対パス、または ``macro_folder`` からの相対パスを1つ読み込みます。"""
+
         try:
             resolved_load_file_path: Path = resolve_macro_file_path(
                 load_file_path,
@@ -36,5 +36,5 @@ class MacroJsonLoader:
             ValueError,
         ) as error:
             raise MacroJsonLoadError(
-                f"cannot load pseudo-macro JSON {load_file_path}: {error}"
+                f"検索/置換プリセットのJSONを読み込めません {load_file_path}: {error}"
             ) from error

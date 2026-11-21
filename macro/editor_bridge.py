@@ -1,4 +1,5 @@
-"""Lossless conversion between editor state and macro JSON models."""
+# pylint: disable=C0301
+"""エディター状態とマクロJSONモデル間における、情報損失のない変換。"""
 
 from macro.editor_data_model import MacroEditorDocumentData, MacroEditorStepData
 from macro.json_data_model import MacroJsonData, MacroJsonStepData
@@ -6,7 +7,7 @@ from unicode_normalize import NORMALIZATION_FORMS
 
 
 class MacroEditorInputError(ValueError):
-    """An editor value that can be mapped back to a particular field."""
+    """エディターの値で、特定のフィールドにマッピングできるもの。"""
 
     def __init__(self, step_index: int, field_name: str, message: str) -> None:
         super().__init__(message)
@@ -15,8 +16,10 @@ class MacroEditorInputError(ValueError):
 
 
 class MacroEditorBridge:
+    """エディターの状態とマクロJSONモデル間の変換を行う。"""
     @staticmethod
     def from_json_model(model: MacroJsonData) -> MacroEditorDocumentData:
+        """マクロJSONモデルを、エディターの状態に変換する。"""
         return MacroEditorDocumentData(
             model.format_version,
             model.macro_name,
@@ -46,6 +49,7 @@ class MacroEditorBridge:
 
     @staticmethod
     def to_json_model(document: MacroEditorDocumentData) -> MacroJsonData:
+        """エディターの状態を、マクロJSONモデルに変換する。"""
         if document.format_version == 1 and any(
             step.case_sensitive or step.whole_word or step.selected_only or step.visible_only
             for step in document.steps

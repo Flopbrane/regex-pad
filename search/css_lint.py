@@ -1,3 +1,5 @@
+# pylint: disable=C0301
+"""CSSに対する構文チェックを行うモジュール。"""
 from __future__ import annotations
 
 import json
@@ -8,26 +10,27 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-CSS_REFERENCE_PATH = (
+CSS_REFERENCE_PATH: Path = (
     Path(__file__).resolve().parent.parent
     / "dictionaries"
     / "standards"
     / "standard_css.json"
 )
-PROPERTY_NAME_PATTERN = re.compile(r"^(?:--|-?[A-Za-z])[A-Za-z0-9_-]*$")
-SIMPLE_KEYWORD_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
-SIMPLE_NUMBER_PATTERN = re.compile(r"^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$")
-NUMBER_WITH_UNIT_PATTERN = re.compile(
+PROPERTY_NAME_PATTERN: re.Pattern[str] = re.compile(r"^(?:--|-?[A-Za-z])[A-Za-z0-9_-]*$")
+SIMPLE_KEYWORD_PATTERN: re.Pattern[str] = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
+SIMPLE_NUMBER_PATTERN: re.Pattern[str] = re.compile(r"^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$")
+NUMBER_WITH_UNIT_PATTERN: re.Pattern[str] = re.compile(
     r"(?<![\w.-])[-+]?(?:\d+(?:\.\d*)?|\.\d+)([A-Za-z]+)\b"
 )
-PROPERTY_LIKE_PATTERN = re.compile(r"(?:^|\s)(--?[A-Za-z][\w-]*|[A-Za-z][\w-]*)\s*:")
-AT_RULE_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9-]*)")
-CURSOR_PLACEHOLDER = "{cursor}"
-CURSOR_PLACEHOLDER_CSS_VALUE = "var(--regex-pad-cursor)"
+PROPERTY_LIKE_PATTERN: re.Pattern[str] = re.compile(r"(?:^|\s)(--?[A-Za-z][\w-]*|[A-Za-z][\w-]*)\s*:")
+AT_RULE_PATTERN: re.Pattern[str] = re.compile(r"@([A-Za-z][A-Za-z0-9-]*)")
+CURSOR_PLACEHOLDER: str = "{cursor}"
+CURSOR_PLACEHOLDER_CSS_VALUE: str = "var(--regex-pad-cursor)"
 
 
 @dataclass(frozen=True)
 class CssLintIssue:
+    """CSSの構文チェックで検出された問題を表すデータクラス。"""
     severity: str
     message_key: str
     line_number: int
@@ -35,14 +38,16 @@ class CssLintIssue:
 
     @property
     def message(self) -> str:
+        """メッセージキーと値を組み合わせて、最終的なメッセージ文字列を返す。"""
         if not self.values:
             return self.message_key
-        values = ", ".join(self.values.values())
+        values: str = ", ".join(self.values.values())
         return f"{self.message_key}: {values}"
 
 
 @lru_cache(maxsize=1)
 def _load_css_reference() -> dict[str, Any]:
+    """CSSの標準仕様を参照するためのJSONデータを読み込む。"""
     load_data: Any = json.loads(CSS_REFERENCE_PATH.read_text(encoding="utf-8"))
     if not isinstance(load_data, dict):
         raise TypeError("CSS reference root must be an object")
@@ -53,9 +58,10 @@ def lint_inline_style(
     style_text: str,
     start_line_number: int = 1,
 ) -> list[CssLintIssue]:
-    """Lint declarations from one HTML style attribute."""
+    """HTMLのstyle属性に含まれる宣言をLintする。"""
+
     try:
-        reference = _load_css_reference()
+        reference: dict[str, Any] = _load_css_reference()
     except (OSError, json.JSONDecodeError, TypeError) as error:
         return [
             CssLintIssue(
@@ -74,7 +80,8 @@ def lint_inline_style(
 
 
 def parse_inline_style_values(style_text: str) -> dict[str, str] | None:
-    """Read declarations using the same comment/quote/parenthesis rules as lint."""
+    """Lintと同様のコメント・引用・括弧に関するルールを適用して、宣言を読み取る。"""
+
     style_text = _mask_cursor_placeholder(style_text)
     masked_text, comment_issues = _mask_css_comments(style_text)
     declarations, syntax_issues = _split_declarations(masked_text, 1)
@@ -92,9 +99,10 @@ def parse_inline_style_values(style_text: str) -> dict[str, str] | None:
 
 
 def lint_stylesheet(css_text: str) -> list[CssLintIssue]:
-    """Lint declaration blocks in a standalone stylesheet."""
+    """スタンドアロンのスタイルシート内の宣言ブロックをLintする。"""
+
     try:
-        reference = _load_css_reference()
+        reference: dict[str, Any] = _load_css_reference()
     except (OSError, json.JSONDecodeError, TypeError) as error:
         return [
             CssLintIssue(
@@ -151,7 +159,7 @@ def lint_stylesheet(css_text: str) -> list[CssLintIssue]:
             continue
         if character in {'"', "'"}:
             quote = character
-            quote_line = line_number
+            quote_line: int = line_number
             continue
         if character == "{":
             if stack:
@@ -176,7 +184,7 @@ def lint_stylesheet(css_text: str) -> list[CssLintIssue]:
                 )
             )
             continue
-        block = stack.pop()
+        block: dict[str, int | bool] = stack.pop()
         if not bool(block["has_child"]):
             content_start = int(block["content_start"])
             messages.extend(
@@ -205,18 +213,19 @@ def _lint_inline_style_with_reference(
     start_line_number: int,
     reference: dict[str, Any],
 ) -> list[CssLintIssue]:
-    messages = _lint_full_width_symbols(style_text, start_line_number, reference)
-    declarations, structure_messages = _split_declarations(style_text, start_line_number)
+    messages: list[CssLintIssue] = _lint_full_width_symbols(style_text, start_line_number, reference)
+    declarations: list[tuple[str, int]] = []
+    structure_messages: list[CssLintIssue] = []
     messages.extend(structure_messages)
 
-    properties = _as_dict(reference.get("properties", {}))
-    property_typos = _as_string_dict(
+    properties: dict[str, Any] = _as_dict(reference.get("properties", {}))
+    property_typos: dict[str, str] = _as_string_dict(
         _as_dict(reference.get("known_typos", {})).get("property_names", {})
     )
-    unit_typos = _as_string_dict(
+    unit_typos: dict[str, str] = _as_string_dict(
         _as_dict(reference.get("known_typos", {})).get("units", {})
     )
-    global_keywords = set(_as_string_list(reference.get("global_keywords", [])))
+    global_keywords: set[str] = set(_as_string_list(reference.get("global_keywords", [])))
     seen_properties: dict[str, int] = {}
 
     for declaration, line_number in declarations:
@@ -238,14 +247,15 @@ def _split_declarations(
     style_text: str,
     start_line_number: int,
 ) -> tuple[list[tuple[str, int]], list[CssLintIssue]]:
+    """CSSの宣言を分割し、構文上の問題を検出する。"""
     declarations: list[tuple[str, int]] = []
     messages: list[CssLintIssue] = []
-    segment_start = 0
-    segment_line = start_line_number
-    line_number = start_line_number
+    segment_start: int = 0
+    segment_line: int = start_line_number
+    line_number: int = start_line_number
     quote: str | None = None
-    quote_line = start_line_number
-    escaped = False
+    quote_line: int = start_line_number
+    escaped: bool = False
     parenthesis_lines: list[int] = []
 
     for index, character in enumerate(style_text):
@@ -310,7 +320,8 @@ def _lint_declaration(
     global_keywords: set[str],
     seen_properties: dict[str, int],
 ) -> list[CssLintIssue]:
-    leading_whitespace_length = len(declaration) - len(declaration.lstrip())
+    """CSSの宣言をLintし、構文上の問題を検出する。"""
+    leading_whitespace_length: int = len(declaration) - len(declaration.lstrip())
     line_number += declaration[:leading_whitespace_length].count("\n")
     declaration = declaration.strip()
     if not declaration:
@@ -326,8 +337,8 @@ def _lint_declaration(
         ]
 
     raw_property_name, raw_value = declaration.split(":", 1)
-    property_name = raw_property_name.strip().lower()
-    value = raw_value.strip()
+    property_name: str = raw_property_name.strip().lower()
+    value: str = raw_value.strip()
     messages: list[CssLintIssue] = []
     if not PROPERTY_NAME_PATTERN.fullmatch(property_name):
         return [
@@ -366,7 +377,7 @@ def _lint_declaration(
     if property_name.startswith("--"):
         return messages
 
-    typo_replacement = property_typos.get(property_name)
+    typo_replacement: str | None = property_typos.get(property_name)
     if typo_replacement:
         messages.append(
             CssLintIssue(
@@ -378,19 +389,19 @@ def _lint_declaration(
         )
         return messages
 
-    lookup_name = _unprefixed_property_name(property_name)
-    property_rule = properties.get(lookup_name)
+    lookup_name: str = _unprefixed_property_name(property_name)
+    property_rule: dict[str, Any] | None = properties.get(lookup_name)
     if not isinstance(property_rule, dict):
-        suggestion = _closest_property(lookup_name, set(properties))
-        values = {"property": property_name}
-        message_key = "css_lint.unknown_property"
+        suggestion: str | None = _closest_property(lookup_name, set(properties))
+        values: dict[str, str] = {"property": property_name}
+        message_key: str = "css_lint.unknown_property"
         if suggestion:
             values["suggestion"] = suggestion
             message_key = "css_lint.unknown_property_with_suggestion"
         messages.append(CssLintIssue("warning", message_key, line_number, values))
         return messages
 
-    missing_separator_property = _property_after_missing_semicolon(
+    missing_separator_property: str | None = _property_after_missing_semicolon(
         value,
         set(properties),
         set(property_typos),
@@ -425,12 +436,13 @@ def _lint_property_value(
     line_number: int,
     global_keywords: set[str],
 ) -> list[CssLintIssue]:
-    clean_value = re.sub(r"\s*!important\s*$", "", value, flags=re.IGNORECASE).strip()
-    lower_value = clean_value.lower()
+    """CSSプロパティの値をLintし、構文上の問題を検出する。"""
+    clean_value: str = re.sub(r"\s*!important\s*$", "", value, flags=re.IGNORECASE).strip()
+    lower_value: str = clean_value.lower()
     if lower_value in global_keywords or lower_value.startswith("var("):
         return []
 
-    keywords = set(_as_string_list(property_rule.get("keywords", [])))
+    keywords: set[str] = set(_as_string_list(property_rule.get("keywords", [])))
     if keywords and SIMPLE_KEYWORD_PATTERN.fullmatch(clean_value) and lower_value not in keywords:
         return [
             CssLintIssue(
@@ -445,9 +457,9 @@ def _lint_property_value(
             )
         ]
 
-    value_types = set(_as_string_list(property_rule.get("value_types", [])))
+    value_types: set[str] = set(_as_string_list(property_rule.get("value_types", [])))
     if property_name == "opacity":
-        opacity_issue = _lint_opacity(clean_value, line_number)
+        opacity_issue: CssLintIssue | None = _lint_opacity(clean_value, line_number)
         if opacity_issue is not None:
             return [opacity_issue]
     if (
@@ -463,7 +475,7 @@ def _lint_property_value(
                 {"property": property_name, "value": clean_value},
             )
         ]
-    length_types = {"length", "length_list", "length_or_auto"}
+    length_types: set[str] = {"length", "length_list", "length_or_auto"}
     if (
         value_types & length_types
         and not value_types & {"number", "integer"}
@@ -482,13 +494,14 @@ def _lint_property_value(
 
 
 def _lint_opacity(value: str, line_number: int) -> CssLintIssue | None:
+    """CSSのopacityプロパティの値をLintし、構文上の問題を検出する。"""
     try:
         if value.endswith("%"):
-            numeric_value = float(value[:-1])
-            valid = 0 <= numeric_value <= 100
+            numeric_value: float = float(value[:-1])
+            valid: bool = 0 <= numeric_value <= 100
         else:
-            numeric_value = float(value)
-            valid = 0 <= numeric_value <= 1
+            numeric_value: float = float(value)
+            valid: bool = 0 <= numeric_value <= 1
     except ValueError:
         return None
     if valid:
@@ -506,10 +519,11 @@ def _lint_known_unit_typos(
     line_number: int,
     unit_typos: dict[str, str],
 ) -> list[CssLintIssue]:
+    """CSSの値に含まれる単位のタイプミスを検出する。"""
     messages: list[CssLintIssue] = []
     for match in NUMBER_WITH_UNIT_PATTERN.finditer(value):
-        unit = match.group(1).lower()
-        suggestion = unit_typos.get(unit)
+        unit: str = match.group(1).lower()
+        suggestion: str | None = unit_typos.get(unit)
         if suggestion:
             messages.append(
                 CssLintIssue(
@@ -523,7 +537,8 @@ def _lint_known_unit_typos(
 
 
 def _mask_cursor_placeholder(style_text: str) -> str:
-    """Keep editable cursor placeholders out of CSS syntax diagnostics."""
+    """CSS構文診断の対象から、編集可能なカーソル用プレースホルダーを除外する。"""
+
     if style_text.strip() == CURSOR_PLACEHOLDER:
         return ""
     return style_text.replace(CURSOR_PLACEHOLDER, CURSOR_PLACEHOLDER_CSS_VALUE)
@@ -534,12 +549,13 @@ def _lint_full_width_symbols(
     start_line_number: int,
     reference: dict[str, Any],
 ) -> list[CssLintIssue]:
-    replacements = _as_string_dict(reference.get("full_width_replacements", {}))
+    """CSSの値に含まれる全角記号を検出する。"""
+    replacements: dict[str, str] = _as_string_dict(reference.get("full_width_replacements", {}))
     messages: list[CssLintIssue] = []
     for symbol, replacement in replacements.items():
-        search_start = 0
+        search_start: int = 0
         while True:
-            position = style_text.find(symbol, search_start)
+            position: int = style_text.find(symbol, search_start)
             if position < 0:
                 break
             messages.append(
@@ -558,14 +574,15 @@ def _mask_css_comments(
     css_text: str,
     start_line_number: int = 1,
 ) -> tuple[str, list[CssLintIssue]]:
-    characters = list(css_text)
+    """CSSのコメントを検出し、構文診断の対象から除外する。"""
+    characters: list[str] = list(css_text)
     messages: list[CssLintIssue] = []
-    position = 0
+    position: int = 0
     while position < len(css_text):
-        start = css_text.find("/*", position)
+        start: int = css_text.find("/*", position)
         if start < 0:
             break
-        end = css_text.find("*/", start + 2)
+        end: int = css_text.find("*/", start + 2)
         if end < 0:
             messages.append(
                 CssLintIssue(
@@ -574,7 +591,7 @@ def _mask_css_comments(
                     start_line_number + _line_number_at(css_text, start) - 1,
                 )
             )
-            end = len(css_text) - 2
+            end: int = len(css_text) - 2
         for index in range(start, min(end + 2, len(characters))):
             if characters[index] != "\n":
                 characters[index] = " "
@@ -587,14 +604,16 @@ def _property_after_missing_semicolon(
     known_properties: set[str],
     typo_properties: set[str],
 ) -> str | None:
+    """CSSの値に含まれる、セミコロンが欠落している可能性のあるプロパティ名を検出する。"""
     for match in PROPERTY_LIKE_PATTERN.finditer(value):
-        candidate = match.group(1).lower()
+        candidate: str | Any = match.group(1).lower()
         if candidate in known_properties or candidate in typo_properties:
             return candidate
     return None
 
 
 def _unprefixed_property_name(property_name: str) -> str:
+    """CSSのベンダープレフィックスを除去したプロパティ名を返す。"""
     for prefix in ("-webkit-", "-moz-", "-ms-", "-o-"):
         if property_name.startswith(prefix):
             return property_name.removeprefix(prefix)
@@ -602,19 +621,23 @@ def _unprefixed_property_name(property_name: str) -> str:
 
 
 def _closest_property(property_name: str, choices: set[str]) -> str | None:
-    matches = get_close_matches(property_name, sorted(choices), n=1, cutoff=0.72)
+    """CSSのプロパティ名に対して、最も近い既知のプロパティ名を返す。"""
+    matches: list[str] = get_close_matches(property_name, sorted(choices), n=1, cutoff=0.72)
     return matches[0] if matches else None
 
 
 def _line_number_at(text: str, position: int) -> int:
+    """指定された位置に対応する行番号を返す。"""
     return text.count("\n", 0, position) + 1
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
+    """値が辞書であればそのまま返し、そうでなければ空の辞書を返す。"""
     return value if isinstance(value, dict) else {}
 
 
 def _as_string_dict(value: Any) -> dict[str, str]:
+    """値が文字列の辞書であればそのまま返し、そうでなければ空の辞書を返す。"""
     if not isinstance(value, dict):
         return {}
     return {
@@ -625,6 +648,7 @@ def _as_string_dict(value: Any) -> dict[str, str]:
 
 
 def _as_string_list(value: Any) -> list[str]:
+    """値が文字列のリストであればそのまま返し、そうでなければ空のリストを返す。"""
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if isinstance(item, str)]

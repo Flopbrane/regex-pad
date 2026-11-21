@@ -1,3 +1,5 @@
+"""regex_pad用検索・置換エンジン。"""
+
 from __future__ import annotations
 
 import re
@@ -10,6 +12,7 @@ from unicode_normalize import NormalizationForm, normalize_matched_text
 
 @dataclass(frozen=True)
 class SearchOptions:
+    """検索・置換のオプションを表す。"""
     case_sensitive: bool = False
     regular_expression: bool = False
     whole_word: bool = False
@@ -23,6 +26,7 @@ class SearchOptions:
 
 @dataclass(frozen=True)
 class SearchMatch:
+    """検索結果のマッチを表す。"""
     start: int
     end: int
     text: str
@@ -30,13 +34,14 @@ class SearchMatch:
 
 @dataclass(frozen=True)
 class ReplaceResult:
+    """置換結果を表す。"""
     text: str
     count: int
 
 
 @dataclass(frozen=True)
 class SearchAnalysis:
-    """Counts before replacement, including protected and zero-width matches."""
+    """置換前のカウント（保護された一致やゼロ幅の一致を含む）。"""
 
     matches: int
     excluded: int
@@ -44,12 +49,17 @@ class SearchAnalysis:
 
 
 class SearchEngine:
+    """検索・置換のためのエンジン。"""
     def analyze_matches(
         self, source_text: str, search_text: str, options: SearchOptions,
     ) -> SearchAnalysis:
-        pattern = self._compile_pattern(search_text, options)
-        excluded_ranges = self._excluded_ranges(source_text, options)
-        matches = excluded = zero_width = 0
+        """ソーステキストを分析し、一致箇所、除外された一致箇所、およびゼロ幅の一致箇所を特定します。"""
+
+        pattern: Pattern[str] = self._compile_pattern(search_text, options)
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(source_text, options)
+        matches: int = 0
+        excluded: int = 0
+        zero_width: int = 0
         for match in pattern.finditer(source_text):
             if match.start() == match.end():
                 zero_width += 1
@@ -62,9 +72,10 @@ class SearchEngine:
     def validate_replacement(
         self, search_text: str, replace_text: str, options: SearchOptions,
     ) -> None:
-        """Validate a template even when the document has no matching text."""
+        """ドキュメント内に一致するテキストがない場合でも、テンプレートを検証する."""
+
         if not options.unicode_normalize:
-            pattern = self._compile_pattern(search_text, options)
+            pattern: Pattern[str] = self._compile_pattern(search_text, options)
             pattern.sub(self._replacement_text_for_options(replace_text, options), "")
 
     def find_all(
@@ -75,12 +86,13 @@ class SearchEngine:
         *,
         max_matches: int | None = None,
     ) -> list[SearchMatch]:
+        """指定されたソーステキストから、一致するすべてのマッチを検索します。"""
         if not search_text:
             return []
 
-        search_options = options or SearchOptions()
-        pattern = self._compile_pattern(search_text, search_options)
-        excluded_ranges = self._excluded_ranges(source_text, search_options)
+        search_options: SearchOptions = options or SearchOptions()
+        pattern: Pattern[str] = self._compile_pattern(search_text, search_options)
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(source_text, search_options)
         matches: list[SearchMatch] = []
         for match in pattern.finditer(source_text):
             if match.start() == match.end() or self._is_excluded(match, excluded_ranges):
@@ -97,13 +109,14 @@ class SearchEngine:
         *,
         max_matches: int | None = None,
     ) -> list[SearchMatch]:
-        """Return nonempty exclusion matches for marker display."""
-        search_options = options or SearchOptions()
+        """マーカー表示用に、空ではない除外一致を返す。"""
+
+        search_options: SearchOptions = options or SearchOptions()
         if not search_options.exclusion_text:
             return []
 
-        excluded_ranges = self._excluded_ranges(source_text, search_options)
-        matches = [
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(source_text, search_options)
+        matches: list[SearchMatch] = [
             SearchMatch(start, end, source_text[start:end])
             for start, end in excluded_ranges
         ]
@@ -118,14 +131,15 @@ class SearchEngine:
         start_position: int,
         options: SearchOptions | None = None,
     ) -> SearchMatch | None:
+        """指定されたソーステキストから、次の一致を検索します。"""
         if not search_text:
             return None
 
-        search_options = options or SearchOptions()
-        pattern = self._compile_pattern(search_text, search_options)
-        excluded_ranges = self._excluded_ranges(source_text, search_options)
-        bounded_start_position = min(max(start_position, 0), len(source_text))
-        match = self._first_non_empty_match(
+        search_options: SearchOptions = options or SearchOptions()
+        pattern: Pattern[str] = self._compile_pattern(search_text, search_options)
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(source_text, search_options)
+        bounded_start_position: int = min(max(start_position, 0), len(source_text))
+        match: Match[str] | None = self._first_non_empty_match(
             pattern,
             source_text,
             bounded_start_position,
@@ -145,14 +159,15 @@ class SearchEngine:
         start_position: int,
         options: SearchOptions | None = None,
     ) -> SearchMatch | None:
+        """指定されたソーステキストから、前の一致を検索します。"""
         if not search_text:
             return None
 
-        search_options = options or SearchOptions()
-        pattern = self._compile_pattern(search_text, search_options)
-        excluded_ranges = self._excluded_ranges(source_text, search_options)
-        bounded_start_position = min(max(start_position, 0), len(source_text))
-        match = self._last_non_empty_match(
+        search_options: SearchOptions = options or SearchOptions()
+        pattern: Pattern[str] = self._compile_pattern(search_text, search_options)
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(source_text, search_options)
+        bounded_start_position: int = min(max(start_position, 0), len(source_text))
+        match: Match[str] | None = self._last_non_empty_match(
             pattern,
             source_text,
             0,
@@ -179,13 +194,14 @@ class SearchEngine:
         replace_text: str,
         options: SearchOptions | None = None,
     ) -> ReplaceResult:
+        """指定されたソーステキスト内のすべての一致を置換します。"""
         if not search_text:
             return ReplaceResult(source_text, 0)
 
-        search_options = options or SearchOptions()
-        pattern = self._compile_pattern(search_text, search_options)
-        replacement_text = self._replacement_text_for_options(replace_text, search_options)
-        excluded_ranges = self._excluded_ranges(source_text, search_options)
+        search_options: SearchOptions = options or SearchOptions()
+        pattern: Pattern[str] = self._compile_pattern(search_text, search_options)
+        replacement_text: str = self._replacement_text_for_options(replace_text, search_options)
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(source_text, search_options)
         if search_options.exclusion_text:
             # Validate the replacement even if every occurrence is excluded.
             if not search_options.unicode_normalize:
@@ -225,13 +241,14 @@ class SearchEngine:
         search_text: str,
         options: SearchOptions | None = None,
     ) -> ReplaceResult:
-        search_options = options or SearchOptions()
-        pattern = self._compile_pattern(search_text, search_options)
-        replacement_text = self._replacement_text_for_options(replace_text, search_options)
-        excluded_ranges = self._excluded_ranges(source_text, search_options)
+        """指定されたソーステキスト内の、特定の一致を置換します。"""
+        search_options: SearchOptions = options or SearchOptions()
+        pattern: Pattern[str] = self._compile_pattern(search_text, search_options)
+        replacement_text: str = self._replacement_text_for_options(replace_text, search_options)
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(source_text, search_options)
         if self._range_is_excluded(match.start, match.end, excluded_ranges):
             return ReplaceResult(source_text, 0)
-        target_text = source_text[match.start : match.end]
+        target_text: str = source_text[match.start : match.end]
         if search_options.unicode_normalize:
             replaced_text, count = pattern.subn(
                 lambda regex_match: self._replacement_for_match(
@@ -259,13 +276,14 @@ class SearchEngine:
         replace_text: str,
         options: SearchOptions | None = None,
     ) -> ReplaceResult:
+        """指定された一致テキストを置換し、置換後のテキストと置換回数を返します。"""
         if not search_text:
             return ReplaceResult(match_text, 0)
 
-        search_options = options or SearchOptions()
-        pattern = self._compile_pattern(search_text, search_options)
-        replacement_text = self._replacement_text_for_options(replace_text, search_options)
-        excluded_ranges = self._excluded_ranges(match_text, search_options)
+        search_options: SearchOptions = options or SearchOptions()
+        pattern: Pattern[str] = self._compile_pattern(search_text, search_options)
+        replacement_text: str = self._replacement_text_for_options(replace_text, search_options)
+        excluded_ranges: list[tuple[int, int]] = self._excluded_ranges(match_text, search_options)
         if self._range_is_excluded(0, len(match_text), excluded_ranges):
             return ReplaceResult(match_text, 0)
         if search_options.unicode_normalize:
@@ -287,11 +305,14 @@ class SearchEngine:
         search_text: str,
         options: SearchOptions,
     ) -> Pattern[str]:
-        pattern_text = search_text if options.regular_expression else re.escape(search_text)
+        """検索テキストとオプションに基づいて、正規表現パターンをコンパイルします。"""
+        pattern_text: str = search_text if options.regular_expression else re.escape(search_text)
         if options.whole_word:
             pattern_text = rf"\b(?:{pattern_text})\b"
 
-        flags = re.MULTILINE if options.regular_expression else 0
+        flags = re.RegexFlag(0)
+        if options.regular_expression:
+            flags |= re.MULTILINE
         if not options.case_sensitive:
             flags |= re.IGNORECASE
         return re.compile(pattern_text, flags)
@@ -301,10 +322,11 @@ class SearchEngine:
         replace_text: str,
         options: SearchOptions,
     ) -> str:
+        """置換テキストを、オプションに基づいて適切な形式に変換します。"""
         if options.unicode_normalize:
             return replace_text
         if not options.regular_expression:
-            # A literal replacement must not become a re.sub backreference.
+            # リテラルな置換が `re.sub` の後方参照になってはならない。
             return replace_text.replace("\\", "\\\\")
         return convert_dollar_replacement_references(replace_text)
 
@@ -314,6 +336,7 @@ class SearchEngine:
         replacement_text: str,
         options: SearchOptions,
     ) -> str:
+        """指定された一致に対して、置換テキストを適用します。"""
         if options.unicode_normalize:
             return normalize_matched_text(
                 match.group(0),
@@ -329,6 +352,7 @@ class SearchEngine:
         start_position: int,
         excluded_ranges: list[tuple[int, int]],
     ) -> Match[str] | None:
+        """指定されたソーステキストから、最初の空ではない一致を検索します。"""
         for match in pattern.finditer(source_text, start_position):
             if match.start() != match.end() and not self._is_excluded(match, excluded_ranges):
                 return match
@@ -342,6 +366,7 @@ class SearchEngine:
         end_position: int,
         excluded_ranges: list[tuple[int, int]],
     ) -> Match[str] | None:
+        """指定されたソーステキストから、最後の空ではない一致を検索します。"""
         last_match: Match[str] | None = None
         for match in pattern.finditer(source_text, start_position, end_position):
             if match.start() != match.end() and not self._is_excluded(match, excluded_ranges):
@@ -351,11 +376,12 @@ class SearchEngine:
     def _excluded_ranges(
         self, source_text: str, options: SearchOptions,
     ) -> list[tuple[int, int]]:
-        """Protect nonempty exclusion matches in the original search scope."""
+        """元の検索範囲において、空ではない除外一致を保護する。"""
+
         if not options.exclusion_text:
             return []
         try:
-            pattern = self._compile_pattern(
+            pattern: Pattern[str] = self._compile_pattern(
                 options.exclusion_text, replace(options, whole_word=False),
             )
         except re.error as error:
@@ -368,40 +394,43 @@ class SearchEngine:
     def _is_excluded(
         self, match: Match[str], excluded_ranges: list[tuple[int, int]],
     ) -> bool:
+        """指定された一致が、除外範囲に含まれるかどうかを判定します。"""
         return self._range_is_excluded(match.start(), match.end(), excluded_ranges)
 
     @staticmethod
     def _range_is_excluded(
         start: int, end: int, excluded_ranges: list[tuple[int, int]],
     ) -> bool:
-        index = bisect_right(excluded_ranges, start, key=lambda span: span[1])
+        """指定された範囲が、除外範囲に含まれるかどうかを判定します。"""
+        index: int = bisect_right(excluded_ranges, start, key=lambda span: span[1])
         return index < len(excluded_ranges) and excluded_ranges[index][0] < end
 
 
 def convert_dollar_replacement_references(replace_text: str) -> str:
+    """置換テキスト内の `$1`、`${name}` などの後方参照を、Python の `re` モジュールで使用できる形式に変換します。"""
     converted: list[str] = []
-    index = 0
+    index: int = 0
     while index < len(replace_text):
-        character = replace_text[index]
+        character: str = replace_text[index]
         if character != "$":
             converted.append(character)
             index += 1
             continue
 
-        next_index = index + 1
+        next_index: int = index + 1
         if next_index >= len(replace_text):
             converted.append(character)
             index += 1
             continue
 
-        next_character = replace_text[next_index]
+        next_character: str = replace_text[next_index]
         if next_character == "$":
             converted.append("$")
             index += 2
             continue
 
         if next_character.isdigit():
-            group_end = next_index + 1
+            group_end: int = next_index + 1
             while group_end < len(replace_text) and replace_text[group_end].isdigit():
                 group_end += 1
             converted.append(rf"\g<{replace_text[next_index:group_end]}>")
@@ -409,9 +438,9 @@ def convert_dollar_replacement_references(replace_text: str) -> str:
             continue
 
         if next_character == "{":
-            closing_index = replace_text.find("}", next_index + 1)
+            closing_index: int = replace_text.find("}", next_index + 1)
             if closing_index != -1:
-                group_name = replace_text[next_index + 1 : closing_index]
+                group_name: str = replace_text[next_index + 1 : closing_index]
                 if group_name.isidentifier() or group_name.isdigit():
                     converted.append(rf"\g<{group_name}>")
                     index = closing_index + 1

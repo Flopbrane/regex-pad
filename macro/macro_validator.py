@@ -1,4 +1,6 @@
-"""Validate pseudo-macro value relationships and regular expressions."""
+# pylint: disable=C0301
+
+"""擬似マクロの値の関係および正規表現を検証する。"""
 
 from __future__ import annotations
 
@@ -19,11 +21,11 @@ APPEND_DOT_NORMALIZATION_FORMS: Final = frozenset({"NFKC", "NFKD"})
 
 
 class MacroValidator:
-    """Validate Version 1 semantics without mutating the supplied model."""
+    """提供されたモデルを変更することなく、バージョン1のセマンティクスを検証する。"""
 
     @classmethod
     def validate(cls, load_data: MacroJsonData) -> MacroValidationResult:
-        """Return every confirmed diagnostic for one normalized model."""
+        """正規化されたモデル1つについて、確定した診断結果をすべて返す。"""
         if not isinstance(load_data, MacroJsonData):
             raise TypeError("load_data must be MacroJsonData")
 
@@ -64,7 +66,7 @@ class MacroValidator:
                 )
             )
 
-        step_name_counts = Counter(step.step_name for step in load_data.steps)
+        step_name_counts: Counter[str] = Counter(step.step_name for step in load_data.steps)
         for step_index, step in enumerate(load_data.steps):
             diagnostics.extend(
                 cls._validate_step(
@@ -84,6 +86,7 @@ class MacroValidator:
         step_name_counts: Counter[str],
         format_version: int,
     ) -> list[MacroDiagnostic]:
+        """単一のステップを検証し、診断結果を返す。"""
         diagnostics: list[MacroDiagnostic] = []
         if not step.step_name.strip():
             diagnostics.append(
@@ -152,6 +155,7 @@ class MacroValidator:
         step: MacroJsonStepData,
         step_index: int,
     ) -> list[MacroDiagnostic]:
+        """正規表現の検索および除外パターンを検証し、診断結果を返す。"""
         diagnostics: list[MacroDiagnostic] = []
         try:
             re.compile(step.search_text)
@@ -187,6 +191,7 @@ class MacroValidator:
         step_index: int,
         format_version: int,
     ) -> list[MacroDiagnostic]:
+        """置換ルートの構成を検証し、診断結果を返す。"""
         diagnostics: list[MacroDiagnostic] = []
         if step.unicode_normalize:
             if step.unicode_normalize_form is None:
@@ -250,6 +255,7 @@ class MacroValidator:
         field_name: str | None = None,
         values: dict[str, Any] | None = None,
     ) -> MacroDiagnostic:
+        """診断結果をエラーとして返す。"""
         return MacroDiagnostic(
             severity=MacroDiagnosticSeverity.ERROR,
             code=code,
@@ -268,6 +274,7 @@ class MacroValidator:
         field_name: str | None = None,
         values: dict[str, Any] | None = None,
     ) -> MacroDiagnostic:
+        """診断結果を警告として返す。"""
         return MacroDiagnostic(
             severity=MacroDiagnosticSeverity.WARNING,
             code=code,

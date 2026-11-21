@@ -1,3 +1,5 @@
+# pylint: disable=C0301,C0302
+"""HTMLタグのタイプミスや構造上の問題を検出するためのモジュール。"""
 from __future__ import annotations
 
 import json
@@ -9,9 +11,9 @@ from difflib import get_close_matches
 from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, LiteralString
 
-from json_lint import lint_json_fragment
+from json_lint import JsonFragmentIssue, lint_json_fragment
 from search.css_lint import (
     CssLintIssue,
     lint_inline_style,
@@ -19,32 +21,32 @@ from search.css_lint import (
     parse_inline_style_values,
 )
 
-LINT_REFERENCE_PATH = Path(__file__).resolve().parent.parent / "dictionaries" / "lint_reference.json"
-WORDPRESS_CLASS_REFERENCE_PATH = (
+LINT_REFERENCE_PATH: Path = Path(__file__).resolve().parent.parent / "dictionaries" / "lint_reference.json"
+WORDPRESS_CLASS_REFERENCE_PATH: Path = (
     Path(__file__).resolve().parent.parent
     / "dictionaries"
     / "standards"
     / "wordpress_class_tag_reference.json"
 )
-WORDPRESS_SERIALIZATION_REFERENCE_PATH = (
+WORDPRESS_SERIALIZATION_REFERENCE_PATH: Path = (
     Path(__file__).resolve().parent.parent
     / "dictionaries"
     / "standards"
     / "wordpress_block_serialization_reference.json"
 )
-BLOCK_COMMENT_PATTERN = re.compile(
+BLOCK_COMMENT_PATTERN: re.Pattern = re.compile(
     r"<!--\s*(/)?\s*wp:([a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)?)"
     r"(?:\s+((?:(?!-->)[\s\S])*?))?\s*(/)?\s*-->",
 )
-HTML_TAG_TOKEN_PATTERN = re.compile(
+HTML_TAG_TOKEN_PATTERN: re.Pattern = re.compile(
     r"<\s*(/)?\s*([A-Za-z][A-Za-z0-9:-]*)(?:\s[^<>]*)?(/)?\s*>",
     re.IGNORECASE,
 )
-HTML_ATTRIBUTE_ASSIGNMENT_PATTERN = re.compile(
+HTML_ATTRIBUTE_ASSIGNMENT_PATTERN: re.Pattern = re.compile(
     r'''([A-Za-z_:][A-Za-z0-9_:.-]*)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+)''',
 )
-ATTRIBUTE_EXAMPLE_TAGS = {"code", "pre", "textarea", "script", "style", "title", "xmp"}
-FULL_WIDTH_HTML_SYNTAX_SUGGESTIONS = {
+ATTRIBUTE_EXAMPLE_TAGS: set[str] = {"code", "pre", "textarea", "script", "style", "title", "xmp"}
+FULL_WIDTH_HTML_SYNTAX_SUGGESTIONS: dict[str, str] = {
     "＜": "<",
     "＞": ">",
     "＝": "=",
@@ -53,7 +55,7 @@ FULL_WIDTH_HTML_SYNTAX_SUGGESTIONS = {
     "／": "/",
 }
 
-DEFAULT_WORDPRESS_CORE_BLOCKS = {
+DEFAULT_WORDPRESS_CORE_BLOCKS: set[str] = {
     "accordion",
     "accordion-heading",
     "accordion-item",
@@ -88,7 +90,7 @@ DEFAULT_WORDPRESS_CORE_BLOCKS = {
     "verse",
     "video",
 }
-DEFAULT_HTML_TAGS = {
+DEFAULT_HTML_TAGS: set[str] = {
     "a",
     "blockquote",
     "br",
@@ -113,7 +115,7 @@ DEFAULT_HTML_TAGS = {
     "strong",
     "ul",
 }
-DEFAULT_HTML_ATTRIBUTES = {
+DEFAULT_HTML_ATTRIBUTES: set[str] = {
     "alt",
     "aria-hidden",
     "aria-label",
@@ -143,8 +145,8 @@ DEFAULT_HTML_ATTRIBUTES = {
     "type",
     "width",
 }
-DEFAULT_ALLOWED_ATTRIBUTE_PREFIXES = ("aria-", "data-")
-DEFAULT_GLOBAL_HTML_ATTRIBUTES = {
+DEFAULT_ALLOWED_ATTRIBUTE_PREFIXES: tuple[str, ...] = ("aria-", "data-")
+DEFAULT_GLOBAL_HTML_ATTRIBUTES: set[str] = {
     "aria-hidden",
     "aria-label",
     "class",
@@ -156,7 +158,7 @@ DEFAULT_GLOBAL_HTML_ATTRIBUTES = {
     "tabindex",
     "title",
 }
-DEFAULT_HTML_ATTRIBUTES_BY_TAG = {
+DEFAULT_HTML_ATTRIBUTES_BY_TAG: dict[str, set[str]] = {
     "a": {"download", "href", "hreflang", "referrerpolicy", "rel", "target", "type"},
     "audio": {
         "autoplay",
@@ -230,7 +232,7 @@ DEFAULT_HTML_ATTRIBUTES_BY_TAG = {
         "width",
     },
 }
-COMMON_HTML_ATTRIBUTE_TYPOS = {
+COMMON_HTML_ATTRIBUTE_TYPOS: dict[str, str] = {
     "calss": "class",
     "clas": "class",
     "decodng": "decoding",
@@ -247,7 +249,7 @@ COMMON_HTML_ATTRIBUTE_TYPOS = {
     "taret": "target",
     "titel": "title",
 }
-RESTRICTED_HTML_TAG_REASONS = {
+RESTRICTED_HTML_TAG_REASONS: dict[str, str] = {
     "script": "arbitrary JavaScript",
     "style": "embedded CSS",
     "iframe": "external embed",
@@ -260,8 +262,8 @@ RESTRICTED_HTML_TAG_REASONS = {
     "button": "form or script control",
     "canvas": "JavaScript drawing surface",
 }
-RESTRICTED_HTML_ATTRIBUTE_PREFIXES = ("on",)
-VOID_TAGS = {
+RESTRICTED_HTML_ATTRIBUTE_PREFIXES: tuple[str, ...] = ("on",)
+VOID_TAGS: set[str] = {
     "area",
     "base",
     "br",
@@ -277,7 +279,7 @@ VOID_TAGS = {
     "track",
     "wbr",
 }
-INLINE_TAGS = {
+INLINE_TAGS: set[str] = {
     "a",
     "b",
     "code",
@@ -289,7 +291,7 @@ INLINE_TAGS = {
     "strong",
     "u",
 }
-INLINE_PARENT_BOUNDARY_TAGS = {
+INLINE_PARENT_BOUNDARY_TAGS: set[str] = {
     "blockquote",
     "dd",
     "div",
@@ -307,8 +309,8 @@ INLINE_PARENT_BOUNDARY_TAGS = {
     "td",
     "th",
 }
-ESCAPED_FRAGMENT_IGNORED_WORDPRESS_BLOCKS = {"code", "html"}
-NON_NESTABLE_WORDPRESS_BLOCKS = {
+ESCAPED_FRAGMENT_IGNORED_WORDPRESS_BLOCKS: set[str] = {"code", "html"}
+NON_NESTABLE_WORDPRESS_BLOCKS: set[str] = {
     "code",
     "heading",
     "list-item",
@@ -316,7 +318,7 @@ NON_NESTABLE_WORDPRESS_BLOCKS = {
     "separator",
     "spacer",
 }
-STRUCTURAL_HTML_TAGS = {
+STRUCTURAL_HTML_TAGS: set[str] = {
     "blockquote",
     "article",
     "aside",
@@ -348,10 +350,10 @@ STRUCTURAL_HTML_TAGS = {
     "tr",
     "ul",
 }
-PARAGRAPH_BREAKING_TAGS = (
+PARAGRAPH_BREAKING_TAGS: set[str] = (
     STRUCTURAL_HTML_TAGS - {"code"}
 ) | {"address", "details", "dialog", "dl", "fieldset", "form", "hr", "menu"}
-WORDPRESS_REQUIRED_PARENTS = {
+WORDPRESS_REQUIRED_PARENTS: dict[str, str] = {
     "accordion-heading": "accordion-item",
     "accordion-item": "accordion",
     "accordion-panel": "accordion-item",
@@ -359,15 +361,15 @@ WORDPRESS_REQUIRED_PARENTS = {
     "column": "columns",
     "list-item": "list",
 }
-WORDPRESS_ALLOWED_CHILDREN = {
+WORDPRESS_ALLOWED_CHILDREN: dict[str, set[str]] = {
     "accordion": {"accordion-item"},
     "accordion-item": {"accordion-heading", "accordion-panel"},
     "buttons": {"button"},
     "columns": {"column"},
     "list": {"list-item"},
 }
-WORDPRESS_NON_CONTAINER_BLOCKS = {"paragraph", "heading", "separator", "spacer", "image"}
-WORDPRESS_HTML_SHAPES = {
+WORDPRESS_NON_CONTAINER_BLOCKS: set[str] = {"paragraph", "heading", "separator", "spacer", "image"}
+WORDPRESS_HTML_SHAPES: dict[str, set[str]] = {
     "accordion": {"div"},
     "accordion-heading": {f"h{level}" for level in range(1, 7)},
     "accordion-item": {"div"},
@@ -385,7 +387,7 @@ WORDPRESS_HTML_SHAPES = {
     "list": {"ul", "ol"},
     "list-item": {"li"},
 }
-COMMON_WORDPRESS_BLOCK_ATTRIBUTES = {
+COMMON_WORDPRESS_BLOCK_ATTRIBUTES: set[str] = {
     "align",
     "anchor",
     "backgroundColor",
@@ -397,7 +399,7 @@ COMMON_WORDPRESS_BLOCK_ATTRIBUTES = {
     "style",
     "textColor",
 }
-WORDPRESS_BLOCK_ATTRIBUTE_ALLOWLISTS = {
+WORDPRESS_BLOCK_ATTRIBUTE_ALLOWLISTS: dict[str, set[str]] = {
     "button": COMMON_WORDPRESS_BLOCK_ATTRIBUTES
     | {
         "linkTarget",
@@ -435,7 +437,7 @@ WORDPRESS_BLOCK_ATTRIBUTE_ALLOWLISTS = {
     "separator": COMMON_WORDPRESS_BLOCK_ATTRIBUTES | {"opacity"},
     "spacer": COMMON_WORDPRESS_BLOCK_ATTRIBUTES | {"height", "width"},
 }
-WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES = {
+WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES: dict[tuple[str, str], str] = {
     ("accordion", "autoclose"): "boolean",
     ("accordion", "headingLevel"): "integer",
     ("accordion", "levelOptions"): "array",
@@ -449,16 +451,17 @@ WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES = {
     ("paragraph", "dropCap"): "boolean",
     ("paragraph", "fitText"): "boolean",
 }
-WORDPRESS_BLOCK_ATTRIBUTE_VALUE_RULES = {
+WORDPRESS_BLOCK_ATTRIBUTE_VALUE_RULES: dict[tuple[str, str], set[str]] = {
     ("accordion", "iconPosition"): {"left", "right"},
     ("accordion-heading", "iconPosition"): {"left", "right"},
     ("paragraph", "align"): {"left", "center", "right"},
 }
-DECORATED_BLOCKS_BETTER_AS_HTML = {"preformatted"}
+DECORATED_BLOCKS_BETTER_AS_HTML: set[str] = {"preformatted"}
 
 
 @dataclass(frozen=True)
 class HtmlTypoLintMessage:
+    """HTMLのタイプミスや構造上の問題を表す。"""
     severity: str
     message_key: str
     line_number: int
@@ -466,14 +469,16 @@ class HtmlTypoLintMessage:
 
     @property
     def message(self) -> str:
+        """メッセージキーと値を組み合わせて、最終的なメッセージ文字列を返す。"""
         if not self.values:
             return self.message_key
-        values = ", ".join(self.values.values())
+        values: str = ", ".join(self.values.values())
         return f"{self.message_key}: {values}"
 
 
 @dataclass(frozen=True)
 class LintReferenceCache:
+    """HTMLやWordPressのブロックに関するリント参照データをキャッシュする。"""
     wordpress_core_blocks: set[str]
     wordpress_block_attributes: dict[str, set[str]]
     html_tags: set[str]
@@ -487,6 +492,7 @@ class LintReferenceCache:
 
 @dataclass(frozen=True)
 class _LintToken:
+    """HTMLタグやWordPressブロックのトークンを表す。"""
     position: int
     line_number: int
     name: str
@@ -495,6 +501,7 @@ class _LintToken:
 
 @dataclass
 class _WordPressBlockStackItem:
+    """WordPressブロックのスタック項目を表す。"""
     name: str
     body_start: int
     open_line: int
@@ -517,17 +524,18 @@ _ParsedWordPressBlockAttributes = tuple[dict[str, Any], bool, int | None]
 
 
 def lint_html_typos(load_data: str) -> list[HtmlTypoLintMessage]:
-    suppressed_ranges = _contaminated_wordpress_separator_body_ranges(load_data)
-    html_lint_data = _mask_ranges(
+    """HTMLタグのタイプミスや構造上の問題を検出する。"""
+    suppressed_ranges: list[tuple[int, int]] = _contaminated_wordpress_separator_body_ranges(load_data)
+    html_lint_data: str = _mask_ranges(
         load_data,
         suppressed_ranges,
     )
-    # Collect live HTML once. WP block checks slice this inventory by source position.
-    html_tokens = _html_tag_tokens(html_lint_data)
-    wordpress_tokens = _wordpress_block_tokens(load_data)
-    # Keep enclosing WP diagnostics first on the same line (for example a broken
-    # separator); the final result remains ordered by source line.
-    messages = _lint_token_inventories(html_lint_data, html_tokens, wordpress_tokens)
+    # ライブHTMLを一度取得します。WPブロックのチェック機能が、このデータ群をソース上の位置に基づいて分割します。
+    html_tokens: list[_LintToken] = _html_tag_tokens(html_lint_data)
+    wordpress_tokens: list[_LintToken] = _wordpress_block_tokens(load_data)
+    # まず、同じ行内でWP診断を囲む処理を行う（例えば、壊れた区切り文字など）。
+    # 最終的な結果は、ソースコード上の行順に並んだままとなる。
+    messages: list[HtmlTypoLintMessage] = _lint_token_inventories(html_lint_data, html_tokens, wordpress_tokens)
     messages.extend(_lint_wordpress_block_typos(load_data))
     messages.extend(_lint_wordpress_block_structure(load_data, html_tokens))
     messages.extend(_lint_known_fragile_typos(load_data))
@@ -537,7 +545,7 @@ def lint_html_typos(load_data: str) -> list[HtmlTypoLintMessage]:
     parser.feed(load_data)
     parser.close()
     messages.extend(parser.messages)
-    # A child block and its container can expose the same broken HTML tag.
+    # 子ブロックとそのコンテナは、同じ壊れたHTMLタグを露呈させる可能性がある。
     unique_messages: dict[tuple[Any, ...], HtmlTypoLintMessage] = {}
     for message in messages:
         signature = (
@@ -545,13 +553,14 @@ def lint_html_typos(load_data: str) -> list[HtmlTypoLintMessage]:
             tuple(sorted((message.values or {}).items())),
         )
         unique_messages.setdefault(signature, message)
-    boundary_keys = {
+    boundary_keys: set[str] = {
         "html_typo_lint.missing_wordpress_closing_block",
         "html_typo_lint.missing_wordpress_html_closing_block",
         "html_typo_lint.mismatched_wordpress_block",
         "html_typo_lint.unexpected_wordpress_closing_block",
+        "html_typo_lint.html_crosses_wordpress_boundary",
     }
-    crossing_tags = {
+    crossing_tags: set[tuple[int, str | None]] = {
         (message.line_number, (message.values or {}).get("tag"))
         for message in messages
         if message.message_key == "html_typo_lint.html_crosses_wordpress_boundary"
@@ -728,7 +737,7 @@ def _lint_html_tag_structure(
             open_tokens.append(token)
             continue
 
-        matching_index = _last_open_html_tag_index(open_tokens, token.name)
+        matching_index: int | None = _last_open_html_tag_index(open_tokens, token.name)
         if matching_index is None:
             messages.append(
                 HtmlTypoLintMessage(
@@ -815,7 +824,7 @@ def _lint_orphan_html_lines_outside_wordpress_blocks(
     messages: list[HtmlTypoLintMessage] = []
     block_depth = 0
     for line_number, line in enumerate(load_data.splitlines(), start=1):
-        stripped_line = line.strip()
+        stripped_line: str = line.strip()
         if block_depth == 0:
             if re.fullmatch(r"<p\s*>\s*</p\s*>", stripped_line, re.IGNORECASE):
                 messages.append(
@@ -835,7 +844,7 @@ def _lint_orphan_html_lines_outside_wordpress_blocks(
                 )
         for block_match in BLOCK_COMMENT_PATTERN.finditer(line):
             if block_match.group(1):
-                block_depth = max(0, block_depth - 1)
+                block_depth: int = max(0, block_depth - 1)
             elif not block_match.group(4):
                 block_depth += 1
     return messages
@@ -843,8 +852,8 @@ def _lint_orphan_html_lines_outside_wordpress_blocks(
 
 def _lint_known_fragile_typos(load_data: str) -> list[HtmlTypoLintMessage]:
     messages: list[HtmlTypoLintMessage] = []
-    line_starts = _line_start_positions(load_data)
-    ignored_ranges = _wordpress_block_body_ranges(
+    line_starts: list[int] = _line_start_positions(load_data)
+    ignored_ranges: list[tuple[int, int]] = _wordpress_block_body_ranges(
         load_data,
         ESCAPED_FRAGMENT_IGNORED_WORDPRESS_BLOCKS,
     )
@@ -876,8 +885,8 @@ def _lint_known_fragile_typos(load_data: str) -> list[HtmlTypoLintMessage]:
 def _lint_full_width_html_syntax(load_data: str) -> list[HtmlTypoLintMessage]:
     """Report full-width punctuation used as live HTML tag syntax."""
     messages: list[HtmlTypoLintMessage] = []
-    line_starts = _line_start_positions(load_data)
-    ignored_ranges = _html_example_body_ranges(load_data)
+    line_starts: list[int] = _line_start_positions(load_data)
+    ignored_ranges: list[tuple[int, int]] = _html_example_body_ranges(load_data)
     ignored_ranges.extend(
         (match.start(), match.end())
         for match in re.finditer(r"<!--[\s\S]*?-->", load_data)
@@ -943,12 +952,12 @@ def _html_tag_like_ranges(load_data: str) -> list[tuple[int, int]]:
             position += 1
             continue
 
-        start = position
+        start: int = position
         quote: str | None = None
         position += 1
-        scan_limit = min(len(load_data), start + 4096)
+        scan_limit: int = min(len(load_data), start + 4096)
         while position < scan_limit:
-            character = load_data[position]
+            character: str = load_data[position]
             if quote is not None:
                 if character == quote:
                     quote = None
@@ -971,7 +980,7 @@ def _html_tag_like_ranges(load_data: str) -> list[tuple[int, int]]:
 
 
 def _looks_like_html_tag_start(load_data: str, position: int) -> bool:
-    candidate_position = position + 1
+    candidate_position: int = position + 1
     while candidate_position < len(load_data) and load_data[candidate_position].isspace():
         candidate_position += 1
     if candidate_position < len(load_data) and load_data[candidate_position] in {"/", "／"}:
@@ -980,7 +989,7 @@ def _looks_like_html_tag_start(load_data: str, position: int) -> bool:
             candidate_position += 1
     if candidate_position >= len(load_data):
         return False
-    normalized_character = unicodedata.normalize("NFKC", load_data[candidate_position])
+    normalized_character: str = unicodedata.normalize("NFKC", load_data[candidate_position])
     return len(normalized_character) == 1 and normalized_character.isascii() and normalized_character.isalpha()
 
 
@@ -1026,7 +1035,7 @@ def _mask_ranges(load_data: str, ranges: list[tuple[int, int]]) -> str:
     if not ranges:
         return load_data
 
-    characters = list(load_data)
+    characters: list[str] = list(load_data)
     for start, end in ranges:
         for index in range(start, end):
             if characters[index] != "\n":
@@ -1040,10 +1049,10 @@ def _position_in_ranges(position: int, ranges: list[tuple[int, int]]) -> bool:
 
 def _lint_embedded_stylesheets(load_data: str) -> list[HtmlTypoLintMessage]:
     messages: list[HtmlTypoLintMessage] = []
-    pattern = re.compile(r"<style\b[^>]*>(.*?)</style\s*>", re.IGNORECASE | re.DOTALL)
+    pattern: re.Pattern[str] = re.compile(r"<style\b[^>]*>(.*?)</style\s*>", re.IGNORECASE | re.DOTALL)
     for match in pattern.finditer(load_data):
-        css_text = match.group(1)
-        line_offset = load_data.count("\n", 0, match.start(1))
+        css_text: str = match.group(1)
+        line_offset: int = load_data.count("\n", 0, match.start(1))
         messages.extend(
             _css_issue_to_html(issue, line_offset)
             for issue in lint_stylesheet(css_text)
@@ -1064,10 +1073,10 @@ def _css_issue_to_html(
 
 
 def _wordpress_block_tokens(load_data: str) -> list[_LintToken]:
-    line_starts = _line_start_positions(load_data)
+    line_starts: list[int] = _line_start_positions(load_data)
     tokens: list[_LintToken] = []
     for block_match in BLOCK_COMMENT_PATTERN.finditer(load_data):
-        block_name = _normalize_block_name(block_match.group(2))
+        block_name: str = _normalize_block_name(block_match.group(2))
         tokens.append(
             _LintToken(
                 position=block_match.start(),
@@ -1086,7 +1095,7 @@ def _html_tag_tokens(
     load_data: str,
     line_number_offset: int = 0,
 ) -> list[_LintToken]:
-    collector = _HtmlTagTokenCollector(
+    collector: _HtmlTagTokenCollector = _HtmlTagTokenCollector(
         _line_start_positions(load_data),
         line_number_offset,
     )
@@ -1145,7 +1154,7 @@ def _load_wordpress_serialization_reference() -> dict[str, Any]:
 def _reference_wordpress_classes(
     reference_data: dict[str, Any],
 ) -> tuple[set[str], dict[str, set[str]]]:
-    values = reference_data.get("classes")
+    values: Any | None = reference_data.get("classes")
     if not isinstance(values, dict):
         return set(), {}
 
@@ -1154,16 +1163,16 @@ def _reference_wordpress_classes(
     for class_name, class_data in values.items():
         if not isinstance(class_name, str) or not isinstance(class_data, dict):
             continue
-        clean_class_name = class_name.strip()
+        clean_class_name: str = class_name.strip()
         if not clean_class_name:
             continue
         class_names.add(clean_class_name)
         if class_data.get("tag_scope") != "strict":
             continue
-        allowed_tags = class_data.get("allowed_tags")
+        allowed_tags: Any | None = class_data.get("allowed_tags")
         if not isinstance(allowed_tags, list):
             continue
-        clean_tags = {
+        clean_tags: set[str] = {
             tag.strip().lower()
             for tag in allowed_tags
             if isinstance(tag, str) and tag.strip() and tag != "*"
@@ -1178,11 +1187,12 @@ def _reference_list(
     key: str,
     fallback: list[str],
 ) -> list[str]:
-    values = reference_data.get(key)
+    """リストを参照データから構築する。"""
+    values: Any | None = reference_data.get(key)
     if not isinstance(values, list):
         return fallback
 
-    result = [value.strip().lower() for value in values if isinstance(value, str) and value.strip()]
+    result: list[str] = [value.strip().lower() for value in values if isinstance(value, str) and value.strip()]
     if not result:
         return fallback
     return result
@@ -1193,6 +1203,7 @@ def _reference_set(
     key: str,
     fallback: set[str],
 ) -> set[str]:
+    """セットを参照データから構築する。"""
     return set(_reference_list(reference_data, key, sorted(fallback)))
 
 
@@ -1201,7 +1212,8 @@ def _reference_attribute_map(
     key: str,
     fallback: dict[str, set[str]],
 ) -> dict[str, set[str]]:
-    values = reference_data.get(key)
+    """属性マップを参照データから構築する。"""
+    values: Any | None = reference_data.get(key)
     if not isinstance(values, dict):
         return fallback
 
@@ -1209,8 +1221,8 @@ def _reference_attribute_map(
     for block_name, attributes in values.items():
         if not isinstance(block_name, str) or not isinstance(attributes, list):
             continue
-        clean_block_name = block_name.strip().lower()
-        clean_attributes = {
+        clean_block_name: str = block_name.strip().lower()
+        clean_attributes: set[str] = {
             attribute.strip()
             for attribute in attributes
             if isinstance(attribute, str) and attribute.strip()
@@ -1225,7 +1237,8 @@ def _reference_string_map(
     key: str,
     fallback: dict[str, set[str]],
 ) -> dict[str, set[str]]:
-    values = reference_data.get(key)
+    """文字列マップを参照データから構築する。キーは小文字に正規化され、値はセットとして返される。"""
+    values: Any | None = reference_data.get(key)
     if not isinstance(values, dict):
         return fallback
 
@@ -1233,8 +1246,8 @@ def _reference_string_map(
     for item_name, item_values in values.items():
         if not isinstance(item_name, str) or not isinstance(item_values, list):
             continue
-        clean_name = item_name.strip().lower()
-        clean_values = {
+        clean_name: str = item_name.strip().lower()
+        clean_values: set[str] = {
             value.strip().lower()
             for value in item_values
             if isinstance(value, str) and value.strip()
@@ -1245,7 +1258,11 @@ def _reference_string_map(
 
 
 def _build_lint_reference_cache() -> LintReferenceCache:
-    reference_data = _load_lint_reference()
+    """リンティング用の参照データを読み込み、キャッシュする。"""
+
+    reference_data: dict[str, Any] = _load_lint_reference()
+    wordpress_classes: set[str]
+    wordpress_class_tags: dict[str, set[str]]
     wordpress_classes, wordpress_class_tags = _reference_wordpress_classes(
         _load_wordpress_class_reference()
     )
@@ -1288,29 +1305,29 @@ def _build_lint_reference_cache() -> LintReferenceCache:
     )
 
 
-LINT_REFERENCE_CACHE = _build_lint_reference_cache()
-WORDPRESS_SERIALIZATION_RULES = _load_wordpress_serialization_reference()
-KNOWN_WORDPRESS_CORE_BLOCKS = LINT_REFERENCE_CACHE.wordpress_core_blocks
-KNOWN_WORDPRESS_BLOCK_ATTRIBUTES = LINT_REFERENCE_CACHE.wordpress_block_attributes
-KNOWN_HTML_TAGS = LINT_REFERENCE_CACHE.html_tags
-KNOWN_HTML_ATTRIBUTES = LINT_REFERENCE_CACHE.html_attributes
-KNOWN_HTML_ATTRIBUTES_BY_TAG = LINT_REFERENCE_CACHE.html_attributes_by_tag
-KNOWN_GLOBAL_HTML_ATTRIBUTES = LINT_REFERENCE_CACHE.global_html_attributes
-ALLOWED_HTML_ATTRIBUTE_PREFIXES = LINT_REFERENCE_CACHE.allowed_attribute_prefixes
-KNOWN_WORDPRESS_CLASSES = LINT_REFERENCE_CACHE.wordpress_classes
-KNOWN_WORDPRESS_CLASS_TAGS = LINT_REFERENCE_CACHE.wordpress_class_tags
+LINT_REFERENCE_CACHE: LintReferenceCache = _build_lint_reference_cache()
+WORDPRESS_SERIALIZATION_RULES: dict[str, Any] = _load_wordpress_serialization_reference()
+KNOWN_WORDPRESS_CORE_BLOCKS: set[str] = LINT_REFERENCE_CACHE.wordpress_core_blocks
+KNOWN_WORDPRESS_BLOCK_ATTRIBUTES: dict[str, set[str]] = LINT_REFERENCE_CACHE.wordpress_block_attributes
+KNOWN_HTML_TAGS: set[str] = LINT_REFERENCE_CACHE.html_tags
+KNOWN_HTML_ATTRIBUTES: set[str] = LINT_REFERENCE_CACHE.html_attributes
+KNOWN_HTML_ATTRIBUTES_BY_TAG: dict[str, set[str]] = LINT_REFERENCE_CACHE.html_attributes_by_tag
+KNOWN_GLOBAL_HTML_ATTRIBUTES: set[str] = LINT_REFERENCE_CACHE.global_html_attributes
+ALLOWED_HTML_ATTRIBUTE_PREFIXES: tuple[str, ...] = LINT_REFERENCE_CACHE.allowed_attribute_prefixes
+KNOWN_WORDPRESS_CLASSES: set[str] = LINT_REFERENCE_CACHE.wordpress_classes
+KNOWN_WORDPRESS_CLASS_TAGS: dict[str, set[str]] = LINT_REFERENCE_CACHE.wordpress_class_tags
 
 
 def _lint_wordpress_block_typos(load_data: str) -> list[HtmlTypoLintMessage]:
     messages: list[HtmlTypoLintMessage] = []
-    line_starts = _line_start_positions(load_data)
+    line_starts: list[int] = _line_start_positions(load_data)
     for block_match in BLOCK_COMMENT_PATTERN.finditer(load_data):
-        block_name = _normalize_block_name(block_match.group(2))
+        block_name: str = _normalize_block_name(block_match.group(2))
         if "/" in block_name or block_name in KNOWN_WORDPRESS_CORE_BLOCKS:
             continue
 
-        suggestion = _find_closest_word(block_name, KNOWN_WORDPRESS_CORE_BLOCKS)
-        values = {"block": block_name}
+        suggestion: str | None = _find_closest_word(block_name, KNOWN_WORDPRESS_CORE_BLOCKS)
+        values: dict[str, str] = {"block": block_name}
         if suggestion:
             values["suggestion"] = suggestion
         messages.append(
@@ -1329,17 +1346,17 @@ def _lint_wordpress_block_structure(
     html_tokens: list[_LintToken],
 ) -> list[HtmlTypoLintMessage]:
     messages: list[HtmlTypoLintMessage] = []
-    line_starts = _line_start_positions(load_data)
+    line_starts: list[int] = _line_start_positions(load_data)
     block_stack: list[_WordPressBlockStackItem] = []
     block_spans: list[_WordPressBlockStackItem] = []
     children_by_parent: dict[int, list[_WordPressBlockStackItem]] = {}
     paragraph_prefix_lines: dict[str, int] = {}
-    html_positions = [token.position for token in html_tokens]
+    html_positions: list[int] = [token.position for token in html_tokens]
 
     for block_match in BLOCK_COMMENT_PATTERN.finditer(load_data):
         is_closing = bool(block_match.group(1))
-        block_name = _normalize_block_name(block_match.group(2))
-        line_number = _line_number_at(block_match.start(), line_starts)
+        block_name: str = _normalize_block_name(block_match.group(2))
+        line_number: int = _line_number_at(block_match.start(), line_starts)
 
         if not is_closing:
             if block_stack:
@@ -1353,7 +1370,7 @@ def _lint_wordpress_block_structure(
                 and block_stack[-1].name == block_name
                 and block_name in NON_NESTABLE_WORDPRESS_BLOCKS
             ):
-                unclosed = block_stack.pop()
+                unclosed: _WordPressBlockStackItem = block_stack.pop()
                 unclosed.boundary_valid = False
                 unclosed.body_end = block_match.start()
                 messages.append(_missing_wordpress_block_message(
@@ -1367,7 +1384,6 @@ def _lint_wordpress_block_structure(
                 block_match.group(3),
                 block_match.start(3) if block_match.group(3) is not None else -1,
                 line_starts,
-                line_number,
             )
             if not block_attributes_valid:
                 messages.append(
@@ -1688,22 +1704,21 @@ def _parse_wordpress_block_attributes(
     attributes_text: str | None,
     attributes_start_position: int,
     line_starts: list[int],
-    fallback_line_number: int,
 ) -> _ParsedWordPressBlockAttributes:
     if attributes_text is None:
         return {}, True, None
     attributes_text = attributes_text.strip()
     if not attributes_text:
         return {}, True, None
-    attributes_line_number = _line_number_at(
+    attributes_line_number: int = _line_number_at(
         attributes_start_position,
         line_starts,
     )
-    attributes_column_number = _column_number_at(
+    attributes_column_number: int = _column_number_at(
         attributes_start_position,
         line_starts,
     )
-    json_issues = lint_json_fragment(
+    json_issues: tuple[JsonFragmentIssue, ...] = lint_json_fragment(
         attributes_text,
         start_line_number=attributes_line_number,
         start_column_number=attributes_column_number,
@@ -1722,7 +1737,7 @@ def _lint_unknown_wordpress_block_attributes(
     block_attributes: dict[str, Any],
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
-    allowed_attributes = KNOWN_WORDPRESS_BLOCK_ATTRIBUTES.get(block_name)
+    allowed_attributes: set[str] | None = KNOWN_WORDPRESS_BLOCK_ATTRIBUTES.get(block_name)
     if allowed_attributes is None:
         return []
 
@@ -1730,8 +1745,8 @@ def _lint_unknown_wordpress_block_attributes(
     for attribute in block_attributes:
         if attribute in allowed_attributes:
             continue
-        values = {"block": block_name, "attribute": attribute}
-        suggestion = _find_closest_word(attribute, allowed_attributes)
+        values: dict[str, str] = {"block": block_name, "attribute": attribute}
+        suggestion: str | None = _find_closest_word(attribute, allowed_attributes)
         if suggestion:
             values["suggestion"] = suggestion
         messages.append(
@@ -1751,12 +1766,12 @@ def _lint_wordpress_block_attribute_semantics(
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
     messages: list[HtmlTypoLintMessage] = []
-    allowed_attributes = KNOWN_WORDPRESS_BLOCK_ATTRIBUTES.get(block_name)
+    allowed_attributes: set[str] | None = KNOWN_WORDPRESS_BLOCK_ATTRIBUTES.get(block_name)
     for attribute, value in block_attributes.items():
         if allowed_attributes is not None and attribute not in allowed_attributes:
             continue
 
-        expected_type = WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES.get(
+        expected_type: str | None = WORDPRESS_BLOCK_ATTRIBUTE_TYPE_RULES.get(
             (block_name, attribute)
         )
         if expected_type and not _wordpress_attribute_value_has_type(
@@ -1777,7 +1792,7 @@ def _lint_wordpress_block_attribute_semantics(
                 )
             )
 
-        allowed_values = WORDPRESS_BLOCK_ATTRIBUTE_VALUE_RULES.get(
+        allowed_values: set[str] | None = WORDPRESS_BLOCK_ATTRIBUTE_VALUE_RULES.get(
             (block_name, attribute)
         )
         if allowed_values is None:
@@ -1799,7 +1814,7 @@ def _lint_wordpress_block_attribute_semantics(
             continue
         if value in allowed_values:
             continue
-        values = {
+        values: dict[str, str] = {
             "block": block_name,
             "attribute": attribute,
             "allowed_values": ", ".join(sorted(allowed_values)),
@@ -2548,17 +2563,17 @@ def _lint_html_attribute_continuation(
             return None
         if first_attribute is None:
             first_attribute = (attribute, position)
-        position = attribute_match.end()
+        position: int = attribute_match.end()
 
     if first_attribute is None:
         return None
     attribute, attribute_position = first_attribute
     if position == end and "\n" not in load_data[start:attribute_position]:
-        # A lone inline attribute example is ordinary body text. A complete
-        # attribute-only continuation on following lines is a stronger signal.
+        # インライン属性が単独で現れる例は、通常の本文テキストとみなされる。一方、
+        # 続く行が属性のみで構成されている場合は、より明確な合図となる。
         return None
-    contains_break = any(attribute_position <= item < position for item in break_ranges)
-    key = (
+    contains_break: bool = any(attribute_position <= item < position for item in break_ranges)
+    key: LiteralString | Literal['html_typo_lint.html_attribute_outside_opening_tag'] = (
         "html_typo_lint.malformed_html_attribute_continuation" if contains_break
         else "html_typo_lint.html_attribute_outside_opening_tag"
     )
@@ -2569,6 +2584,8 @@ def _lint_html_attribute_continuation(
 
 
 class HtmlTypoLintParser(HTMLParser):
+    """HTMLコンテンツ内の誤字や構造上の問題をチェック（リント）する、カスタムHTMLパーサー。"""
+
     def __init__(
         self,
         load_data: str = "",
@@ -2578,27 +2595,30 @@ class HtmlTypoLintParser(HTMLParser):
         self.messages: list[HtmlTypoLintMessage] = []
         self.inline_stack: list[tuple[str, int, int]] = []
         self.inline_boundaries: list[str] = []
-        self.line_starts = _line_start_positions(load_data)
-        self.suppressed_ranges = suppressed_ranges or []
+        self.line_starts: list[int] = _line_start_positions(load_data)
+        self.suppressed_ranges: list[tuple[int, int]] = suppressed_ranges or []
         self.reported_unknown_html_tags: set[tuple[int, str]] = set()
-        self.load_data = load_data
+        self.load_data: str = load_data
         self.attribute_opening: tuple[str, int] | None = None
         self.attribute_break_ranges: dict[int, int] = {}
         self.attribute_example_tags: list[str] = []
 
     def _parser_position(self) -> int:
+        """元の入力文字列における現在の文字位置を取得する。"""
+
         line_number, column_number = self.getpos()
         return _position_from_parser_pos(self.line_starts, line_number, column_number)
 
     def _flush_attribute_continuation(self, end: int | None = None) -> None:
-        opening = self.attribute_opening
+        """属性の継続状態をリセットし、必要に応じて警告メッセージを生成する。"""
+        opening: tuple[str, int] | None = self.attribute_opening
         self.attribute_opening = None
-        break_ranges = self.attribute_break_ranges
+        break_ranges: dict[int, int] = self.attribute_break_ranges
         self.attribute_break_ranges = {}
         if opening is None:
             return
         tag, start = opening
-        message = _lint_html_attribute_continuation(
+        message: HtmlTypoLintMessage | None = _lint_html_attribute_continuation(
             self.load_data, tag, start, self._parser_position() if end is None else end,
             break_ranges, self.line_starts,
         )
@@ -2606,8 +2626,9 @@ class HtmlTypoLintParser(HTMLParser):
             self.messages.append(message)
 
     def _track_attribute_start(self, tag: str, *, self_closing: bool = False) -> None:
-        position = self._parser_position()
-        start_tag_text = self.get_starttag_text() or ""
+        """属性の開始位置を追跡し、必要に応じて警告メッセージを生成する。"""
+        position: int = self._parser_position()
+        start_tag_text: str = self.get_starttag_text() or ""
         if tag == "br" and self.attribute_opening is not None:
             self.attribute_break_ranges[position] = position + len(start_tag_text)
             return
@@ -2621,15 +2642,21 @@ class HtmlTypoLintParser(HTMLParser):
         self.attribute_opening = (tag, position + len(start_tag_text))
 
     def handle_comment(self, data: str) -> None:
+        """コメントを処理し、属性の継続状態をリセットする。"""
         self._flush_attribute_continuation()
 
     def handle_decl(self, decl: str) -> None:
+        """DOCTYPE宣言を処理し、属性の継続状態をリセットする。"""
         self._flush_attribute_continuation()
 
     def handle_pi(self, data: str) -> None:
+        """処理命令を処理し、属性の継続状態をリセットする。"""
         self._flush_attribute_continuation()
 
     def _is_suppressed_inline_position(self) -> bool:
+        """現在の位置が抑制範囲内にあるかどうかを判定する。"""
+        line_number: int
+        column_number: int
         line_number, column_number = self.getpos()
         return bool(self.suppressed_ranges) and _position_in_ranges(
             _position_from_parser_pos(self.line_starts, line_number, column_number),
@@ -2637,11 +2664,12 @@ class HtmlTypoLintParser(HTMLParser):
         )
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """開始タグを処理し、属性の開始位置を追跡する。"""
         self._track_attribute_start(tag)
         self._lint_tag_and_attrs(tag, attrs)
         if self._is_suppressed_inline_position():
             return
-        clean_tag = tag.lower()
+        clean_tag: str = tag.lower()
         if clean_tag in VOID_TAGS:
             return
         if clean_tag in INLINE_PARENT_BOUNDARY_TAGS:
@@ -2650,30 +2678,34 @@ class HtmlTypoLintParser(HTMLParser):
             self.inline_stack.append((clean_tag, self.getpos()[0], len(self.inline_boundaries)))
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """開始終了タグを処理し、属性の開始位置を追跡する。"""
         self._track_attribute_start(tag, self_closing=True)
         self._lint_tag_and_attrs(tag, attrs)
 
     def handle_endtag(self, tag: str) -> None:
+        """終了タグを処理し、属性の継続状態をリセットする。"""
         self._flush_attribute_continuation()
         if not self._is_suppressed_inline_position() and tag in self.attribute_example_tags:
-            index = len(self.attribute_example_tags) - 1 - self.attribute_example_tags[::-1].index(tag)
+            index: int = len(self.attribute_example_tags) - 1 - self.attribute_example_tags[::-1].index(tag)
             del self.attribute_example_tags[index:]
-        clean_tag = tag.lower()
-        line_number = self.getpos()[0]
+        clean_tag: str = tag.lower()
+        line_number: int = self.getpos()[0]
         self._lint_unknown_html_tag(clean_tag, line_number)
         if not self._is_suppressed_inline_position():
             self._lint_inline_endtag(clean_tag, line_number)
 
     def close(self) -> None:
+        """パーサーを閉じ、属性の継続状態をリセットし、未閉じのインラインタグをチェックする。"""
         super().close()
         self._flush_attribute_continuation(len(self.load_data))
         self._lint_unclosed_inline_tags_at_document_end()
 
     def _lint_tag_and_attrs(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        clean_tag = tag.lower()
-        line_number = self.getpos()[0]
+        """タグと属性を検査し、必要に応じて警告メッセージを生成する。"""
+        clean_tag: str = tag.lower()
+        line_number: int = self.getpos()[0]
         self._lint_unknown_html_tag(clean_tag, line_number)
-        attrs_dict = {name.lower(): value or "" for name, value in attrs}
+        attrs_dict: dict[str, str] = {name.lower(): value or "" for name, value in attrs}
         self._lint_restricted_html_tag(clean_tag, attrs_dict, line_number)
         self._lint_unknown_html_attrs(clean_tag, attrs_dict, line_number)
         self._lint_unexpected_html_attrs_for_tag(clean_tag, attrs_dict, line_number)
@@ -2691,11 +2723,12 @@ class HtmlTypoLintParser(HTMLParser):
         attrs: dict[str, str],
         line_number: int,
     ) -> None:
-        class_value = unescape(attrs.get("class", ""))
+        """WordPressのクラス名とタグの組み合わせが正しいかを検査する。"""
+        class_value: str = unescape(attrs.get("class", ""))
         for class_name in class_value.split():
             if "{" in class_name or "}" in class_name:
                 continue
-            allowed_tags = KNOWN_WORDPRESS_CLASS_TAGS.get(class_name)
+            allowed_tags: set[str] | None = KNOWN_WORDPRESS_CLASS_TAGS.get(class_name)
             if allowed_tags is None or tag in allowed_tags:
                 continue
             self.messages.append(
@@ -2714,6 +2747,7 @@ class HtmlTypoLintParser(HTMLParser):
             )
 
     def _lint_inline_endtag(self, tag: str, line_number: int) -> None:
+        """インラインタグの終了タグを検査し、必要に応じて警告メッセージを生成する。"""
         if tag in INLINE_TAGS:
             self._close_inline_tag(tag, line_number)
             return
@@ -2721,11 +2755,12 @@ class HtmlTypoLintParser(HTMLParser):
             self._lint_unclosed_inline_tags_before_parent(tag)
 
     def _close_inline_tag(self, tag: str, line_number: int) -> None:
+        """インラインタグを閉じる。"""
         if self.inline_stack and self.inline_stack[-1][0] == tag:
             self.inline_stack.pop()
             return
 
-        matching_index = next(
+        matching_index: int | None = next(
             (
                 index
                 for index in range(len(self.inline_stack) - 1, -1, -1)
@@ -2740,7 +2775,7 @@ class HtmlTypoLintParser(HTMLParser):
             ))
             return
 
-        expected_tag = self.inline_stack[-1][0]
+        expected_tag: str = self.inline_stack[-1][0]
         self.messages.append(
             HtmlTypoLintMessage(
                 "warning",
@@ -2752,7 +2787,8 @@ class HtmlTypoLintParser(HTMLParser):
         del self.inline_stack[matching_index]
 
     def _lint_unclosed_inline_tags_before_parent(self, parent_tag: str) -> None:
-        boundary_index = next((
+        """親タグの前に未閉じのインラインタグがある場合に警告を生成する。"""
+        boundary_index: int | None = next((
             index for index in range(len(self.inline_boundaries) - 1, -1, -1)
             if self.inline_boundaries[index] == parent_tag
         ), None)
@@ -2771,6 +2807,7 @@ class HtmlTypoLintParser(HTMLParser):
         del self.inline_boundaries[boundary_index:]
 
     def _lint_unclosed_inline_tags_at_document_end(self) -> None:
+        """ドキュメントの終わりに未閉じのインラインタグがある場合に警告を生成する。"""
         while self.inline_stack:
             tag, line_number, _ = self.inline_stack.pop()
             self.messages.append(
@@ -2783,15 +2820,16 @@ class HtmlTypoLintParser(HTMLParser):
             )
 
     def _lint_unknown_html_tag(self, tag: str, line_number: int) -> None:
+        """未知のHTMLタグを検査し、必要に応じて警告メッセージを生成する。"""
         if tag in KNOWN_HTML_TAGS or "-" in tag or ":" in tag:
             return
-        report_key = (line_number, tag)
+        report_key: tuple[int, str] = (line_number, tag)
         if report_key in self.reported_unknown_html_tags:
             return
         self.reported_unknown_html_tags.add(report_key)
 
-        suggestion = _find_closest_word(tag, KNOWN_HTML_TAGS)
-        values = {"tag": tag}
+        suggestion: str | None = _find_closest_word(tag, KNOWN_HTML_TAGS)
+        values: dict[str, str] = {"tag": tag}
         if suggestion:
             values["suggestion"] = suggestion
         self.messages.append(
@@ -2809,7 +2847,8 @@ class HtmlTypoLintParser(HTMLParser):
         attrs: dict[str, str],
         line_number: int,
     ) -> None:
-        reason = RESTRICTED_HTML_TAG_REASONS.get(tag)
+        """制限されたHTMLタグを検査し、必要に応じて警告メッセージを生成する。"""
+        reason: str | None = RESTRICTED_HTML_TAG_REASONS.get(tag)
         if reason is None:
             return
         if _is_wordpress_accordion_toggle_button(tag, attrs):
@@ -2829,14 +2868,15 @@ class HtmlTypoLintParser(HTMLParser):
         attrs: dict[str, str],
         line_number: int,
     ) -> None:
+        """未知のHTML属性を検査し、必要に応じて警告メッセージを生成する。"""
         for attr_name, attr_value in attrs.items():
             if _is_known_html_attribute(attr_name):
                 continue
 
-            suggestion = COMMON_HTML_ATTRIBUTE_TYPOS.get(attr_name)
+            suggestion: str | None = COMMON_HTML_ATTRIBUTE_TYPOS.get(attr_name)
             if suggestion is None:
                 suggestion = _find_closest_word(attr_name, KNOWN_HTML_ATTRIBUTES)
-            values = {"tag": tag, "attribute": attr_name, "value": attr_value}
+            values: dict[str, str] = {"tag": tag, "attribute": attr_name, "value": attr_value}
             if suggestion:
                 values["suggestion"] = suggestion
             self.messages.append(
@@ -2854,7 +2894,8 @@ class HtmlTypoLintParser(HTMLParser):
         attrs: dict[str, str],
         line_number: int,
     ) -> None:
-        allowed_attributes = KNOWN_HTML_ATTRIBUTES_BY_TAG.get(tag)
+        """タグに対して予期しないHTML属性を検査し、必要に応じて警告メッセージを生成する。"""
+        allowed_attributes: set[str] | None = KNOWN_HTML_ATTRIBUTES_BY_TAG.get(tag)
         if allowed_attributes is None:
             return
 
@@ -2880,6 +2921,7 @@ class HtmlTypoLintParser(HTMLParser):
         attrs: dict[str, str],
         line_number: int,
     ) -> None:
+        """制限されたHTML属性を検査し、必要に応じて警告メッセージを生成する。"""
         for attr_name in attrs:
             if not attr_name.startswith(RESTRICTED_HTML_ATTRIBUTE_PREFIXES):
                 continue
@@ -2898,7 +2940,7 @@ class HtmlTypoLintParser(HTMLParser):
 
 
 class _BlockRootCollector(HTMLParser):
-    """Read real root elements without treating comments or escaped code as tags."""
+    """コメントやエスケープされたコードをタグとして扱うことなく、実際のルート要素を読み取る。"""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -2909,15 +2951,18 @@ class _BlockRootCollector(HTMLParser):
         self.first_content_line: int | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """開始タグを処理し、ルート要素を記録する。"""
         self._record_root(tag, attrs)
         if tag not in VOID_TAGS:
             self.open_tags.append(tag)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """自己終了タグを処理し、ルート要素を記録する。"""
         self._record_root(tag, attrs)
 
     def _record_root(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        attribute_values = {name: value or "" for name, value in attrs}
+        """ルート要素を記録する。"""
+        attribute_values: dict[str, str] = {name: value or "" for name, value in attrs}
         self.all_tags.append((tag, attribute_values))
         if not self.open_tags:
             if self.first_content_line is None:
@@ -2925,12 +2970,14 @@ class _BlockRootCollector(HTMLParser):
             self.root_tags.append((tag, attribute_values))
 
     def handle_endtag(self, tag: str) -> None:
+        """終了タグを処理し、開いているタグのリストから削除する。"""
         for index in range(len(self.open_tags) - 1, -1, -1):
             if self.open_tags[index] == tag:
                 del self.open_tags[index:]
                 break
 
     def handle_data(self, data: str) -> None:
+        """テキストデータを処理し、ルート要素の外にテキストがある場合にフラグを設定する。"""
         if not self.open_tags and data.strip():
             self.has_root_text = True
             if self.first_content_line is None:
@@ -2938,22 +2985,27 @@ class _BlockRootCollector(HTMLParser):
 
 
 class _HtmlTagTokenCollector(HTMLParser):
+    """HTMLタグのトークンを収集するためのカスタムHTMLパーサー。"""
     def __init__(self, line_starts: list[int], line_number_offset: int = 0) -> None:
         super().__init__(convert_charrefs=False)
-        self.line_starts = line_starts
-        self.line_number_offset = line_number_offset
+        self.line_starts: list[int] = line_starts
+        self.line_number_offset: int = line_number_offset
         self.tokens: list[_LintToken] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """開始タグを処理し、トークンを収集する。"""
         self._append_token(tag, "open")
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """自己終了タグを処理し、トークンを収集する。"""
         self._append_token(tag, "self_close")
 
     def handle_endtag(self, tag: str) -> None:
+        """終了タグを処理し、トークンを収集する。"""
         self._append_token(tag, "close")
 
     def _append_token(self, tag: str, token_type: str) -> None:
+        """タグとトークンタイプを指定してトークンを収集する。"""
         line_number, column_number = self.getpos()
         self.tokens.append(
             _LintToken(

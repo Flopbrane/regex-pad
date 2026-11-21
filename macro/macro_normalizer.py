@@ -1,4 +1,4 @@
-"""Normalize safe pseudo-macro defaults without rewriting user expressions."""
+"""ユーザーの式を書き換えることなく、安全な擬似マクロのデフォルトを標準化する。"""
 
 from __future__ import annotations
 
@@ -6,16 +6,16 @@ from macro.json_data_model import MacroJsonData, MacroJsonStepData
 
 
 class MacroNormalizer:
-    """Create a detached canonical model while preserving all user text."""
+    """ユーザーのテキストをすべて保持したまま、独立したカノニカルモデルを作成する。"""
 
     @staticmethod
     def normalize(load_data: MacroJsonData) -> MacroJsonData:
-        """Return a detached model copy without semantic correction.
+        """意味的な修正を行わず、モデルの独立したコピーを返す。
 
-        Version 1 currently requires every JSON field, so no default needs to
-        be inserted.  This boundary exists for future format migrations and
-        deliberately preserves empty strings, ``None``, whitespace, newlines,
-        backslashes and full-width characters exactly as supplied.
+        バージョン1では現在、すべてのJSONフィールドが必須となっているため、デフォルト値を挿入する必要はない。
+        この境界は将来的なフォーマット移行を見据えたものであり、
+        空文字列、``None``、空白、改行、バックスラッシュ、全角文字を、
+        入力されたそのままの状態で保持するよう意図されている。
         """
         if not isinstance(load_data, MacroJsonData):
             raise TypeError("load_data must be MacroJsonData")

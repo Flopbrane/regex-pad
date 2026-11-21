@@ -1,4 +1,4 @@
-"""Pseudo-macro package for validated, previewable sequential text transformations."""
+"""検証可能かつプレビュー可能な、一連のテキスト変換を行うための疑似マクロパッケージ。"""
 
 from macro.json_bridge import MacroJsonBridge, MacroJsonBridgeError
 from macro.json_data_model import MacroJsonData, MacroJsonStepData
@@ -23,7 +23,7 @@ from macro.validation_types import (
     MacroValidationResult,
 )
 
-__all__ = [
+__all__: list[str] = [
     "MacroCompiler",
     "MacroDefinition",
     "MacroDiagnostic",

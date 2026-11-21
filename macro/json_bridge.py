@@ -1,4 +1,5 @@
-"""Convert pseudo-macro JSON dictionaries to and from file data models."""
+# pylint: disable=C0301
+"""擬似マクロ形式のJSON辞書を、ファイルデータモデルとの間で相互変換する。"""
 
 from __future__ import annotations
 
@@ -50,15 +51,15 @@ STEP_KEYS_V2: Final = STEP_KEYS | frozenset(
 
 
 class MacroJsonBridgeError(ValueError):
-    """Raised when JSON data cannot be represented by the file data model."""
-
+    """JSONデータがファイルデータモデルで表現できない場合に発生します。"""
 
 class MacroJsonBridge:
-    """Perform structural ``dict`` and dataclass conversion only."""
+    """構造的な `dict` および dataclass への変換のみを行う。"""
 
     @classmethod
     def from_dict(cls, load_data: object) -> MacroJsonData:
-        """Convert a decoded JSON object into ``MacroJsonData``."""
+        """デコード済みのJSONオブジェクトを ``MacroJsonData`` に変換する。"""
+
         root: Mapping[str, object] = cls._require_mapping(load_data, "root")
         cls._require_exact_keys(root, ROOT_KEYS, "root")
         raw_steps: object = root[STEPS_KEY]
@@ -81,7 +82,8 @@ class MacroJsonBridge:
 
     @classmethod
     def to_dict(cls, save_data: MacroJsonData) -> dict[str, object]:
-        """Convert ``MacroJsonData`` into an ordered JSON-compatible dictionary."""
+        """``MacroJsonData`` を、順序が保持されたJSON互換の辞書に変換します。"""
+
         if not isinstance(save_data, MacroJsonData):
             raise TypeError("save_data must be MacroJsonData")
         return {
@@ -101,6 +103,7 @@ class MacroJsonBridge:
         step_index: int,
         version_two: bool,
     ) -> MacroJsonStepData:
+        """単一ステップの辞書を ``MacroJsonStepData`` に変換する。"""
         step: Mapping[str, object] = cls._require_mapping(step_data, f"{STEPS_KEY}[{step_index}]")
         cls._require_exact_keys(
             step, STEP_KEYS_V2 if version_two else STEP_KEYS, f"{STEPS_KEY}[{step_index}]"
@@ -132,6 +135,7 @@ class MacroJsonBridge:
 
     @staticmethod
     def _step_to_dict(step: MacroJsonStepData, version_two: bool) -> dict[str, object]:
+        """単一ステップの ``MacroJsonStepData`` を辞書に変換する。"""
         if not isinstance(step, MacroJsonStepData):
             raise TypeError("steps must contain only MacroJsonStepData")
         result: dict[str, object] = {
@@ -158,6 +162,7 @@ class MacroJsonBridge:
 
     @staticmethod
     def _require_mapping(value: object, location: str) -> Mapping[str, object]:
+        """値が辞書であることを確認し、キーがすべて文字列であることを検証する。"""
         if not isinstance(value, dict):
             raise MacroJsonBridgeError(f"{location} must be object")
         if not all(isinstance(key, str) for key in value):
@@ -170,6 +175,7 @@ class MacroJsonBridge:
         expected_keys: frozenset[str],
         location: str,
     ) -> None:
+        """値が指定されたキーの正確な集合を持つことを確認する。"""
         actual_keys: frozenset[str] = frozenset(value)
         missing_keys: frozenset[str] = expected_keys - actual_keys
         unknown_keys: frozenset[str] = actual_keys - expected_keys

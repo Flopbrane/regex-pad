@@ -1,4 +1,4 @@
-"""Immutable execution definitions compiled only after model validation."""
+"""モデルの検証後にのみコンパイルされる、不変の実行定義。"""
 
 from dataclasses import dataclass
 
@@ -11,6 +11,7 @@ from search.search_engine import SearchOptions
 
 @dataclass(frozen=True, slots=True)
 class MacroStep:
+    """マクロの単一のステップを表す。"""
     step_index: int
     step_name: str
     enabled: bool
@@ -21,6 +22,7 @@ class MacroStep:
 
 @dataclass(frozen=True, slots=True)
 class MacroDefinition:
+    """検証後にのみコンパイルされる、不変のマクロ定義。"""
     macro_name: str
     description: str
     steps: tuple[MacroStep, ...]
@@ -28,19 +30,22 @@ class MacroDefinition:
 
 @dataclass(frozen=True, slots=True)
 class MacroPreparation:
+    """マクロの準備状態を表す。"""
     model: MacroJsonData
     validation: MacroValidationResult
     definition: MacroDefinition | None
 
 
 class MacroCompiler:
+    """検証後にのみコンパイルされる、不変の実行定義を作成する。"""
     @staticmethod
     def prepare(model: MacroJsonData) -> MacroPreparation:
-        normalized = MacroNormalizer.normalize(model)
-        validation = MacroValidator.validate(normalized)
+        """マクロの準備状態を作成する。"""
+        normalized: MacroJsonData = MacroNormalizer.normalize(model)
+        validation: MacroValidationResult = MacroValidator.validate(normalized)
         if not validation.is_valid:
             return MacroPreparation(normalized, validation, None)
-        steps = tuple(
+        steps: tuple[MacroStep, ...] = tuple(
             MacroStep(
                 index,
                 step.step_name,
