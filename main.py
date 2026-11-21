@@ -122,6 +122,7 @@ from fileio.unsaved_backup_manager import (
 from localization.translator import Translator
 from macro.editor_data_model import MacroEditorDocumentData, MacroEditorStepData
 from macro.json_loader import MacroJsonLoader, MacroJsonLoadError
+from macro.json_paths import configured_macro_folder, default_macro_folder
 from normalise import apply_normalise_operation
 from preview.wordpress_preview import WordPressPreview
 from preview.wordpress_runtime import default_runtime_root
@@ -270,7 +271,7 @@ class MainWindow(QMainWindow):
         self.macro_editor_window: MacroEditorWindow | None = None
         self.macro_editor_controller: MacroEditorController | None = None
         self.macro_execution_controller: MacroExecutionController | None = None
-        self.macro_folder = settings.macro_folder
+        self.macro_folder = str(configured_macro_folder(settings.macro_folder))
         self.macro_editor_geometry = settings.macro_editor_geometry
         self.macro_editor_splitter_state = settings.macro_editor_splitter_state
         self.grammar_check_dialog: GrammarCheckDialog | None = None
@@ -1500,7 +1501,7 @@ class MainWindow(QMainWindow):
         folder = (
             self.macro_editor_controller.session.macro_folder
             if self.macro_editor_controller is not None
-            else Path(self.macro_folder) if self.macro_folder else app_base_dir() / "macro"
+            else Path(self.macro_folder) if self.macro_folder else default_macro_folder()
         )
         name, _ = QFileDialog.getOpenFileName(
             self, self.translator.text("preset.delete"), str(folder), "JSON (*.json)"

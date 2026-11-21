@@ -32,14 +32,19 @@ def _model() -> MacroJsonData:
     )
 
 
-def test_default_folder_is_portable_macro_folder(
+def test_default_folder_is_portable_preset_folder(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(json_paths, "app_base_dir", lambda: tmp_path)
 
-    assert MacroJsonLoader().macro_folder == tmp_path / "macro"
-    assert MacroJsonSaver().macro_folder == tmp_path / "macro"
+    expected = tmp_path / "macro" / "preset_json_files"
+    assert MacroJsonLoader().macro_folder == expected
+    assert MacroJsonSaver().macro_folder == expected
+    assert json_paths.configured_macro_folder("") == expected
+    assert json_paths.configured_macro_folder(tmp_path / "macro") == expected
+    custom_folder = tmp_path / "other_presets"
+    assert json_paths.configured_macro_folder(custom_folder) == custom_folder
 
 
 def test_saver_and_loader_round_trip_model_in_custom_folder(tmp_path: Path) -> None:

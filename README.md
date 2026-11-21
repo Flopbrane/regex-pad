@@ -90,6 +90,7 @@ Use **Search > Search/Replace Presets** to create, open and run, edit, or delete
 saved presets. In **Search > Find / Replace**, **Save Current Search/Replace
 Conditions as Preset** copies the current text fields and options into one new
 step. Name it in the preset editor and choose **Save** to create a JSON file.
+The default location is `macro/preset_json_files/` beside the application.
 Add or reorder steps there for a sequence. Opening a saved preset displays it
 for inspection; **Run Preview** shows the combined result, and **Apply to
 document** makes one undoable change. Selected/visible scopes use the target

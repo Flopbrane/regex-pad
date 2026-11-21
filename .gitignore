@@ -44,10 +44,13 @@ CODEX_regex-pad_linter_HTMLタグ閉じ忘れ診断_改修指示書.md
 README_Dialog_focus_error.md
 LINTER_MODIFICATION_POLICY.md
 LINTER_MODIFICATION_REPORT.md
+
 # Local settings
 settings.json
 config.json
+macro/preset_json_files/
 test_sample/
+
 # Logs
 *.log
 *.zip

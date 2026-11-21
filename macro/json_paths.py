@@ -8,8 +8,16 @@ from portable_runtime import app_base_dir
 
 
 def default_macro_folder() -> Path:
-    """Return the default user-editable pseudo-macro folder."""
-    return app_base_dir() / "macro"
+    """Return the default local folder for saved search/replace presets."""
+    return app_base_dir() / "macro" / "preset_json_files"
+
+
+def configured_macro_folder(saved_folder: str | Path) -> Path:
+    """Migrate the former default while retaining a custom folder choice."""
+    legacy_default = app_base_dir() / "macro"
+    if not saved_folder or Path(saved_folder).resolve() == legacy_default.resolve():
+        return default_macro_folder()
+    return Path(saved_folder)
 
 
 def resolve_macro_file_path(

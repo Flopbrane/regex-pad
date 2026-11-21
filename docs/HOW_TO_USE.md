@@ -106,7 +106,8 @@ editor for inspection; it does not change the article immediately.
 To capture the current search, exclusion, replacement and checkbox settings,
 click **Save Current Search/Replace Conditions as Preset** below the Find/Replace
 buttons. The preset editor opens with one populated step. Enter a preset name,
-adjust the step if needed, then click **Save** to choose a new JSON file. You
+adjust the step if needed, then click **Save** to choose a new JSON file. The
+default save location is `macro/preset_json_files/` beside the application. You
 can add, duplicate, delete and reorder steps; definition Undo/Redo is separate
 from the article's Undo. The ordinary replacement field is retained in JSON
 even when Unicode normalization makes it temporarily inactive.
