@@ -72,3 +72,8 @@ NEXT_STEPS.md
 .markdownlint.yaml
 CODEX_regex-pad_囲み枠挿入機能_改修指示書.md
 ADDITIONAL_FUNCTION_GUIDE.md
+
+# Local-only development notes and generated inventory
+/AGENTS.md
+/DELET_ITEMS_LIST.md
+/install_records/
