@@ -2,6 +2,13 @@
 
 RegexPad keeps bundled snippet dictionaries in this folder. Bundled dictionaries are read-only during normal use; user dictionaries are loaded from the folder selected in Options.
 
+From the Search/Replace Preset editor, **Edit insertion dictionaries** opens a
+field/JSON editor for `html_dict.json`, `markdown_dict.json`,
+`wordpress_html_dict.json`, and `paragraph_insert_dict.json`. Saving validates
+the candidate and writes a user copy in `user_dictionaries/` beside the app,
+or in the user dictionary folder configured in Options. The bundled copy and
+Linter references (`lint_reference.json` and `standards/`) are not edited.
+
 ## Tag Snippet Dictionaries
 
 The following bundled files use the same snippet format:
@@ -74,6 +81,8 @@ Every operation contains:
 - `error_key`: bilingual application-text key used by the insertion Linter when the operation is unavailable.
 
 The `grammar` object also supplies the WordPress paragraph-block search, `<p>` content search, paragraph replacement template, block separator, `<br>` cleanup rules, and structural diagnostic keys. Python owns range safety, cursor placement and Undo grouping; it does not own completed WordPress block text.
+
+`shortcut_insertions` supplies the fixed text for `F8`, `F9`, `Ctrl+B`, `Ctrl+U`, and the text-color shortcuts. `{selection}` places selected text, `{cursor}` marks where the caret ends up, and `{value}` receives the selected color. `inline_underline` defaults to `<u style="">{selection}{cursor}</u>`. The shortcut keys, selection handling, and Undo grouping remain in Python. An older user dictionary without this section uses the bundled templates; a user dictionary can override individual entries.
 
 When a selected user-dictionary folder contains `paragraph_insert_dict.json`, Paragraph Split uses it. If that optional file is absent, RegexPad uses the bundled paragraph dictionary so existing user-dictionary folders remain compatible.
 

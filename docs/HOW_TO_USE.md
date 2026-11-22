@@ -193,7 +193,7 @@ on document type. Review the explanation and inserted parameters.
 
 ![English context menu showing CSS insertion choices](images/css-insertion-en.png)
 
-- Select text and press `Ctrl+B` for a `<strong>` wrapper or `Ctrl+U` for `<u>`.
+- Select text and press `Ctrl+B` for a `<strong>` wrapper or `Ctrl+U` for `<u style="">`.
 - **Text Color** and the default `Ctrl+Alt+1` through `Ctrl+Alt+7` shortcuts
   wrap selected text with colored spans. `Ctrl+Alt+R` is the default red alias.
 - **Insert CSS > color: ;** and **background-color: ;** offer swatches. Press
@@ -219,6 +219,18 @@ The snippet dictionaries are `html_dict.json`, `markdown_dict.json`, and
 `wordpress_html_dict.json` under `dictionaries` in source runs, or the bundled
 data area in EXE runs. Options can select a user dictionary folder and enable
 dictionary validation. Use a copy for customization.
+
+To edit an insertion dictionary, open **Search > Search/Replace Presets**, then
+choose **Edit insertion dictionaries** in the preset editor. Choose an HTML,
+Markdown, WordPress, or paragraph/shortcut dictionary. Edit a text field in the
+outline, or use the JSON tab for structural changes, then **Validate** and
+**Save**. The editor writes a validated user copy in `user_dictionaries/`
+beside the application (or in the user dictionary folder already selected in
+Options), and activates that folder. Bundled files stay intact. The Linter
+reference dictionary and `standards/` are not available in this editor.
+For example, change the HTML `tag.html.strong` template to `<strong >` for
+Insert Tag, and the paragraph dictionary's `inline_strong` template for Ctrl+B.
+Syntax errors in inserted HTML or CSS can still be reported by the Linter.
 
 The editable `color_presets.json` is beside the EXE; a missing editable copy is
 created from the bundled default. `text_colors` controls text palettes and
@@ -437,7 +449,7 @@ bundled preview environment makes later preview use require preparation again.
 | `Ctrl+F` | Find / Replace |
 | `F7` | Grammar Check |
 | `F8` / `F9` | Insert `<br>` / `<br><br>` |
-| `Ctrl+B` / `Ctrl+U` | Wrap selection in `<strong>` / `<u>` |
+| `Ctrl+B` / `Ctrl+U` | Wrap selection in `<strong>` / `<u style="">` |
 | `Ctrl+Alt+1` ... `Ctrl+Alt+7` | Default text colors: red, blue, green, orange, purple, pink, gray |
 | `Ctrl+Alt+R` | Default red text alias |
 | `Ctrl+Shift+T` | Insert Tag dialog |
@@ -449,6 +461,14 @@ bundled preview environment makes later preview use require preparation again.
 
 Color shortcuts can change in `color_presets.json`. Standard clipboard
 shortcuts are also available in the editor.
+
+Open **Options > Shortcut key settings** to review all assigned keys. Select an
+editable application action and press **Edit** to change its main key. Use
+**Add** to give a named plain-text snippet its own key, **Edit** to revise it,
+and **Delete** to remove a custom snippet. **OK** saves changes to
+`shortcutkey_ref.json` beside `config.json`; **Cancel** discards them. A snippet
+replaces any selected text when inserted. Windows and standard editing keys
+appear as **Cannot change**, and duplicate or reserved keys are rejected.
 
 ## Troubleshooting
 

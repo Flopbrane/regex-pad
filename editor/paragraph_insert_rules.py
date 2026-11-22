@@ -2,14 +2,23 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from string import Formatter
 from typing import Any
 
 PARAGRAPH_INSERT_DICTIONARY_FILE_NAME = "paragraph_insert_dict.json"
 DEFAULT_DICTIONARIES_PATH = Path(__file__).resolve().parent.parent / "dictionaries"
 REQUIRED_OPERATION_KEYS = {"insert_spacer", "insert_html", "decorated_block"}
 SUPPORTED_CONTENT_TRANSFORMS = {"none", "code", "decorated"}
+SHORTCUT_FIELDS = {
+    "insert_br": {"cursor"},
+    "insert_br_br": {"cursor"},
+    "inline_strong": {"selection", "cursor"},
+    "inline_underline": {"selection", "cursor"},
+    "inline_color": {"selection", "value", "cursor"},
+}
 
 
 class ParagraphInsertDictionaryError(ValueError):
@@ -61,6 +70,7 @@ class ParagraphInsertRuleBook:
     load_file_path: Path
     grammar: ParagraphGrammarRules
     operations: dict[str, ParagraphInsertRule]
+    shortcut_insertions: dict[str, str]
 
     def operation(self, key: str) -> ParagraphInsertRule:
         try:
@@ -69,6 +79,32 @@ class ParagraphInsertRuleBook:
             raise ParagraphInsertDictionaryError(
                 f"operation key is not registered: {key!r} ({self.load_file_path})"
             ) from error
+
+    def render_shortcut(
+        self, key: str, selected_text: str = "", value: str = ""
+    ) -> tuple[str, int]:
+        """Render dictionary text and return the cursor position in the result."""
+        try:
+            template = self.shortcut_insertions[key]
+        except KeyError as error:
+            raise ParagraphInsertDictionaryError(
+                f"shortcut key is not registered: {key!r} ({self.load_file_path})"
+            ) from error
+        parts: list[str] = []
+        cursor_offset = 0
+        length = 0
+        for literal, field, _format_spec, _conversion in Formatter().parse(template):
+            parts.append(literal)
+            length += len(literal)
+            if field == "cursor":
+                cursor_offset = length
+            elif field == "selection":
+                parts.append(selected_text)
+                length += len(selected_text)
+            elif field == "value":
+                parts.append(value)
+                length += len(value)
+        return "".join(parts), cursor_offset
 
 
 def paragraph_insert_dictionary_path(
@@ -161,7 +197,47 @@ def load_paragraph_insert_rule_book(
         key: _operation_rule(key, value, load_file_path)
         for key, value in operations_data.items()
     }
-    return ParagraphInsertRuleBook(load_file_path, grammar, operations)
+    shortcut_data = _require_object(
+        root.get("shortcut_insertions", {}), "shortcut_insertions", load_file_path
+    )
+    shortcut_insertions = (
+        load_paragraph_insert_rule_book().shortcut_insertions.copy()
+        if load_file_path != DEFAULT_DICTIONARIES_PATH / PARAGRAPH_INSERT_DICTIONARY_FILE_NAME
+        else {}
+    )
+    for key, value in shortcut_data.items():
+        shortcut_insertions[key] = _require_string(
+            value, f"shortcut_insertions.{key}", load_file_path
+        )
+    _validate_shortcut_insertions(shortcut_insertions, load_file_path)
+    return ParagraphInsertRuleBook(load_file_path, grammar, operations, shortcut_insertions)
+
+
+def _validate_shortcut_insertions(
+    templates: dict[str, str], load_file_path: Path
+) -> None:
+    """Reject templates that lose selected text or the insertion cursor."""
+    missing = SHORTCUT_FIELDS.keys() - templates.keys()
+    if missing:
+        raise ParagraphInsertDictionaryError(
+            f"missing shortcut_insertions keys {sorted(missing)!r} ({load_file_path})"
+        )
+    for key, expected_fields in SHORTCUT_FIELDS.items():
+        try:
+            fields: Counter[str] = Counter()
+            for _literal, field, format_spec, conversion in Formatter().parse(templates[key]):
+                if field is not None:
+                    if format_spec or conversion:
+                        raise ValueError("format specifiers and conversions are not supported")
+                    fields[field] += 1
+        except ValueError as error:
+            raise ParagraphInsertDictionaryError(
+                f"invalid shortcut_insertions.{key}: {error} ({load_file_path})"
+            ) from error
+        if set(fields) != expected_fields or any(count != 1 for count in fields.values()):
+            raise ParagraphInsertDictionaryError(
+                f"shortcut_insertions.{key} must contain each of {sorted(expected_fields)!r} once ({load_file_path})"
+            )
 
 
 def _text_rule(

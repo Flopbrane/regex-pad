@@ -45,6 +45,7 @@ class MacroEditorWindow(QMainWindow):
     preview_requested = Signal()
     run_requested = Signal()
     folder_requested = Signal()
+    dictionary_requested = Signal()
     step_add_requested = Signal()
     step_duplicate_requested = Signal(int)
     step_delete_requested = Signal(int)
@@ -91,6 +92,12 @@ class MacroEditorWindow(QMainWindow):
             toolbar.addAction(action)
             file_menu.addAction(action)
             self.editor_actions[name] = action
+        dictionary_action = QAction(translator.text("dictionary.editor.open"), self)
+        dictionary_action.triggered.connect(self.dictionary_requested.emit)
+        toolbar.addSeparator()
+        toolbar.addAction(dictionary_action)
+        file_menu.addAction(dictionary_action)
+        self.dictionary_action = dictionary_action
         close_action = toolbar.addAction(translator.text("macro.editor.close"))
         close_action.triggered.connect(self.close)
         self.close_action = close_action
@@ -220,6 +227,7 @@ class MacroEditorWindow(QMainWindow):
         self.toolbar.setWindowTitle(text("macro.editor.title"))
         for name, action in self.editor_actions.items():
             action.setText(text("macro.editor." + name))
+        self.dictionary_action.setText(text("dictionary.editor.open"))
         self.close_action.setText(text("macro.editor.close"))
         self.folder_button.setText(text("macro.editor.folder"))
         self.tree.setHeaderLabel(text("macro.editor.outline"))

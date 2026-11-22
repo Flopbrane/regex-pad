@@ -4949,3 +4949,28 @@ Canonical propagation and final concentrated-test results:
 - 専用手順をプリセット形式3の `処理種別` に保存し、形式1・2は従来通り読込可能。検索・置換ステップと順に実行でき、実行プレビューと文書への1回のUndoでの適用に接続。READMEと日英の使い方ガイドを更新。ユーザーの保存済みプリセットJSONは変更していない。
 - canonical checkout `D:/PC/Python/regex_pad_project` を指定Pythonで検証。関連テスト130 passed / 1 deselected（単独でも終了しない既知の設定永続化テスト）。全体テスト948 passed / 7 failed / 1 deselected。7件は従来からの段落style、タグ挿入4件、空白記号2件。Ruff全体合格、Pyright 0 errors / 0 warnings、`git diff --check` 合格。物理GUIでの操作確認とEXE再ビルドは未実施。
 - 追加のユーザー指定により、手順の処理選択をドロップダウンからチェックボックスに変更した。チェック中は検索・除外・置換テキスト欄と通常検索設定を無効にし、入力済みの文字列は保持する。日英ガイドの操作説明を更新。GUI操作と変換の focused 26 tests passed / 1 deselected、Ruff全体合格、Pyright 0 errors / 0 warningsを再確認した。
+
+## 2026-11-22 Ctrl+U下線テンプレートの辞書化
+
+- Ctrl+Uは選択文字列を `<u style="">...</u>` で囲むよう変更した。選択なしでは空のタグ対を挿入し、従来と同じ位置へカーソルを置く。1回のUndoで戻せる。
+- 固定のショートカット挿入文字列（F8、F9、Ctrl+B、Ctrl+U、文字色span）を `dictionaries/paragraph_insert_dict.json` の `shortcut_insertions` に移した。Python側にはショートカットの割り当て、辞書の安全な読込、選択文字の挿入、カーソル配置、Undo処理のみ残した。旧形式のユーザー辞書に同セクションがなければ同梱版を使い、個別テンプレートの上書きも可能。既存の段落・WordPress辞書のローカル変更は保持した。
+- README、日英の使い方ガイド、辞書READMEを更新。指定Pythonで関連のfocused pytest 24件合格、F8/F9・下線・文字色の追加6件合格、Ruff全体合格、Pyright 0 errors / 0 warnings、git diff --check合格。段落挿入とタグ挿入の全98件は91合格・7失敗で、失敗はいずれも今回の作業前から存在する辞書テンプレートと旧テスト期待値の不一致。物理GUIとEXE再ビルドは未実施。
+
+## 2026-11-22 ショートカットキー設定一覧と定型文
+
+- 設定メニューに「ショートカットキー設定一覧」を追加。アプリの割当一覧とWindows・標準キーの変更不可一覧を表示し、変更可能な操作の主キーを編集できる。複数キーを持つ操作の追加キーは維持する。
+- 定型文ショートカットを追加・編集・削除できる。定型文は選択文字を置き換えるプレーンテキストとして挿入する。定型文が空の場合とキー重複・Windows予約キーは拒否する。OKで反映・保存し、キャンセルでは破棄する。
+- ユーザー指定のファイル名をTypo訂正後の `shortcutkey_ref.json` に統一。`config.json` と同じローカルフォルダーに一時ファイル経由で安全に保存し、次回起動で再適用する。破損・衝突した外部JSONは上書きせず既定キーのまま維持し、画面で読込エラーを知らせる。`.gitignore` に追加。READMEと日英の使い方ガイドを更新。
+- canonical `D:/PC/Python/regex_pad_project` で指定Pythonを使用。新規テスト6件合格。全体 pytest（既知の終了しない設定永続化テスト1件を除外）は954 passed / 10 failed / 1 deselected。10件は段落style 1、既存の段落テンプレート3、タグ挿入4、空白記号2の既存期待値との不一致。Ruff全体合格、Pyright 0 errors / 0 warnings、git diff --check合格。物理GUIの操作確認とEXE再ビルドは未実施。
+
+## 2026-11-22 辞書変更後のテスト期待値の整理
+
+- 前回の全体テスト失敗10件を調査。`paragraph_insert_dict.json` の未保存変更に直接対応したものが3件。タグ挿入4件は `html_dict.json` と `wordpress_html_dict.json` の現行内容に対して、以前からの古い固定値を期待していた。残り3件は段落色クラスの不一致判定1件と、半角空白表示記号 `·` に対する旧期待値2件で、辞書変更とは別。
+- 利用者の辞書・実装・設定は変更せず、`tests/test_paragraph_splitter.py` と `tests/test_tag_insert.py` の構造・カーソル・辞書参照の検証を維持したまま、色・枠線・display の古い固定値を現在の辞書を読む期待値に改めた。`tests/test_html_typo_lint.py` は primary 指定に secondary クラスが付く例を不一致とし、`tests/test_text_editor_visible_whitespace.py` は実装どおりの `·` を期待するよう修正。
+- 指定Pythonで関連テスト380件合格、全体pytestは964 passed / 1 deselected。全体pytestは結果表示後にテスト用プロセスが自動終了しなかったため手動停止した。Ruff全体合格、Pyright 0 errors / 0 warnings、git diff --check合格。物理GUIとEXEの確認は未実施。
+
+## 2026-11-22 挿入辞書をプリセットエディターから編集
+
+- 検索/置換プリセットエディターに「挿入辞書を編集」を追加。HTML、Markdown、WordPress、段落・ショートカット定型文の4辞書を項目別またはJSONで編集できる。Linter基準辞書とstandardsは一覧・読込・保存から除外した。
+- 既存の辞書検証を通過した場合のみ、アプリ横のuser_dictionariesまたは設定済みのユーザー辞書フォルダーに一時ファイル経由で保存する。同梱辞書と利用者の未保存データは保持する。保存後はユーザー辞書を有効にし、タグ挿入メニューを更新する。`user_dictionaries/`をgitignoreに追加。
+- README日英、使用ガイド日英、辞書READMEを更新。指定Pythonで辞書編集テスト7件成功。全体pytestは971 passed / 1 deselectedで結果表示後にプロセスが残ったため手動停止。Ruff全体成功、Pyright 0 errors / 0 warnings、git diff --check成功。実機GUIとEXEの確認は未実施。

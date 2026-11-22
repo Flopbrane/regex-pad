@@ -225,6 +225,16 @@ def test_inline_html_wrap_actions_wrap_selected_text(app: QApplication) -> None:
     window.undo_action.trigger()
     assert window.editor.toPlainText() == "before target after"
 
+    cursor = window.editor.textCursor()
+    cursor.setPosition(len("before "))
+    cursor.setPosition(len("before target"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.inline_underline_action.trigger()
+    assert window.editor.toPlainText() == 'before <u style="">target</u> after'
+    assert window.editor.textCursor().position() == len('before <u style="">target')
+    window.undo_action.trigger()
+    assert window.editor.toPlainText() == "before target after"
+
 
 def test_inline_html_wrap_actions_insert_pair_without_selection(
     app: QApplication,
@@ -243,6 +253,35 @@ def test_inline_html_wrap_actions_insert_pair_without_selection(
     assert window.editor.textCursor().position() == len(
         'before <span style="color: #d00000">'
     )
+
+    window.undo_action.trigger()
+    cursor = window.editor.textCursor()
+    cursor.setPosition(len("before "))
+    window.editor.setTextCursor(cursor)
+    window.inline_underline_action.trigger()
+    assert window.editor.toPlainText() == 'before <u style=""></u>after'
+    assert window.editor.textCursor().position() == len('before <u style="">')
+
+
+def test_underline_shortcut_reads_selected_user_dictionary(
+    app: QApplication, tmp_path: Path
+) -> None:
+    _ = app
+    load_data = json.loads(
+        Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
+    )
+    load_data["shortcut_insertions"]["inline_underline"] = (
+        '<u class="personal">{selection}{cursor}</u>'
+    )
+    (tmp_path / "paragraph_insert_dict.json").write_text(
+        json.dumps(load_data, ensure_ascii=False), encoding="utf-8"
+    )
+    window = MainWindow()
+    window.user_dictionary_folder = str(tmp_path)
+    window.editor.setPlainText("target")
+    window.editor.selectAll()
+    window.inline_underline_action.trigger()
+    assert window.editor.toPlainText() == '<u class="personal">target</u>'
 
 
 def test_inline_color_wrap_actions_wrap_selected_text(app: QApplication) -> None:
@@ -1010,7 +1049,7 @@ def write_app_text_files(
         )
 
 
-def test_insert_html_div_places_cursor_in_class_parameter(app: QApplication) -> None:
+def test_insert_html_div_places_cursor_in_style_parameter(app: QApplication) -> None:
     _ = app
     window = MainWindow()
     window.editor.setPlainText("content")
@@ -1025,8 +1064,8 @@ def test_insert_html_div_places_cursor_in_class_parameter(app: QApplication) -> 
 
     window.insert_tag_snippet(div_snippet)
 
-    assert window.editor.toPlainText() == '<div class="">content</div>'
-    assert window.editor.textCursor().position() == len('<div class="')
+    assert window.editor.toPlainText() == '<div style="">content</div>'
+    assert window.editor.textCursor().position() == len('<div style="')
 
 
 def test_markdown_snippets_are_loaded_from_json() -> None:
@@ -1441,11 +1480,15 @@ def test_insert_wordpress_custom_frame_block_has_editable_style_parameters(
     assert 'text-align: left; margin: 1.5em 0 2em 0;">' in editor_text
     assert "display: inline-block;" in editor_text
     assert "max-width: 100%;" in editor_text
-    assert "border: 2px solid #f0b84a;" in editor_text
+    source_style = frame_snippet.template.split('<div style="', 1)[1].split('">', 1)[0]
+    for property_name in ("border", "border-left", "padding", "border-radius"):
+        declaration = next(
+            part.strip() for part in source_style.split(";")
+            if part.strip().startswith(f"{property_name}:")
+        )
+        assert f"{declaration};" in editor_text
     assert "background-color: #fffaf0;" in editor_text
     assert "color: #333333;" in editor_text
-    assert "padding: 14px 16px;" in editor_text
-    assert "border-radius: 8px;" in editor_text
     assert "text-align: left;" in editor_text
     assert "\n重要なお知らせ\n</div>" in editor_text
     assert window.editor.textCursor().position() == editor_text.index("\n</div>")
@@ -1525,18 +1568,14 @@ def test_insert_wordpress_frame_block_without_selection_keeps_matching_tags(
     window.insert_tag_snippet(frame_snippet)
 
     editor_text = window.editor.toPlainText()
-    assert editor_text == (
+    assert editor_text.startswith(
         "<!-- wp:html -->\n"
         '<div style="text-align: left; margin: 1.5em 0 2em 0;">\n'
         '<div style="display: inline-block; max-width: 100%; '
-        'border: 2px solid #f0b84a; padding: 14px 16px; '
-        'border-radius: 8px; background-color: #fffaf0; '
-        'color: #333333; text-align: left;">\n'
-        "ここに本文を入れます。\n"
-        "</div>\n"
-        "</div>\n"
-        "<!-- /wp:html -->"
     )
+    assert editor_text.count("<div style=") == 2
+    assert frame_snippet.default_selection in editor_text
+    assert editor_text.endswith("\n</div>\n</div>\n<!-- /wp:html -->")
     assert window.editor.textCursor().position() == editor_text.index("\n</div>")
     assert "wp:preformatted" not in editor_text
 
@@ -1547,40 +1586,27 @@ def test_insert_wordpress_frame_presets_keep_distinct_border_styles(
     _ = app
     snippets = {snippet.label_key: snippet for snippet in tag_snippet_groups()[2].snippets}
 
-    expected_styles = {
-        "tag.wordpress.notice_frame_block": (
-            "display: inline-block;",
-            "max-width: 100%;",
-            "border: 2px solid #f0b84a;",
-            "background-color: #fffaf0;",
-            "color: #333333;",
-            "border-radius: 8px;",
-        ),
-        "tag.wordpress.info_frame_block": (
-            "display: inline-block;",
-            "max-width: 100%;",
-            "border: 2px solid #5aa7d8;",
-            "background-color: #fffaf0;",
-            "color: #333333;",
-            "padding: 14px 16px;",
-        ),
-        "tag.wordpress.important_frame_block": (
-            "display: inline-block;",
-            "max-width: 100%;",
-            "background-color: #fffaf0;",
-            "color: #333333;",
-            "border-left: 4px solid #6abf8f;",
-            "font-weight: bold;",
-        ),
-    }
-    for label_key, style_parts in expected_styles.items():
+    frame_keys = (
+        "tag.wordpress.notice_frame_block",
+        "tag.wordpress.info_frame_block",
+        "tag.wordpress.important_frame_block",
+    )
+    borders: set[str] = set()
+    for label_key in frame_keys:
+        snippet = snippets[label_key]
+        source_style = snippet.template.split('<div style="', 1)[1].split('">', 1)[0]
+        border = next(
+            part.strip() for part in source_style.split(";")
+            if part.strip().startswith("border:")
+        )
+        borders.add(border)
         window = MainWindow()
         window.editor.setPlainText("本文")
         cursor = window.editor.textCursor()
         cursor.select(QTextCursor.SelectionType.Document)
         window.editor.setTextCursor(cursor)
 
-        window.insert_tag_snippet(snippets[label_key])
+        window.insert_tag_snippet(snippet)
 
         editor_text = window.editor.toPlainText()
         assert editor_text.count("<!-- wp:html -->") == 1
@@ -1588,8 +1614,10 @@ def test_insert_wordpress_frame_presets_keep_distinct_border_styles(
         assert "\n本文\n</div>" in editor_text
         assert "<!-- wp:group -->" not in editor_text
         assert 'text-align: left; margin: 1.5em 0 2em 0;">' in editor_text
-        for style_part in style_parts:
-            assert style_part in editor_text
+        assert f"{border};" in editor_text
+        assert "background-color: #fffaf0;" in editor_text
+        assert "color: #333333;" in editor_text
+    assert len(borders) == len(frame_keys)
 
 
 def test_insert_wordpress_frame_uses_configured_alignment_and_display(

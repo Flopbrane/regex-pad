@@ -61,6 +61,10 @@ No commercial Qt entitlement or completed dependency-source delivery is assumed.
 Regular expression search and replacement use Python's standard-library `re` module.
 
 See the [user guide](docs/HOW_TO_USE.md) for step-by-step instructions and shortcuts.
+`Ctrl+U` wraps selected text in `<u style="">...</u>` so the style can be filled in later.
+**Options > Shortcut key settings** lists application and Windows/standard keys.
+Editable application keys and custom text shortcuts are saved locally in
+`shortcutkey_ref.json` beside `config.json`.
 
 ## Unicode normalization replacement
 
@@ -85,6 +89,11 @@ NFKC or NFKD. Compatibility normalization can change visual distinctions, so
 preview the matches and use Undo if the selected form is not appropriate.
 
 ## Search/Replace Presets (current source build)
+
+The preset editor also has **Edit insertion dictionaries** for HTML, Markdown,
+WordPress, and paragraph/shortcut templates. It validates changes and saves
+user copies under `user_dictionaries/` (or the configured user dictionary
+folder); Linter reference dictionaries are excluded.
 
 Use **Search > Search/Replace Presets** to create, open and run, edit, or delete
 saved presets. In **Search > Find / Replace**, **Save Current Search/Replace

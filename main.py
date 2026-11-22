@@ -65,6 +65,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 from config import default_config_path, migrate_legacy_settings_if_needed
+from dialogs.dictionary_editor_dialog import DictionaryEditorDialog
 from dialogs.find_replace_dialog import FindReplaceDialog
 from dialogs.grammar_check_dialog import GrammarCheckDialog
 from dialogs.macro_editor_controller import MacroEditorController
@@ -73,10 +74,19 @@ from dialogs.macro_execution_controller import MacroExecutionController
 from dialogs.options_dialog import OptionsDialog
 from dialogs.regex_help_dialog import RegexHelpDialog
 from dialogs.schema_reference_dialog import SchemaReferenceDialog
+from dialogs.shortcut_settings_dialog import (
+    ShortcutActionInfo,
+    ShortcutSettingsDialog,
+    validate_shortcut_settings,
+)
 from dialogs.tag_insert_dialog import TagInsertDialog
 from dialogs.user_help_dialog import UserHelpDialog
+from editor.dictionary_edit_service import DictionaryEditService
 from editor.editor_tab import EditorTab
-from editor.paragraph_insert_rules import load_paragraph_insert_rule_book
+from editor.paragraph_insert_rules import (
+    ParagraphInsertDictionaryError,
+    load_paragraph_insert_rule_book,
+)
 from editor.paragraph_splitter import (
     ParagraphBlock,
     ParagraphReplacement,
@@ -131,6 +141,12 @@ from search.html_typo_lint import HtmlTypoLintMessage, lint_html_typos
 from search.search_engine import SearchEngine, SearchMatch, SearchOptions
 from settings.color_presets import ColorPreset, load_color_preset_catalog
 from settings.settings_manager import EditorSettings, SettingsManager
+from settings.shortcut_settings import (
+    ShortcutSettings,
+    ShortcutSettingsError,
+    load_shortcut_settings,
+    save_shortcut_settings,
+)
 
 GrammarLintMessage = HtmlTypoLintMessage | CssLintIssue
 GRAMMAR_SEVERITY_ORDER = {
@@ -238,6 +254,13 @@ class MainWindow(QMainWindow):
         config_path = settings_path or default_config_path()
         migrate_legacy_settings_if_needed(config_path)
         self.settings_manager = SettingsManager(config_path)
+        self.shortcut_settings_path = config_path.with_name("shortcutkey_ref.json")
+        self.shortcut_settings_error = ""
+        try:
+            self.shortcut_settings = load_shortcut_settings(self.shortcut_settings_path)
+        except ShortcutSettingsError as error:
+            self.shortcut_settings = ShortcutSettings()
+            self.shortcut_settings_error = str(error)
         self.unsaved_backup_enabled = (
             unsaved_backup_path is not None
             or os.environ.get("QT_QPA_PLATFORM") != "offscreen"
@@ -354,7 +377,16 @@ class MainWindow(QMainWindow):
 
         self.resize(900, 650)
         self._create_actions()
+        self._shortcut_action_info = self._collect_shortcut_actions()
+        if not self.shortcut_settings_error:
+            problem = validate_shortcut_settings(
+                self.shortcut_settings, self._shortcut_action_info
+            )
+            if problem:
+                self.shortcut_settings_error = self.translator.text(problem)
+                self.shortcut_settings = ShortcutSettings()
         self._create_menus()
+        self._apply_shortcut_settings()
         self._create_status_bar()
         self.editor = self._create_editor_tab()
         self._restore_settings(settings)
@@ -464,24 +496,26 @@ class MainWindow(QMainWindow):
 
         self.insert_br_action = QAction(self)
         self.insert_br_action.setShortcut("F8")
-        self.insert_br_action.triggered.connect(lambda: self.insert_text_at_cursor("<br>"))
+        self.insert_br_action.triggered.connect(
+            lambda: self.insert_shortcut_template("insert_br")
+        )
 
         self.insert_br_br_action = QAction(self)
         self.insert_br_br_action.setShortcut("F9")
         self.insert_br_br_action.triggered.connect(
-            lambda: self.insert_text_at_cursor("<br><br>")
+            lambda: self.insert_shortcut_template("insert_br_br")
         )
 
         self.inline_strong_action = QAction(self)
         self.inline_strong_action.setShortcut("Ctrl+B")
         self.inline_strong_action.triggered.connect(
-            lambda: self.wrap_selection_with_inline_html("<strong>", "</strong>")
+            lambda: self.insert_shortcut_template("inline_strong")
         )
 
         self.inline_underline_action = QAction(self)
         self.inline_underline_action.setShortcut("Ctrl+U")
         self.inline_underline_action.triggered.connect(
-            lambda: self.wrap_selection_with_inline_html("<u>", "</u>")
+            lambda: self.insert_shortcut_template("inline_underline")
         )
 
         self.inline_color_actions: dict[str, QAction] = {}
@@ -492,9 +526,8 @@ class MainWindow(QMainWindow):
                 [QKeySequence(shortcut) for shortcut in preset.shortcuts]
             )
             action.triggered.connect(
-                lambda checked=False, value=preset.value: self.wrap_selection_with_inline_html(
-                    f'<span style="color: {value}">',
-                    "</span>",
+                lambda checked=False, value=preset.value: self.insert_shortcut_template(
+                    "inline_color", value
                 )
             )
             self.inline_color_actions[preset.identifier] = action
@@ -610,6 +643,9 @@ class MainWindow(QMainWindow):
         self.options_action.setShortcut("Ctrl+,")
         self.options_action.triggered.connect(self.show_options_dialog)
 
+        self.shortcut_settings_action = QAction(self)
+        self.shortcut_settings_action.triggered.connect(self.show_shortcut_settings_dialog)
+
         self.user_help_action = QAction(self)
         self.user_help_action.setShortcut("F1")
         self.user_help_action.triggered.connect(self.show_user_help_dialog)
@@ -629,6 +665,64 @@ class MainWindow(QMainWindow):
         self.language_action_group.setExclusive(True)
         self.language_action_group.addAction(self.english_action)
         self.language_action_group.addAction(self.japanese_action)
+
+    def _collect_shortcut_actions(self) -> dict[str, ShortcutActionInfo]:
+        """Capture original shortcuts before loading portable overrides."""
+        actions = {
+            "new": self.new_action, "open": self.open_action,
+            "save": self.save_action, "save_as": self.save_as_action,
+            "exit": self.exit_action, "undo": self.undo_action,
+            "redo": self.redo_action, "select_all": self.select_all_action,
+            "copy_rectangular": self.copy_rectangular_selection_action,
+            "insert_br": self.insert_br_action,
+            "insert_br_br": self.insert_br_br_action,
+            "inline_strong": self.inline_strong_action,
+            "inline_underline": self.inline_underline_action,
+            "insert_tag": self.insert_tag_picker_action,
+            "find": self.find_action, "grammar_check": self.grammar_check_action,
+            "wordpress_preview": self.wordpress_preview_action,
+            "wordpress_theme_preview": self.wordpress_theme_preview_action,
+            "options": self.options_action, "help": self.user_help_action,
+        }
+        actions.update({
+            f"color_{identifier}": action
+            for identifier, action in self.inline_color_actions.items()
+        })
+        locked = {"exit", "undo", "redo", "select_all", "help"}
+        return {
+            identifier: ShortcutActionInfo(
+                action,
+                tuple(key.toString(QKeySequence.SequenceFormat.PortableText)
+                      for key in action.shortcuts()),
+                identifier in locked,
+            )
+            for identifier, action in actions.items()
+            if action.shortcuts()
+        }
+
+    def _apply_shortcut_settings(self) -> None:
+        """Apply saved keys and rebuild actions for plain-text snippets."""
+        for identifier, info in self._shortcut_action_info.items():
+            primary = (
+                info.defaults[0] if info.locked else
+                self.shortcut_settings.overrides.get(identifier, info.defaults[0])
+            )
+            info.action.setShortcuts([
+                QKeySequence(value) for value in (primary, *info.defaults[1:])
+            ])
+        for action in getattr(self, "_custom_shortcut_actions", []):
+            self.custom_snippet_menu.removeAction(action)
+            action.deleteLater()
+        self._custom_shortcut_actions: list[QAction] = []
+        for snippet in self.shortcut_settings.snippets:
+            action = QAction(snippet.name, self)
+            action.setShortcut(QKeySequence(snippet.shortcut))
+            action.triggered.connect(
+                lambda checked=False, text=snippet.text: self.insert_text_at_cursor(text)
+            )
+            self.custom_snippet_menu.addAction(action)
+            self._custom_shortcut_actions.append(action)
+        self.custom_snippet_menu.setEnabled(bool(self._custom_shortcut_actions))
 
     def _create_menus(self) -> None:
         """Create menus for the main window."""
@@ -662,6 +756,8 @@ class MainWindow(QMainWindow):
         self.edit_menu.addAction(self.inline_underline_action)
         for preset in self.color_presets.text_colors:
             self.edit_menu.addAction(self.inline_color_actions[preset.identifier])
+        self.custom_snippet_menu = QMenu(self)
+        self.edit_menu.addMenu(self.custom_snippet_menu)
         self.edit_menu.addSeparator()
         self.edit_menu.addAction(self.insert_tag_picker_action)
         self.edit_menu.addMenu(self.insert_tag_menu)
@@ -700,6 +796,7 @@ class MainWindow(QMainWindow):
 
         self.options_menu = QMenu(self)
         self.options_menu.addAction(self.options_action)
+        self.options_menu.addAction(self.shortcut_settings_action)
         menu_bar.addMenu(self.options_menu)
 
         self.language_menu = QMenu(self)
@@ -1259,6 +1356,8 @@ class MainWindow(QMainWindow):
         self.line_numbers_action.setText(self.translator.text("action.line_numbers"))
         self.ruler_action.setText(self.translator.text("options.item.ruler"))
         self.options_action.setText(self.translator.text("action.options"))
+        self.shortcut_settings_action.setText(self.translator.text("shortcut.menu"))
+        self.custom_snippet_menu.setTitle(self.translator.text("shortcut.snippets_menu"))
         self.user_help_action.setText(self.translator.text("action.user_help"))
         self.schema_reference_action.setText(
             self.translator.text("action.schema_reference")
@@ -1427,6 +1526,7 @@ class MainWindow(QMainWindow):
         """Open or raise the independent structured macro editor."""
         if self.macro_editor_window is None:
             self.macro_editor_window = MacroEditorWindow(self.translator, self)
+            self.macro_editor_window.dictionary_requested.connect(self.show_dictionary_editor)
             self.macro_editor_controller = MacroEditorController(self.macro_editor_window, LOGGER)
             self.macro_execution_controller = MacroExecutionController(
                 self.translator, LOGGER,
@@ -1450,6 +1550,23 @@ class MainWindow(QMainWindow):
         self.macro_editor_window.show()
         self.macro_editor_window.raise_()
         self.macro_editor_window.activateWindow()
+
+    def show_dictionary_editor(self) -> None:
+        """Open the editable insertion dictionaries from the preset editor."""
+        user_folder = Path(self.user_dictionary_folder) if self.user_dictionary_folder else None
+        dialog = DictionaryEditorDialog(
+            self.translator,
+            DictionaryEditService(user_folder),
+            self._dictionary_saved,
+            self.macro_editor_window or self,
+        )
+        dialog.exec()
+
+    def _dictionary_saved(self, save_file_path: Path) -> None:
+        """Activate validated user copies after a dictionary is saved."""
+        self.user_dictionary_folder = str(save_file_path.parent)
+        self._rebuild_insert_tag_menu()
+        self._save_settings()
 
     def new_search_preset(self) -> None:
         self.show_macro_editor()
@@ -1580,6 +1697,30 @@ class MainWindow(QMainWindow):
         selected_snippet = self.tag_insert_dialog.selected_choice()
         if selected_snippet is not None:
             self.insert_tag_snippet(selected_snippet)
+
+    def show_shortcut_settings_dialog(self) -> None:
+        """Edit portable shortcut bindings and user-defined text snippets."""
+        if self.shortcut_settings_error:
+            QMessageBox.warning(
+                self, self.translator.text("shortcut.title"),
+                self.translator.text("shortcut.load_error", error=self.shortcut_settings_error),
+            )
+            return
+        dialog = ShortcutSettingsDialog(
+            self.translator, self._shortcut_action_info, self.shortcut_settings, self
+        )
+        if dialog.exec() != ShortcutSettingsDialog.DialogCode.Accepted:
+            return
+        try:
+            save_shortcut_settings(self.shortcut_settings_path, dialog.settings)
+        except ShortcutSettingsError as error:
+            QMessageBox.warning(
+                self, self.translator.text("shortcut.title"),
+                self.translator.text("shortcut.save_error", error=str(error)),
+            )
+            return
+        self.shortcut_settings = dialog.settings
+        self._apply_shortcut_settings()
 
     def show_options_dialog(self) -> None:
         """Show the options dialog, allowing the user to modify editor and application settings."""
@@ -2376,18 +2517,22 @@ class MainWindow(QMainWindow):
         self.editor.setTextCursor(cursor)
         self.editor.setFocus()
 
-    def wrap_selection_with_inline_html(self, opening_tag: str, closing_tag: str) -> None:
+    def insert_shortcut_template(self, key: str, value: str = "") -> None:
+        """Insert a shortcut template from the active paragraph dictionary."""
         cursor = self.editor.textCursor()
-        insert_start = cursor.selectionStart()
         selected_text = cursor.selectedText().replace("\u2029", "\n")
-        insert_text = f"{opening_tag}{selected_text}{closing_tag}"
-
-        cursor.beginEditBlock()
-        cursor.insertText(insert_text)
-        cursor.endEditBlock()
-        cursor.setPosition(insert_start + len(opening_tag) + len(selected_text))
-        self.editor.setTextCursor(cursor)
-        self.editor.setFocus()
+        try:
+            insert_text, cursor_offset = load_paragraph_insert_rule_book(
+                self._tag_dictionaries_path()
+            ).render_shortcut(key, selected_text, value)
+        except ParagraphInsertDictionaryError as error:
+            QMessageBox.warning(
+                self,
+                self.translator.text("paragraph_split.error_title"),
+                self.translator.text("paragraph_split.dictionary_error", error=str(error)),
+            )
+            return
+        self.insert_text_at_cursor(insert_text, cursor_offset)
 
     def insert_paragraph_split_spacer(self) -> None:
         """Split the current paragraph and insert a WordPress spacer block."""

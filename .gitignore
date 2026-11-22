@@ -48,6 +48,8 @@ LINTER_MODIFICATION_REPORT.md
 # Local settings
 settings.json
 config.json
+shortcutkey_ref.json
+user_dictionaries/
 macro/preset_json_files/
 test_sample/
 

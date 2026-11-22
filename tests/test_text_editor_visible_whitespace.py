@@ -46,7 +46,7 @@ def test_visible_whitespace_marks_follow_individual_options(
     assert [
         (mark.text_position, mark.marker) for mark in editor.visible_whitespace_marks()
     ] == [
-        (1, "␣"),
+        (1, "·"),
         (5, "↵"),
         (10, "□"),
     ]
@@ -68,7 +68,7 @@ def test_visible_whitespace_options_do_not_modify_text(app: QApplication) -> Non
     assert [
         (mark.text_position, mark.marker) for mark in editor.visible_whitespace_marks()
     ] == [
-        (1, "␣"),
+        (1, "·"),
         (3, "→"),
         (5, "↵"),
     ]

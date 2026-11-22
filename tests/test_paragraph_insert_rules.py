@@ -31,6 +31,16 @@ def test_default_dictionary_is_valid_and_keeps_output_text_out_of_python() -> No
     assert rule_book.operation("insert_spacer").replacement.startswith("<!-- wp:spacer")
     assert rule_book.operation("insert_html").replacement.startswith("<!-- wp:html")
     assert rule_book.operation("decorated_block").replacement.startswith("<!-- wp:html")
+    assert rule_book.render_shortcut("inline_underline", "文章") == (
+        '<u style="">文章</u>', len('<u style="">文章')
+    )
+    assert rule_book.render_shortcut("inline_strong", "text") == (
+        "<strong>text</strong>", len("<strong>text")
+    )
+    literal = "{cursor} and {value}"
+    assert rule_book.render_shortcut("inline_underline", literal) == (
+        f'<u style="">{literal}</u>', len('<u style="">') + len(literal)
+    )
 
     source = Path("editor/paragraph_splitter.py").read_text(encoding="utf-8")
     assert "<!-- wp:" not in source
@@ -44,6 +54,34 @@ def test_user_dictionary_folder_without_paragraph_dictionary_uses_bundled_fallba
     rule_book = load_paragraph_insert_rule_book(tmp_path)
 
     assert rule_book.load_file_path == Path("dictionaries/paragraph_insert_dict.json").resolve()
+
+
+def test_old_user_dictionary_and_narrow_shortcut_override(tmp_path: Path) -> None:
+    load_data = json.loads(
+        Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
+    )
+    load_data.pop("shortcut_insertions")
+    load_file_path = tmp_path / "paragraph_insert_dict.json"
+    load_file_path.write_text(json.dumps(load_data, ensure_ascii=False), encoding="utf-8")
+    assert load_paragraph_insert_rule_book(tmp_path).render_shortcut("inline_underline", "A")[0] == '<u style="">A</u>'
+
+    load_data["shortcut_insertions"] = {"inline_underline": '<u class="custom">{selection}{cursor}</u>'}
+    load_file_path.write_text(json.dumps(load_data, ensure_ascii=False), encoding="utf-8")
+    book = load_paragraph_insert_rule_book(tmp_path)
+    assert book.render_shortcut("inline_underline", "A")[0] == '<u class="custom">A</u>'
+    assert book.render_shortcut("inline_strong", "A")[0] == "<strong>A</strong>"
+
+
+def test_shortcut_template_must_keep_selection_and_cursor(tmp_path: Path) -> None:
+    load_data = json.loads(
+        Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
+    )
+    load_data["shortcut_insertions"]["inline_underline"] = "<u>{selection}</u>"
+    (tmp_path / "paragraph_insert_dict.json").write_text(
+        json.dumps(load_data, ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(ParagraphInsertDictionaryError, match="inline_underline"):
+        load_paragraph_insert_rule_book(tmp_path)
 
 
 def test_invalid_replacement_without_cursor_is_rejected(tmp_path: Path) -> None:

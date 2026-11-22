@@ -1,5 +1,12 @@
 {
   "schema_version": 1,
+  "shortcut_insertions": {
+    "insert_br": "<br>{cursor}",
+    "insert_br_br": "<br><br>{cursor}",
+    "inline_strong": "<strong>{selection}{cursor}</strong>",
+    "inline_underline": "<u style=\"\">{selection}{cursor}</u>",
+    "inline_color": "<span style=\"color: {value}\">{selection}{cursor}</span>"
+  },
   "grammar": {
     "paragraph_block": {
       "search": "(?is)<!--\\s+wp:paragraph\\s+-->(?P<body>.*?)<!--\\s+/wp:paragraph\\s+-->",
@@ -62,7 +69,7 @@
     "insert_html": {
       "search": "(?s)^.*$",
       "exclude": "",
-      "replacement": "<!-- wp:html -->\n<pre\n    class=\"wp-block-code\"\n    style=\"display:inline-block; border:1px solid #999; padding:16px; border-radius:8px; background-color:#f9f9f9;\"\n><code>{selection}{cursor}</code></pre>\n<!-- /wp:html -->",
+      "replacement": "<!-- wp:html -->\n<pre\n    class=\"wp-block-code\"\n    style=\"display:inline-block; border:2px solid #0011ff; padding:16px; border-radius:8px;border-left: 4px solid #5802d9; background-color:#f3fecd;\"\n><code>{selection}{cursor}</code></pre>\n<!-- /wp:html -->",
       "content_transform": "code",
       "selection": {
         "allow_nonempty": true,
@@ -78,7 +85,7 @@
     "decorated_block": {
       "search": "(?s)^.*$",
       "exclude": "",
-      "replacement": "<!-- wp:html -->\n<div style=\"display: grid; border: 2px solid #4d29ff; font-weight: bold; background-color: #d0e7fb; color: #0c2c46; padding: 14px 16px; margin: 2em 0 2em 0;border-left: 4px solid #2401d0; border-radius: 10px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
+      "replacement": "<!-- wp:html -->\n<div style=\"display: inline-block; border: 2px solid #4d29ff; font-weight: bold; background-color: #d0e7fb; color: #0c2c46; padding: 14px 16px; margin: 2em 0 2em 0;border-left: 4px solid #2401d0; border-radius: 10px;\">\n{selection}{cursor}\n</div>\n<!-- /wp:html -->",
       "content_transform": "decorated",
       "selection": {
         "allow_nonempty": true,

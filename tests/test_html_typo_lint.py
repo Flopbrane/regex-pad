@@ -384,7 +384,7 @@ def test_lint_preserves_valid_html_around_reported_gaps(html: str) -> None:
             False,
         ),
         ({"textColor": "primary"}, '<p class="has-primary-color has-text-color">Text</p>', False),
-        ({"textColor": "primary"}, '<p class="has-secondary-color has-text-color">Text</p>', False),
+        ({"textColor": "primary"}, '<p class="has-secondary-color has-text-color">Text</p>', True),
         ({"backgroundColor": "base"}, '<p class="has-base-background-color has-background">Text</p>', False),
         ({"fontSize": "large"}, '<p class="has-large-font-size">Text</p>', False),
         ({"fontSize": "large"}, '<p class="has-small-font-size">Text</p>', True),

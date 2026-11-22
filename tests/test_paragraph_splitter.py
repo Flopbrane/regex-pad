@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from editor.paragraph_insert_rules import load_paragraph_insert_rule_book
 from editor.paragraph_splitter import (
     INSERT_SPACER_KEY,
     ParagraphSplitError,
@@ -16,6 +17,12 @@ from editor.paragraph_splitter import (
     wrap_selection_as_code_block,
     wrap_selection_as_decorated_block,
 )
+
+
+def _code_block_style() -> str:
+    """Read the editable code-block style instead of fixing its colors in tests."""
+    template = load_paragraph_insert_rule_book().operation("insert_html").replacement
+    return template.split('style="', 1)[1].split('"', 1)[0]
 
 
 def test_find_current_paragraph_block_detects_content_range() -> None:
@@ -108,8 +115,7 @@ def test_split_paragraph_insert_html_code_block_at_blank_line() -> None:
         "<!-- wp:html -->\n"
         "<pre\n"
         '    class="wp-block-code"\n'
-        '    style="display:inline-block; border:1px solid #999; padding:16px; '
-        'border-radius:8px; background-color:#f9f9f9;"\n'
+        f'    style="{_code_block_style()}"\n'
         "><code>\n"
         "</code></pre>\n"
         "<!-- /wp:html -->\n\n"
@@ -163,8 +169,7 @@ def test_wrap_selection_as_code_block_converts_br_to_newlines() -> None:
         "<!-- wp:html -->\n"
         "<pre\n"
         '    class="wp-block-code"\n'
-        '    style="display:inline-block; border:1px solid #999; padding:16px; '
-        'border-radius:8px; background-color:#f9f9f9;"\n'
+        f'    style="{_code_block_style()}"\n'
         "><code>・行1\n"
         "・行2\n"
         "・行3</code></pre>\n"
@@ -190,7 +195,9 @@ def test_wrap_selection_as_decorated_block_uses_div_frame() -> None:
 
     replacement = wrap_selection_as_decorated_block(text, start, end)
 
-    assert '<div style="display: grid;' in replacement.text
+    template = load_paragraph_insert_rule_book().operation("decorated_block").replacement
+    display = template.split('<div style="', 1)[1].split(";", 1)[0]
+    assert f'<div style="{display};' in replacement.text
     assert "border: 2px solid #4d29ff;" in replacement.text
     assert "background-color: #d0e7fb;" in replacement.text
     assert "border-left: 4px solid #2401d0;" in replacement.text
