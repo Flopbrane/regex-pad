@@ -54,6 +54,7 @@ test_sample/
 # Logs
 *.log
 *.zip
+/logs/
 # OS / editor
 .DS_Store
 Thumbs.db
