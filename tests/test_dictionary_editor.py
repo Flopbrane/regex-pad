@@ -162,3 +162,14 @@ def test_preset_editor_opens_dictionary_action_and_saved_copy_becomes_active(
     main.close()
     preset_window.close()
     app.processEvents()
+
+
+def test_relative_user_dictionary_folder_resolves_beside_app(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    import main as main_module
+
+    monkeypatch.setattr(main_module, "app_base_dir", lambda: tmp_path)
+    assert MainWindow._resolve_user_dictionary_folder("user_dictionaries") == (
+        tmp_path / "user_dictionaries"
+    )

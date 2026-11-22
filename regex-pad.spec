@@ -64,9 +64,9 @@ def _project_json_datas():
     # Keep Linter evidence JSON (including analysis_cases and root verification
     # records) in the bundle.  They are retained research material; only the
     # validated dictionaries under dictionaries/ are used as runtime rules.
-    ignored_parts = {"build", "dist", "_internal", ".git", ".vscode", "runtime", "Temp", "install_records", "logs", "cache", "modules", "data", "preset_json_files", ".deleted_presets"}
+    ignored_parts = {"build", "dist", "_internal", ".git", ".vscode", "runtime", "Temp", "install_records", "logs", "cache", "modules", "data", "user_dictionaries", "preset_json_files", ".deleted_presets"}
     ignored_names = {"pyrightconfig.json"}
-    user_editable_root_json = {Path("config.json"), Path("color_presets.json")}
+    user_editable_root_json = {Path("config.json"), Path("color_presets.json"), Path("shortcutkey_ref.json")}
     datas = []
     for json_path in PROJECT_ROOT.rglob("*.json"):
         relative_path = json_path.relative_to(PROJECT_ROOT)

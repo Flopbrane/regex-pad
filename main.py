@@ -1553,7 +1553,10 @@ class MainWindow(QMainWindow):
 
     def show_dictionary_editor(self) -> None:
         """Open the editable insertion dictionaries from the preset editor."""
-        user_folder = Path(self.user_dictionary_folder) if self.user_dictionary_folder else None
+        user_folder = (
+            self._resolve_user_dictionary_folder(self.user_dictionary_folder)
+            if self.user_dictionary_folder else None
+        )
         dialog = DictionaryEditorDialog(
             self.translator,
             DictionaryEditService(user_folder),
@@ -1564,7 +1567,12 @@ class MainWindow(QMainWindow):
 
     def _dictionary_saved(self, save_file_path: Path) -> None:
         """Activate validated user copies after a dictionary is saved."""
-        self.user_dictionary_folder = str(save_file_path.parent)
+        default_user_folder = app_base_dir() / "user_dictionaries"
+        self.user_dictionary_folder = (
+            "user_dictionaries"
+            if save_file_path.parent.resolve() == default_user_folder.resolve()
+            else str(save_file_path.parent)
+        )
         self._rebuild_insert_tag_menu()
         self._save_settings()
 
@@ -1852,8 +1860,9 @@ class MainWindow(QMainWindow):
         if not dictionary_check_enabled or not user_dictionary_folder:
             return True
         try:
-            tag_snippet_groups(Path(user_dictionary_folder))
-            load_paragraph_insert_rule_book(Path(user_dictionary_folder))
+            dictionaries_path = self._resolve_user_dictionary_folder(user_dictionary_folder)
+            tag_snippet_groups(dictionaries_path)
+            load_paragraph_insert_rule_book(dictionaries_path)
         except (OSError, TypeError, ValueError) as error:
             LOGGER(
                 error,
@@ -1873,7 +1882,13 @@ class MainWindow(QMainWindow):
     def _tag_dictionaries_path(self) -> Path | None:
         if not self.user_dictionary_folder:
             return None
-        return Path(self.user_dictionary_folder)
+        return self._resolve_user_dictionary_folder(self.user_dictionary_folder)
+
+    @staticmethod
+    def _resolve_user_dictionary_folder(folder: str) -> Path:
+        """Resolve a portable relative user dictionary folder beside the app."""
+        candidate = Path(folder)
+        return candidate if candidate.is_absolute() else app_base_dir() / candidate
 
     def _internal_data_folder(self) -> Path:
         """Return the app-owned internal data folder for portable runtime files."""

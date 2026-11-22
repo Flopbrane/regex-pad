@@ -23,8 +23,10 @@ $DeletionListSourcePath = Join-Path $ProjectRoot "DELET_ITEMS_LIST.md"
 $ConfigSourcePath = Join-Path $ProjectRoot "config.json"
 $ColorPresetsSourcePath = Join-Path $ProjectRoot "color_presets.json"
 $ExistingDistAppPath = Join-Path (Join-Path $ProjectRoot "dist") $AppDistName
-$PreservedConfigPath = $null
-$PreservedColorPresetsPath = $null
+$PortableFiles = @("config.json", "color_presets.json", "shortcutkey_ref.json")
+$PortableFolders = @("user_dictionaries", "macro\preset_json_files")
+$PreservedPortableDataPath = $null
+$BuildCompleted = $false
 
 function Copy-DirectoryFresh {
     param(
@@ -145,10 +147,11 @@ function Assert-ProjectJsonFilesBundled {
     # Keep this filter aligned with _project_json_datas() in regex-pad.spec.
     $IgnoredParts = @(
         "build", "dist", "_internal", ".git", ".vscode", "runtime",
-        "Temp", "install_records", "logs", "cache", "modules", "data"
+        "Temp", "install_records", "logs", "cache", "modules", "data",
+        "user_dictionaries", "preset_json_files", ".deleted_presets"
     )
     $IgnoredNames = @("pyrightconfig.json")
-    $PortableRootJson = @("config.json", "color_presets.json")
+    $PortableRootJson = @("config.json", "color_presets.json", "shortcutkey_ref.json")
 
     Get-ChildItem -LiteralPath $SourceRoot -Recurse -File -Filter "*.json" | ForEach-Object {
         $RelativePath = [System.IO.Path]::GetRelativePath($SourceRoot, $_.FullName)
@@ -170,6 +173,62 @@ function Assert-ProjectJsonFilesBundled {
         if ((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $BundledPath -Algorithm SHA256).Hash) {
             throw "Bundled project JSON does not match its source: $BundledPath"
         }
+    }
+}
+
+function Copy-PortableEntry {
+    param(
+        [Parameter(Mandatory = $true)] [string] $SourcePath,
+        [Parameter(Mandatory = $true)] [string] $DestinationPath
+    )
+
+    if (Test-Path -LiteralPath $SourcePath -PathType Leaf) {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $DestinationPath) -Force | Out-Null
+        Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
+        if ((Get-FileHash -LiteralPath $SourcePath -Algorithm SHA256).Hash -ne
+            (Get-FileHash -LiteralPath $DestinationPath -Algorithm SHA256).Hash) {
+            throw "Portable file copy differs from source: $DestinationPath"
+        }
+        return
+    }
+
+    if (Test-Path -LiteralPath $SourcePath -PathType Container) {
+        New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
+        Get-ChildItem -LiteralPath $SourcePath -Recurse -File | ForEach-Object {
+            $RelativePath = [System.IO.Path]::GetRelativePath($SourcePath, $_.FullName)
+            $CopiedPath = Join-Path $DestinationPath $RelativePath
+            New-Item -ItemType Directory -Path (Split-Path -Parent $CopiedPath) -Force | Out-Null
+            Copy-Item -LiteralPath $_.FullName -Destination $CopiedPath -Force
+            if ((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash -ne
+                (Get-FileHash -LiteralPath $CopiedPath -Algorithm SHA256).Hash) {
+                throw "Portable folder copy differs from source: $CopiedPath"
+            }
+        }
+    }
+}
+
+function Set-PortableProjectPaths {
+    param(
+        [Parameter(Mandatory = $true)] [string] $ConfigPath,
+        [Parameter(Mandatory = $true)] [string] $SourceRoot
+    )
+
+    $Settings = Get-Content -LiteralPath $ConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $Changed = $false
+    $SourcePresetFolder = [System.IO.Path]::GetFullPath((Join-Path $SourceRoot "macro\preset_json_files"))
+    $SourceUserDictionaryFolder = [System.IO.Path]::GetFullPath((Join-Path $SourceRoot "user_dictionaries"))
+    if ($Settings.macro_folder -and
+        [System.IO.Path]::GetFullPath($Settings.macro_folder) -eq $SourcePresetFolder) {
+        $Settings.macro_folder = ""
+        $Changed = $true
+    }
+    if ($Settings.user_dictionary_folder -and
+        [System.IO.Path]::GetFullPath($Settings.user_dictionary_folder) -eq $SourceUserDictionaryFolder) {
+        $Settings.user_dictionary_folder = "user_dictionaries"
+        $Changed = $true
+    }
+    if ($Changed) {
+        $Settings | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $ConfigPath -Encoding utf8
     }
 }
 
@@ -197,20 +256,20 @@ if (-not (Test-Path -LiteralPath $ColorPresetsSourcePath -PathType Leaf)) {
     throw "color_presets.json was not found: $ColorPresetsSourcePath"
 }
 
-$ExistingConfigPath = Join-Path $ExistingDistAppPath "config.json"
-if (Test-Path -LiteralPath $ExistingConfigPath -PathType Leaf) {
-    $PreservedConfigPath = [System.IO.Path]::GetTempFileName()
-    Copy-Item -LiteralPath $ExistingConfigPath -Destination $PreservedConfigPath -Force
-}
-
-$ExistingColorPresetsPath = Join-Path $ExistingDistAppPath "color_presets.json"
-if (Test-Path -LiteralPath $ExistingColorPresetsPath -PathType Leaf) {
-    $PreservedColorPresetsPath = [System.IO.Path]::GetTempFileName()
-    Copy-Item -LiteralPath $ExistingColorPresetsPath -Destination $PreservedColorPresetsPath -Force
-}
-
 Push-Location $ProjectRoot
 try {
+    foreach ($PortableName in @($PortableFiles) + @($PortableFolders)) {
+        $ExistingPath = Join-Path $ExistingDistAppPath $PortableName
+        if (Test-Path -LiteralPath $ExistingPath) {
+            if ($null -eq $PreservedPortableDataPath) {
+                $PreservedPortableDataPath = Join-Path ([System.IO.Path]::GetTempPath()) `
+                    ("regexpad-build-" + [guid]::NewGuid().ToString("N"))
+            }
+            Copy-PortableEntry -SourcePath $ExistingPath `
+                -DestinationPath (Join-Path $PreservedPortableDataPath $PortableName)
+        }
+    }
+
     $OriginalPath = $env:Path
     $OriginalSkipWordPressRuntime = $env:REGEXPAD_SKIP_WORDPRESS_RUNTIME
     $env:Path = (($OriginalPath -split ";") | Where-Object {
@@ -268,12 +327,22 @@ try {
         -SourceRoot $ProjectRoot `
         -DestinationRoot $InternalPath
 
-    # Keep user-owned portable settings beside regex-pad.exe. An earlier dist
-    # configuration wins over the project defaults when rebuilding in place.
-    $ConfigToCopy = if ($null -ne $PreservedConfigPath) { $PreservedConfigPath } else { $ConfigSourcePath }
-    $ColorPresetsToCopy = if ($null -ne $PreservedColorPresetsPath) { $PreservedColorPresetsPath } else { $ColorPresetsSourcePath }
-    Copy-Item -LiteralPath $ConfigToCopy -Destination (Join-Path $DistAppPath "config.json") -Force
-    Copy-Item -LiteralPath $ColorPresetsToCopy -Destination (Join-Path $DistAppPath "color_presets.json") -Force
+    # Existing dist data wins. On a first build, copy local portable data.
+    foreach ($PortableName in @($PortableFiles) + @($PortableFolders)) {
+        $SourcePath = Join-Path $ProjectRoot $PortableName
+        if ($null -ne $PreservedPortableDataPath) {
+            $PreservedPath = Join-Path $PreservedPortableDataPath $PortableName
+            if (Test-Path -LiteralPath $PreservedPath) {
+                $SourcePath = $PreservedPath
+            }
+        }
+        Copy-PortableEntry -SourcePath $SourcePath `
+            -DestinationPath (Join-Path $DistAppPath $PortableName)
+        if ($PortableName -eq "config.json") {
+            Set-PortableProjectPaths -ConfigPath (Join-Path $DistAppPath "config.json") `
+                -SourceRoot $ProjectRoot
+        }
+    }
     foreach ($PortableFileName in @("config.json", "color_presets.json")) {
         $PortableFilePath = Join-Path $DistAppPath $PortableFileName
         if (-not (Test-Path -LiteralPath $PortableFilePath -PathType Leaf)) {
@@ -323,6 +392,7 @@ try {
     Write-Host "Portable settings are beside regex-pad.exe: $DistAppPath"
     Write-Host "Portable logs will be written to: $LogOutputPath"
     Write-Host "Copied release documentation beside regex-pad.exe: $DistAppPath"
+    $BuildCompleted = $true
 
     if (Test-Path -LiteralPath $PyInstallerCachePath) {
         $LocalAppDataPath = (Resolve-Path -LiteralPath $env:LOCALAPPDATA).Path
@@ -338,11 +408,18 @@ finally {
         $env:Path = $OriginalPath
     }
     $env:REGEXPAD_SKIP_WORDPRESS_RUNTIME = $OriginalSkipWordPressRuntime
-    if ($null -ne $PreservedConfigPath -and (Test-Path -LiteralPath $PreservedConfigPath)) {
-        Remove-Item -LiteralPath $PreservedConfigPath -Force
-    }
-    if ($null -ne $PreservedColorPresetsPath -and (Test-Path -LiteralPath $PreservedColorPresetsPath)) {
-        Remove-Item -LiteralPath $PreservedColorPresetsPath -Force
+    if ($null -ne $PreservedPortableDataPath -and (Test-Path -LiteralPath $PreservedPortableDataPath)) {
+        $ResolvedPreservedPath = (Resolve-Path -LiteralPath $PreservedPortableDataPath).Path
+        $ExpectedTempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+        if (-not $ResolvedPreservedPath.StartsWith($ExpectedTempRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Unexpected portable backup path: $ResolvedPreservedPath"
+        }
+        if ($BuildCompleted) {
+            Remove-Item -LiteralPath $ResolvedPreservedPath -Recurse -Force
+        }
+        else {
+            Write-Warning "Build did not complete. Portable data backup remains at: $ResolvedPreservedPath"
+        }
     }
     Pop-Location
 }

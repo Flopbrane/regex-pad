@@ -58,8 +58,11 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(
     assert ("linter_modification_manifest.json", ".") in app_datas
     assert ("config.json", ".") not in app_datas
     assert ("color_presets.json", ".") not in app_datas
+    assert ("shortcutkey_ref.json", ".") not in app_datas
     assert all(not source.startswith("_internal/") for source, _target in app_datas)
     assert all(not source.startswith("runtime/") for source, _target in app_datas)
+    assert all(not source.startswith("user_dictionaries/") for source, _target in app_datas)
+    assert all("preset_json_files/" not in source for source, _target in app_datas)
 
     analysis_path = tmp_path / "analysis_cases" / "evidence_verification.json"
     analysis_path.parent.mkdir()
@@ -73,6 +76,22 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(
         "analysis_cases/evidence_verification.json",
         "analysis_cases",
     ) in project_json_datas()
+    for relative_path in (
+        "shortcutkey_ref.json",
+        "user_dictionaries/html_dict.json",
+        "macro/preset_json_files/personal.json",
+    ):
+        sample = tmp_path / relative_path
+        sample.parent.mkdir(parents=True, exist_ok=True)
+        sample.write_text("{}", encoding="utf-8")
+    assert all(
+        source not in {
+            "shortcutkey_ref.json",
+            "user_dictionaries/html_dict.json",
+            "macro/preset_json_files/personal.json",
+        }
+        for source, _target in project_json_datas()
+    )
 
 
 def test_pyinstaller_spec_builds_gui_app_without_upx() -> None:
@@ -100,10 +119,12 @@ def test_build_script_copies_and_verifies_runtime_json_and_portable_settings() -
     assert '-SourceRoot $ProjectRoot' in build_script
     assert '-DestinationRoot $InternalPath' in build_script
     assert '-DestinationPath (Join-Path $InternalPath "dictionaries")' in build_script
-    assert 'Join-Path $DistAppPath "config.json"' in build_script
-    assert 'Join-Path $DistAppPath "color_presets.json"' in build_script
-    assert "$PreservedConfigPath" in build_script
-    assert "$PreservedColorPresetsPath" in build_script
+    assert '"config.json", "color_presets.json", "shortcutkey_ref.json"' in build_script
+    assert '"user_dictionaries", "macro\\preset_json_files"' in build_script
+    assert "$PreservedPortableDataPath" in build_script
+    assert 'Copy-PortableEntry -SourcePath $SourcePath' in build_script
+    assert 'Set-PortableProjectPaths -ConfigPath' in build_script
+    assert '"user_dictionaries"' in build_script
     assert '$LogOutputPath = Join-Path $DistAppPath "logs"' in build_script
     assert 'Test-Path -LiteralPath $LogOutputPath -PathType Container' in build_script
 

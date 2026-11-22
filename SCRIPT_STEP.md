@@ -4974,3 +4974,9 @@ Canonical propagation and final concentrated-test results:
 - 検索/置換プリセットエディターに「挿入辞書を編集」を追加。HTML、Markdown、WordPress、段落・ショートカット定型文の4辞書を項目別またはJSONで編集できる。Linter基準辞書とstandardsは一覧・読込・保存から除外した。
 - 既存の辞書検証を通過した場合のみ、アプリ横のuser_dictionariesまたは設定済みのユーザー辞書フォルダーに一時ファイル経由で保存する。同梱辞書と利用者の未保存データは保持する。保存後はユーザー辞書を有効にし、タグ挿入メニューを更新する。`user_dictionaries/`をgitignoreに追加。
 - README日英、使用ガイド日英、辞書READMEを更新。指定Pythonで辞書編集テスト7件成功。全体pytestは971 passed / 1 deselectedで結果表示後にプロセスが残ったため手動停止。Ruff全体成功、Pyright 0 errors / 0 warnings、git diff --check成功。実機GUIとEXEの確認は未実施。
+
+## 2026-11-22 EXE同梱と再ビルド時の利用者データ確認
+
+- `regex-pad.spec`のJSON収集から`shortcutkey_ref.json`、`user_dictionaries/`、`macro/preset_json_files/`、`.deleted_presets/`を除外。翻訳、タグ・段落辞書、Linter基準辞書、WordPressプレビュー資材は同梱対象に維持した。`build.ps1`側の収集照合条件も合わせた。
+- `build.ps1`で再ビルド前にEXE横の設定・色設定・ショートカット・ユーザー辞書・プリセットを退避し、完成後に復元するよう変更。初回ビルドではプロジェクト側の対応ファイルをコピーする。コピーをハッシュ確認し、ビルド失敗時は退避場所を残す。開発フォルダーを指す既定のプリセット・ユーザー辞書パスは配布先で使用できる値に補正する。`main.py`は相対指定のユーザー辞書フォルダーをアプリ横として解決する。
+- 指定PythonでPyInstaller 6.22.2のフルビルドを2回実施し、WordPress資材234件を検証。配布先の辞書・翻訳・プリセットの配置と代表ファイルのSHA-256一致、再ビルド前後の設定・色設定・プリセットのSHA-256一致を確認。個人用JSONが`_internal`へ混入していないことを確認。PowerShell構文解析、利用者データのコピー・パス補正スモーク、全体pytest 972 passed / 1 deselected、Ruff全体、Pyright 0 errors / 0 warnings、git diff --checkを確認。全体pytestは結果表示後にプロセスが残るため手動停止。EXE実機GUI操作は未実施。
