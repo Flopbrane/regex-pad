@@ -36,6 +36,7 @@ class MacroNormalizer:
                 selected_only=step.selected_only,
                 visible_only=step.visible_only,
                 replacement_input_text=step.replacement_input_text,
+                operation=step.operation,
             )
             for step in load_data.steps
         )

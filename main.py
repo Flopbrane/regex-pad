@@ -1469,10 +1469,13 @@ class MainWindow(QMainWindow):
     def capture_search_preset(
         self, find_text: str, replacement_text: str, options: SearchOptions
     ) -> None:
-        """Start a new editable preset from the current Find/Replace controls."""
+        """Capture conditions into an open preset, or start a new one."""
+        editor_was_open = (
+            self.macro_editor_window is not None and self.macro_editor_window.isVisible()
+        )
         self.show_macro_editor()
         controller = self.macro_editor_controller
-        if controller is None or not controller.confirm_discard():
+        if controller is None:
             return
         step = MacroEditorStepData(
             search_text=find_text,
@@ -1491,10 +1494,14 @@ class MainWindow(QMainWindow):
             selected_only=options.selected_only,
             visible_only=options.visible_only,
         )
-        controller.start_document(
-            MacroEditorDocumentData(format_version=2, steps=[step]), needs_save=True
-        )
-        self.macro_editor_window.macro_name.setFocus()  # type: ignore[union-attr]
+        if editor_was_open:
+            controller.append_captured_step(step)
+            return
+        if controller.confirm_discard():
+            controller.start_document(
+                MacroEditorDocumentData(format_version=2, steps=[step]), needs_save=True
+            )
+            self.macro_editor_window.macro_name.setFocus()  # type: ignore[union-attr]
 
     def delete_search_preset(self) -> None:
         """Remove a validated preset from the picker with a reversible move."""

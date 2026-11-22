@@ -108,6 +108,8 @@ click **Save Current Search/Replace Conditions as Preset** below the Find/Replac
 buttons. The preset editor opens with one populated step. Enter a preset name,
 adjust the step if needed, then click **Save** to choose a new JSON file. The
 default save location is `macro/preset_json_files/` beside the application. You
+can click the capture button again while the preset editor is open to fill a
+blank first step or append to the current definition, including a saved preset. You
 can add, duplicate, delete and reorder steps; definition Undo/Redo is separate
 from the article's Undo. The ordinary replacement field is retained in JSON
 even when Unicode normalization makes it temporarily inactive.
@@ -118,6 +120,18 @@ of the active article. Selected/visible options use the selection and visible
 area at preview time. **Apply to document** commits the reviewed result as one
 Undo operation; Cancel leaves the article unchanged. **Delete Preset** asks
 before moving the JSON into `.deleted_presets` beside the original file.
+
+For numbered Markdown headings, add a step, then check
+**Number items under numbered Markdown headings**. The search, exclusion, and
+replacement fields are disabled while the box is checked; their text is kept
+for when it is unchecked. This operation reads the
+document from top to bottom and uses the latest numbered `#` to `######`
+heading. For example, under `## 3. Plans`, `1. First` becomes `## 3-1. First`;
+under `## 4. Next`, it becomes `## 4-1. First`. The existing item number is
+used; numbering is not generated from a counter. An unnumbered heading ends
+the current section. Fenced code and indented items remain unchanged. This
+operation always uses the whole document and saves in preset format 3. Check
+the result with **Run Preview** before applying it.
 
 The Python source build has been checked. A new packaged EXE has not yet been
 built or accepted for these preset changes.

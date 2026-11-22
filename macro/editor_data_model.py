@@ -23,6 +23,7 @@ class MacroEditorStepData:
     whole_word: bool = False
     selected_only: bool = False
     visible_only: bool = False
+    operation: str = "search_replace"
 
 
 @dataclass(slots=True)

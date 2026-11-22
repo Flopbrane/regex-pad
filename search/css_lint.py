@@ -214,8 +214,7 @@ def _lint_inline_style_with_reference(
     reference: dict[str, Any],
 ) -> list[CssLintIssue]:
     messages: list[CssLintIssue] = _lint_full_width_symbols(style_text, start_line_number, reference)
-    declarations: list[tuple[str, int]] = []
-    structure_messages: list[CssLintIssue] = []
+    declarations, structure_messages = _split_declarations(style_text, start_line_number)
     messages.extend(structure_messages)
 
     properties: dict[str, Any] = _as_dict(reference.get("properties", {}))

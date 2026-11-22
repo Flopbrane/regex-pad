@@ -16,7 +16,7 @@ from macro.validation_types import (
 )
 from search.search_engine import SearchEngine, SearchOptions
 
-SUPPORTED_FORMAT_VERSIONS: Final = frozenset({1, 2})
+SUPPORTED_FORMAT_VERSIONS: Final = frozenset({1, 2, 3})
 APPEND_DOT_NORMALIZATION_FORMS: Final = frozenset({"NFKC", "NFKD"})
 
 
@@ -108,7 +108,25 @@ class MacroValidator:
                 )
             )
 
+        if step.operation not in {"search_replace", "numbered_heading"}:
+            diagnostics.append(cls._error(
+                "invalid_operation", "macro.validation.invalid_operation",
+                step_index=step_index, field_name="operation",
+            ))
+            return diagnostics
+        if step.operation == "numbered_heading" and format_version < 3:
+            diagnostics.append(cls._error(
+                "operation_requires_v3", "macro.validation.operation_requires_v3",
+                step_index=step_index, field_name="operation",
+            ))
         if not step.enabled:
+            return diagnostics
+        if step.operation == "numbered_heading":
+            if step.selected_only or step.visible_only:
+                diagnostics.append(cls._error(
+                    "heading_requires_full_document", "macro.validation.heading_requires_full_document",
+                    step_index=step_index, field_name="operation",
+                ))
             return diagnostics
 
         if step.search_text == "":

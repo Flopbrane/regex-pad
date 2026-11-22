@@ -91,11 +91,20 @@ saved presets. In **Search > Find / Replace**, **Save Current Search/Replace
 Conditions as Preset** copies the current text fields and options into one new
 step. Name it in the preset editor and choose **Save** to create a JSON file.
 The default location is `macro/preset_json_files/` beside the application.
+If the preset editor is already open, captured conditions fill its blank first
+step or append a step to its existing definition instead of starting a new preset.
 Add or reorder steps there for a sequence. Opening a saved preset displays it
 for inspection; **Run Preview** shows the combined result, and **Apply to
 document** makes one undoable change. Selected/visible scopes use the target
 editor's selection and viewport when Run Preview is pressed. Deleted presets
 are retained in a `.deleted_presets` folder beside their JSON files.
+
+For Markdown chapter numbering, add a step and check **Number items under
+numbered Markdown headings**. It scans the whole document from
+the top. Under `## 3.`, `1. Item` becomes `## 3-1. Item`; after `## 4.`, it
+becomes `## 4-1. Item`. It uses the existing item number, keeps the heading
+level, and leaves fenced code and lines outside numbered headings unchanged.
+This step saves in preset format 3; older presets remain readable.
 
 This feature has been verified in the Python source build. The packaged EXE
 has not yet been rebuilt or checked for this change.

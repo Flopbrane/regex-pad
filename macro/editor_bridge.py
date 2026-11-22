@@ -42,6 +42,7 @@ class MacroEditorBridge:
                     step.whole_word,
                     step.selected_only,
                     step.visible_only,
+                    step.operation,
                 )
                 for step in model.steps
             ],
@@ -55,6 +56,10 @@ class MacroEditorBridge:
             for step in document.steps
         ):
             raise MacroEditorInputError(-1, "format_version", "Search scope options require format version 2")
+        if document.format_version < 3 and any(
+            step.operation != "search_replace" for step in document.steps
+        ):
+            raise MacroEditorInputError(-1, "format_version", "Special steps require format version 3")
         for index, step in enumerate(document.steps):
             if (
                 step.unicode_normalize_form is not None
@@ -82,7 +87,8 @@ class MacroEditorBridge:
                     step.whole_word,
                     step.selected_only,
                     step.visible_only,
-                    step.replacement_text if document.format_version == 2 else None,
+                    step.replacement_text if document.format_version >= 2 else None,
+                    step.operation,
                 )
                 for step in document.steps
             ],

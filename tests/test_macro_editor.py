@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from PySide6.QtWidgets import QApplication, QComboBox, QMessageBox
+from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QMessageBox
 
 from app_logging import AppLogger
 from dialogs.macro_editor_controller import MacroEditorController
@@ -45,7 +45,7 @@ def test_form_retains_invalid_regex_and_diagnostic_navigation(editor):
     window, controller = editor
     window.macro_name.setText("test")
     fields = window.step_editor.fields
-    cast(QComboBox, fields["regular_expression"]).setCurrentIndex(1)
+    cast(QCheckBox, fields["regular_expression"]).setChecked(True)
     cast(RegexInputEdit, fields["search_text"]).setPlainText("[")
     controller.validate()
     assert controller.session.document.steps[0].search_text == "["
@@ -60,6 +60,47 @@ def test_form_retains_invalid_regex_and_diagnostic_navigation(editor):
     controller.focus_diagnostic(0, "search_text")
     assert window.selected_step() == 0
     assert cast(RegexInputEdit, fields["search_text"]).toPlainText() == "["
+
+
+def test_boolean_options_are_checkboxes_and_keep_editor_history(editor):
+    window, controller = editor
+    fields = window.step_editor.fields
+    boolean_names = (
+        "enabled", "operation", "exclusion_enabled", "replacement_enabled",
+        "regular_expression", "case_sensitive", "whole_word",
+        "selected_only", "visible_only", "unicode_normalize",
+        "append_dot_to_circled_number",
+    )
+    assert all(isinstance(fields[name], QCheckBox) for name in boolean_names)
+    assert isinstance(fields["unicode_normalize_form"], QComboBox)
+
+    checkbox = cast(QCheckBox, fields["case_sensitive"])
+    checkbox.setChecked(True)
+    assert controller.session.document.steps[0].case_sensitive is True
+    controller.undo_stack.undo()
+    assert checkbox.isChecked() is False
+    controller.undo_stack.redo()
+    assert checkbox.isChecked() is True
+
+
+def test_heading_numbering_step_upgrades_format_and_is_saveable(editor, tmp_path):
+    window, controller = editor
+    window.macro_name.setText("Markdown numbering")
+    operation = cast(QCheckBox, window.step_editor.fields["operation"])
+    cast(RegexInputEdit, window.step_editor.fields["search_text"]).setPlainText("preserved")
+    cast(RegexInputEdit, window.step_editor.fields["exclusion_text"]).setPlainText("excluded")
+    cast(RegexInputEdit, window.step_editor.fields["replacement_text"]).setPlainText("replacement")
+    operation.setChecked(True)
+    assert controller.session.document.format_version == 3
+    for name in ("search_text", "exclusion_text", "replacement_text"):
+        assert not window.step_editor.fields[name].isEnabled()
+    assert controller.validate() is not None
+    destination = tmp_path / "headings.json"
+    assert controller.save(destination)
+    loaded = MacroJsonLoader().load(destination)
+    assert loaded.steps[0].operation == "numbered_heading"
+    operation.setChecked(False)
+    assert cast(RegexInputEdit, window.step_editor.fields["search_text"]).toPlainText() == "preserved"
 
 
 def test_step_operations_preserve_order_and_independent_data(editor, monkeypatch):
@@ -158,15 +199,15 @@ def test_unicode_route_and_null_switches(editor):
     window, controller = editor
     fields = window.step_editor.fields
     cast(RegexInputEdit, fields["replacement_text"]).setPlainText("kept in form")
-    cast(QComboBox, fields["unicode_normalize"]).setCurrentIndex(1)
+    cast(QCheckBox, fields["unicode_normalize"]).setChecked(True)
     form = cast(QComboBox, fields["unicode_normalize_form"])
     assert not form.isEditable()
     form.setCurrentIndex(form.findData("NFKC"))
     model = MacroEditorBridge.to_json_model(controller.session.document)
     assert model.steps[0].replacement_text is None
     assert model.steps[0].unicode_normalize_form == "NFKC"
-    cast(QComboBox, fields["unicode_normalize"]).setCurrentIndex(0)
-    cast(QComboBox, fields["replacement_enabled"]).setCurrentIndex(1)
+    cast(QCheckBox, fields["unicode_normalize"]).setChecked(False)
+    cast(QCheckBox, fields["replacement_enabled"]).setChecked(True)
     model = MacroEditorBridge.to_json_model(controller.session.document)
     assert model.steps[0].replacement_text == "kept in form"
     assert model.steps[0].unicode_normalize_form is None

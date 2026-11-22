@@ -71,7 +71,7 @@ def test_version_one_reference_macro_has_no_diagnostics() -> None:
 
 
 def test_validator_reports_root_errors_together() -> None:
-    load_data = MacroJsonData(3, "   ", "", ())
+    load_data = MacroJsonData(4, "   ", "", ())
 
     result = MacroValidator.validate(load_data)
 

@@ -118,7 +118,10 @@ class MacroEditorController(QObject):
                 if getattr(before.steps[index], name) != getattr(step, name)
             ]
             self.session.document.steps[index] = step
-            if any((step.case_sensitive, step.whole_word, step.selected_only, step.visible_only)):
+            if step.operation == "numbered_heading":
+                self.session.document.format_version = 3
+                self.window.version.setCurrentIndex(self.window.version.findData(3))
+            elif any((step.case_sensitive, step.whole_word, step.selected_only, step.visible_only)) and self.session.document.format_version < 2:
                 self.session.document.format_version = 2
                 self.window.version.setCurrentIndex(self.window.version.findData(2))
             key = f"step:{index}:{','.join(changed)}"
@@ -225,6 +228,30 @@ class MacroEditorController(QObject):
         while any(step.step_name == f"step_{number}" for step in steps):
             number += 1
         steps.insert(position, MacroEditorStepData(step_name=f"step_{number}"))
+        self._structural_change(before, selected, position)
+
+    def append_captured_step(self, step: MacroEditorStepData) -> None:
+        """Add captured Find/Replace conditions to the open preset definition."""
+        before = deepcopy(self.session.document)
+        selected = self.window.selected_step()
+        steps = self.session.document.steps
+        captured = deepcopy(step)
+        if (
+            self.session.save_file_path is None
+            and len(steps) == 1
+            and steps[0] == MacroEditorStepData()
+        ):
+            captured.step_name = steps[0].step_name
+            steps[0] = captured
+            position = 0
+        else:
+            number = len(steps) + 1
+            while any(existing.step_name == f"step_{number}" for existing in steps):
+                number += 1
+            captured.step_name = f"step_{number}"
+            position = len(steps)
+            steps.append(captured)
+        self.session.document.format_version = 2
         self._structural_change(before, selected, position)
 
     def duplicate_step(self, index: int) -> None:

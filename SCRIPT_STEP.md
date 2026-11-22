@@ -4915,3 +4915,37 @@ Canonical propagation and final concentrated-test results:
 - Changed the portable default preset save/open folder from `macro/` to `macro/preset_json_files/`. A saved setting equal to the former default is migrated in memory when the main window starts; custom folder selections remain unchanged. On the next settings save, the new default is persisted.
 - Ignored `macro/preset_json_files/` in Git, including the user's existing preset JSON. Excluded that folder and `.deleted_presets` from the PyInstaller JSON collector so personal presets are not bundled. Kept the tracked `macro/macro_format_v1.json` development reference in place.
 - Updated the four user documents with the default path and added a path-migration test. Canonical focused macro/preset tests: 35 passed; whole-project Ruff passed and Pyright reported 0 errors/warnings. Full pytest: 941 passed / 7 failed, with the same pre-existing paragraph, tag-insertion, and whitespace-marker failures. `git check-ignore` confirmed the existing preset is ignored, and `git diff --check` passed. The source was edited directly in `D:/PC/Python/regex_pad_project`; no EXE rebuild or physical GUI acceptance was performed.
+
+## 2026-11-21 本日の作業まとめとDocstring整備
+
+- 検索メニューへ「検索/置換プリセット」をまとめ、作成・呼び出しと実行・編集・削除の4操作を用意した。検索/置換画面の現在の条件から1手順のプリセットを作成でき、JSONをXMLライクな編集画面で確認してから多段処理を実行する。形式2のオプション保存、実行時の選択・表示範囲、プレビューと1回のUndoへの適用も整備した。
+- 正規表現ヘルプを日英5区分・36項目へ整理し、検索側の `\d`、置換側の `\1` / `\g<1>` と実際の検索・置換例を明確にした。README両言語にはPython標準モジュールの `re` を使うことを明記した。
+- プリセットJSONの既定保存先を `macro/preset_json_files/` に変更し、旧既定値の設定を読み替えるようにした。同フォルダーをGitの無視対象とし、個人用JSONをEXEの同梱対象からも除外した。READMEと両言語の使い方を更新した。詳細と当時の検証結果は直前の各節を参照。
+- 利用者がコミット `51cc436` で `macro/` と `search/` の計21個のPythonファイルについて、クラス・関数・内部関数のDocstring追加と日本語化を進めた。変更には型注釈の追加と一部の処理記述の変更も含まれるため、Docstringだけの変更とは扱わない。
+- Docstring整備後、指定Python環境でプロジェクト全体のRuffは成功、Pyrightは0 errors / 0 warnings。全体pytestは従来の7件より多く失敗し、約60%地点で進行が止まったため中断した。`pytest -x` の最初の失敗は `tests/test_css_lint.py::test_inline_style_detects_property_and_unit_typos`（25 passed / 1 failed）。`search/css_lint.py` の `_lint_inline_style_with_reference()` で、従来の `_split_declarations(style_text, start_line_number)` 呼び出しが空リスト2つの初期化に置き換わっていることを確認した。CSS診断が空になる原因として特定したが、本日の終了希望に合わせ、この記録ではコードを修正していない。残る失敗・停止の原因は未調査であり、次回に修正と全体再検証が必要。
+
+### 同日の追補：CSS診断の1か所を修復
+
+- 利用者の依頼で `search/css_lint.py` の `_lint_inline_style_with_reference()` にある空リスト2つの初期化を、元の `_split_declarations(style_text, start_line_number)` 呼び出しへ戻した。Docstringや他の型注釈は変更していない。
+- 指定PythonでCSS診断テスト18件がすべて成功。Ruff（対象ファイル）とPyright（全体）は成功。全体テストを `-x` で確認すると318件成功後に従来からある段落スタイル期待値の失敗で停止した。この追補では全体テストの完走は確認していない。
+
+## 2026-11-22 プリセット編集画面の真偽項目をチェックボックスへ変更
+
+- 手順の有効化、除外・置換文字列の使用、正規表現、大文字小文字、単語単位、選択・表示範囲、Unicode正規化、丸数字変換後のピリオド追加を、非編集の有効/無効ドロップダウンからチェックボックスへ変更した。正規化形式は複数候補から選ぶためドロップダウンのままにした。
+- 既存のデータモデルとJSON形式は変更せず、チェック状態の読込・編集・Undo/Redo・依存する入力欄の有効化に対応した。日英の画面言語を切り替えた際のアクセシビリティ名も更新する。
+- 変更ファイル: `dialogs/macro_step_editor_widget.py`、`tests/test_macro_editor.py`、`tests/test_macro_editor_history.py`、`SCRIPT_STEP.md`。正規化形式以外の真偽項目がチェックボックスであることと、チェック操作のUndo/Redoを確認するテストを追加した。
+- canonical checkout `D:/PC/Python/regex_pad_project` で指定Pythonを用い、関連テスト64件成功、プロジェクト全体のRuff成功、Pyrightは0 errors / 0 warnings。全体pytest、実画面での操作確認、EXE再ビルドは未実施。
+
+## 2026-11-22 開いているプリセットへの検索条件の連続取り込み
+
+- 検索/置換画面の条件取り込みボタンは、プリセット編集画面が開いているとき、現在の定義の末尾へ手順を追加する。既存のプリセット名・保存先・手順を保ち、追加した手順を選択する。クリックを繰り返すと順番に増え、追加操作は定義全体のUndo/Redoで戻せる。開いていないときは従来どおり新規定義を開始する。
+- 空の新規編集画面だけは最初の仮手順を取り込んだ条件で埋め、次回以降に追加する。取り込み手順の名前は重複しない `step_N` とし、形式1の定義に取り込む場合は新しい検索条件を保存できる形式2へ上げる。JSONの保存処理自体は変更していない。
+- `main.py`、`dialogs/macro_editor_controller.py`、`tests/test_search_replace_presets.py` と、README・使用説明書の日英4ファイルを更新した。既存の保存済み定義への連続追加、保存、Undo/Redo、空の新規画面での初回取り込みを確認するテストを追加した。
+- canonical checkout `D:/PC/Python/regex_pad_project` で指定Pythonを使用。関連テスト65件成功、1件除外（`test_macro_editor_preferences_survive_main_window_restart` は単独実行でも停止したため）。プロジェクト全体のRuff成功、Pyrightは0 errors / 0 warnings、`git diff --check`成功。全体pytest、実画面操作、EXE再ビルドは未実施。
+
+## 2026-11-22 Markdown 見出し番号に基づく項目番号変換
+
+- プリセット編集画面に「番号付き見出しの下の項目番号を変換」を追加。文書先頭から `#`～`######` の番号付き見出しを追跡し、行頭の `1. 項目` を直近の章番号・見出しレベルに合わせて `## 3-1. 項目` の形式へ変換する。次の番号付き見出しで親番号を切り替える。番号のない見出し、コードフェンス、字下げ行を保護し、元の改行コードを維持する。既存の項目番号を使い、連番は生成しない。
+- 専用手順をプリセット形式3の `処理種別` に保存し、形式1・2は従来通り読込可能。検索・置換ステップと順に実行でき、実行プレビューと文書への1回のUndoでの適用に接続。READMEと日英の使い方ガイドを更新。ユーザーの保存済みプリセットJSONは変更していない。
+- canonical checkout `D:/PC/Python/regex_pad_project` を指定Pythonで検証。関連テスト130 passed / 1 deselected（単独でも終了しない既知の設定永続化テスト）。全体テスト948 passed / 7 failed / 1 deselected。7件は従来からの段落style、タグ挿入4件、空白記号2件。Ruff全体合格、Pyright 0 errors / 0 warnings、`git diff --check` 合格。物理GUIでの操作確認とEXE再ビルドは未実施。
+- 追加のユーザー指定により、手順の処理選択をドロップダウンからチェックボックスに変更した。チェック中は検索・除外・置換テキスト欄と通常検索設定を無効にし、入力済みの文字列は保持する。日英ガイドの操作説明を更新。GUI操作と変換の focused 26 tests passed / 1 deselected、Ruff全体合格、Pyright 0 errors / 0 warningsを再確認した。

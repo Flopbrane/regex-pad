@@ -18,6 +18,7 @@ class MacroStep:
     search_text: str
     replacement_text: str
     options: SearchOptions
+    operation: str = "search_replace"
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +64,7 @@ class MacroCompiler:
                     unicode_normalize_form=step.unicode_normalize_form or "NFKC",
                     append_dot_to_circled_number=step.append_dot_to_circled_number,
                 ),
+                step.operation,
             )
             for index, step in enumerate(normalized.steps)
         )

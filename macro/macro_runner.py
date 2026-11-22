@@ -6,6 +6,7 @@ from difflib import SequenceMatcher
 
 from macro.macro_linter import MacroLinter
 from macro.macro_model import MacroDefinition
+from macro.markdown_heading_numbers import number_items_under_headings
 from macro.validation_types import (
     MacroDiagnostic,
     MacroDiagnosticSeverity,
@@ -63,40 +64,39 @@ class MacroRunner:
                 reports.append(MacroStepResult(step.step_index, step.step_name, False))
                 continue
             try:
-                scope: tuple[int, int] | None = self._scope_for_step(
-                    step.options.selected_only,
-                    step.options.visible_only,
-                    current_selected_scope,
-                    current_visible_scope,
-                    len(current_text),
-                )
-                if scope is None:
-                    reports.append(MacroStepResult(step.step_index, step.step_name, True))
-                    continue
-                scope_start, scope_end = scope
-                source_part: str = current_text[scope_start:scope_end]
-                analysis: SearchAnalysis = self.search_engine.analyze_matches(
-                    source_part, step.search_text, step.options
-                )
-                if analysis.zero_width:
-                    diagnostics.append(
-                        MacroLinter.step_diagnostic(
+                if step.operation == "numbered_heading":
+                    transformed, count = number_items_under_headings(current_text)
+                    scope_start, scope_end = 0, len(current_text)
+                    analysis = SearchAnalysis(count, 0, 0)
+                    result = ReplaceResult(transformed, count)
+                else:
+                    scope: tuple[int, int] | None = self._scope_for_step(
+                        step.options.selected_only,
+                        step.options.visible_only,
+                        current_selected_scope,
+                        current_visible_scope,
+                        len(current_text),
+                    )
+                    if scope is None:
+                        reports.append(MacroStepResult(step.step_index, step.step_name, True))
+                        continue
+                    scope_start, scope_end = scope
+                    source_part: str = current_text[scope_start:scope_end]
+                    analysis = self.search_engine.analyze_matches(
+                        source_part, step.search_text, step.options
+                    )
+                    if analysis.zero_width:
+                        diagnostics.append(MacroLinter.step_diagnostic(
                             "zero_width_search", step.step_index
+                        ))
+                        return MacroRunResult(
+                            source_text, source_text, tuple(reports),
+                            MacroValidationResult(tuple(diagnostics)), False,
                         )
+                    result = self.search_engine.replace_all(
+                        source_part, step.search_text, step.replacement_text,
+                        step.options,
                     )
-                    return MacroRunResult(
-                        source_text,
-                        source_text,
-                        tuple(reports),
-                        MacroValidationResult(tuple(diagnostics)),
-                        False,
-                    )
-                result: ReplaceResult = self.search_engine.replace_all(
-                    source_part,
-                    step.search_text,
-                    step.replacement_text,
-                    step.options,
-                )
             except (re.error, IndexError, ValueError) as error:
                 diagnostics.append(
                     MacroLinter.step_diagnostic(

@@ -111,6 +111,59 @@ def test_find_dialog_captures_all_active_conditions_into_new_json(
     )
 
 
+def test_repeated_capture_appends_to_open_saved_preset(window, tmp_path: Path):
+    save_file_path = MacroJsonSaver(tmp_path).save(
+        _preset(_step("first", "a", "b")), tmp_path / "saved.json"
+    )
+    window.show_macro_editor()
+    controller = window.macro_editor_controller
+    assert controller is not None
+    assert controller.open_document(save_file_path)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+
+    for find_text, replacement_text in (("b", "c"), ("c", "d")):
+        dialog.find_text_edit.setPlainText(find_text)
+        dialog.replace_text_edit.setPlainText(replacement_text)
+        dialog.preset_button.click()
+
+    document = controller.session.document
+    assert controller.session.save_file_path == save_file_path
+    assert document.macro_name == "sample"
+    assert [step.search_text for step in document.steps] == ["a", "b", "c"]
+    assert [step.step_name for step in document.steps] == ["first", "step_2", "step_3"]
+    assert controller.window.selected_step() == 2
+    assert controller.session.modified
+    controller.undo_stack.undo()
+    assert [step.search_text for step in controller.session.document.steps] == ["a", "b"]
+    controller.undo_stack.redo()
+    assert [step.search_text for step in controller.session.document.steps] == ["a", "b", "c"]
+    assert controller.save()
+    saved = MacroJsonLoader(tmp_path).load(save_file_path)
+    assert [step.search_text for step in saved.steps] == ["a", "b", "c"]
+
+
+def test_capture_fills_pristine_new_editor_then_appends(window):
+    window.new_search_preset()
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    controller = window.macro_editor_controller
+    assert dialog is not None and controller is not None
+
+    dialog.find_text_edit.setPlainText("first")
+    dialog.preset_button.click()
+    assert [step.search_text for step in controller.session.document.steps] == ["first"]
+    controller.undo_stack.undo()
+    assert controller.session.document.steps[0].search_text == ""
+    controller.undo_stack.redo()
+    dialog.find_text_edit.setPlainText("second")
+    dialog.preset_button.click()
+    assert [step.search_text for step in controller.session.document.steps] == [
+        "first", "second"
+    ]
+
+
 def test_open_and_run_menu_loads_editor_before_execution(
     window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):

@@ -8,7 +8,14 @@ import pytest
 from PySide6.QtCore import QMimeData, QPointF, Qt, QTimer
 from PySide6.QtGui import QContextMenuEvent, QDropEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QComboBox, QDialog, QMenu, QMessageBox
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QMenu,
+    QMessageBox,
+)
 
 from app_logging import AppLogger
 from dialogs.macro_editor_controller import MacroEditorController
@@ -104,7 +111,9 @@ def test_step_field_history_retains_exact_text_and_nullable_controls(
     window, controller = editor
     before = deepcopy(controller.session.document)
     widget = window.step_editor.fields[field]
-    if isinstance(widget, QComboBox):
+    if isinstance(widget, QCheckBox):
+        widget.setChecked(value)
+    elif isinstance(widget, QComboBox):
         widget.setCurrentIndex(widget.findData(value))
     elif isinstance(widget, RegexInputEdit):
         widget.setPlainText(str(value))
@@ -199,7 +208,7 @@ def test_new_and_successful_load_reset_history_but_failed_load_does_not(
 def test_undo_new_edit_discards_redo_and_revalidation_follows_restored_input(editor):
     window, controller = editor
     field = cast(RegexInputEdit, window.step_editor.fields["search_text"])
-    cast(QComboBox, window.step_editor.fields["regular_expression"]).setCurrentIndex(1)
+    cast(QCheckBox, window.step_editor.fields["regular_expression"]).setChecked(True)
     controller.history.break_merge()
     field.setPlainText("[")
     controller.validate()
@@ -394,12 +403,12 @@ def test_cancelled_new_and_language_change_keep_history(editor, monkeypatch):
 
 def test_normalization_form_and_its_dependent_controls_restore_together(editor):
     window, controller = editor
-    normalize = cast(QComboBox, window.step_editor.fields["unicode_normalize"])
+    normalize = cast(QCheckBox, window.step_editor.fields["unicode_normalize"])
     form = cast(QComboBox, window.step_editor.fields["unicode_normalize_form"])
-    normalize.setCurrentIndex(normalize.findData(True))
+    normalize.setChecked(True)
     form.setCurrentIndex(form.findData("NFKC"))
     before = deepcopy(controller.session.document)
-    normalize.setCurrentIndex(normalize.findData(False))
+    normalize.setChecked(False)
     controller.undo_stack.undo()
     assert controller.session.document == before
     assert form.currentData() == "NFKC" and form.isEnabled()

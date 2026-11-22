@@ -28,6 +28,7 @@ WHOLE_WORD_KEY: Final = "単語単位"
 SELECTED_ONLY_KEY: Final = "選択範囲のみ"
 VISIBLE_ONLY_KEY: Final = "表示範囲のみ"
 REPLACEMENT_INPUT_KEY: Final = "置換欄の入力"
+OPERATION_KEY: Final = "処理種別"
 
 ROOT_KEYS: Final = frozenset(
     {FORMAT_VERSION_KEY, MACRO_NAME_KEY, DESCRIPTION_KEY, STEPS_KEY}
@@ -48,6 +49,7 @@ STEP_KEYS: Final = frozenset(
 STEP_KEYS_V2: Final = STEP_KEYS | frozenset(
     {CASE_SENSITIVE_KEY, WHOLE_WORD_KEY, SELECTED_ONLY_KEY, VISIBLE_ONLY_KEY, REPLACEMENT_INPUT_KEY}
 )
+STEP_KEYS_V3: Final = STEP_KEYS_V2 | frozenset({OPERATION_KEY})
 
 
 class MacroJsonBridgeError(ValueError):
@@ -67,7 +69,7 @@ class MacroJsonBridge:
             raise MacroJsonBridgeError(f"{STEPS_KEY} must be list")
 
         steps: tuple[MacroJsonStepData, ...] = tuple(
-            cls._step_from_dict(step_data, step_index, root[FORMAT_VERSION_KEY] == 2)
+            cls._step_from_dict(step_data, step_index, cast(int, root[FORMAT_VERSION_KEY]))
             for step_index, step_data in enumerate(raw_steps)
         )
         try:
@@ -91,7 +93,7 @@ class MacroJsonBridge:
             MACRO_NAME_KEY: save_data.macro_name,
             DESCRIPTION_KEY: save_data.description,
             STEPS_KEY: [
-                cls._step_to_dict(step, save_data.format_version == 2)
+                cls._step_to_dict(step, save_data.format_version)
                 for step in save_data.steps
             ],
         }
@@ -101,12 +103,14 @@ class MacroJsonBridge:
         cls,
         step_data: object,
         step_index: int,
-        version_two: bool,
+        format_version: int,
     ) -> MacroJsonStepData:
         """単一ステップの辞書を ``MacroJsonStepData`` に変換する。"""
         step: Mapping[str, object] = cls._require_mapping(step_data, f"{STEPS_KEY}[{step_index}]")
         cls._require_exact_keys(
-            step, STEP_KEYS_V2 if version_two else STEP_KEYS, f"{STEPS_KEY}[{step_index}]"
+            step,
+            STEP_KEYS_V3 if format_version >= 3 else STEP_KEYS_V2 if format_version == 2 else STEP_KEYS,
+            f"{STEPS_KEY}[{step_index}]",
         )
         try:
             return MacroJsonStepData(
@@ -122,11 +126,12 @@ class MacroJsonBridge:
                 search_text=cast(str, step[SEARCH_TEXT_KEY]),
                 exclusion_text=cast(str | None, step[EXCLUSION_TEXT_KEY]),
                 replacement_text=cast(str | None, step[REPLACEMENT_TEXT_KEY]),
-                case_sensitive=cast(bool, step[CASE_SENSITIVE_KEY]) if version_two else False,
-                whole_word=cast(bool, step[WHOLE_WORD_KEY]) if version_two else False,
-                selected_only=cast(bool, step[SELECTED_ONLY_KEY]) if version_two else False,
-                visible_only=cast(bool, step[VISIBLE_ONLY_KEY]) if version_two else False,
-                replacement_input_text=cast(str, step[REPLACEMENT_INPUT_KEY]) if version_two else None,
+                case_sensitive=cast(bool, step[CASE_SENSITIVE_KEY]) if format_version >= 2 else False,
+                whole_word=cast(bool, step[WHOLE_WORD_KEY]) if format_version >= 2 else False,
+                selected_only=cast(bool, step[SELECTED_ONLY_KEY]) if format_version >= 2 else False,
+                visible_only=cast(bool, step[VISIBLE_ONLY_KEY]) if format_version >= 2 else False,
+                replacement_input_text=cast(str, step[REPLACEMENT_INPUT_KEY]) if format_version >= 2 else None,
+                operation=cast(str, step[OPERATION_KEY]) if format_version >= 3 else "search_replace",
             )
         except (TypeError, ValueError) as error:
             raise MacroJsonBridgeError(
@@ -134,7 +139,7 @@ class MacroJsonBridge:
             ) from error
 
     @staticmethod
-    def _step_to_dict(step: MacroJsonStepData, version_two: bool) -> dict[str, object]:
+    def _step_to_dict(step: MacroJsonStepData, format_version: int) -> dict[str, object]:
         """単一ステップの ``MacroJsonStepData`` を辞書に変換する。"""
         if not isinstance(step, MacroJsonStepData):
             raise TypeError("steps must contain only MacroJsonStepData")
@@ -149,7 +154,7 @@ class MacroJsonBridge:
             EXCLUSION_TEXT_KEY: step.exclusion_text,
             REPLACEMENT_TEXT_KEY: step.replacement_text,
         }
-        if version_two:
+        if format_version >= 2:
             result.update({
                 CASE_SENSITIVE_KEY: step.case_sensitive,
                 WHOLE_WORD_KEY: step.whole_word,
@@ -158,6 +163,8 @@ class MacroJsonBridge:
                 REPLACEMENT_INPUT_KEY: step.replacement_input_text
                 if step.replacement_input_text is not None else (step.replacement_text or ""),
             })
+        if format_version >= 3:
+            result[OPERATION_KEY] = step.operation
         return result
 
     @staticmethod

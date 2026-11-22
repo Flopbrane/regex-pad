@@ -69,6 +69,7 @@ class MacroJsonStepData:
     _selected_only: bool
     _visible_only: bool
     _replacement_input_text: str | None
+    _operation: str
 
     def __init__(
         self,
@@ -86,6 +87,7 @@ class MacroJsonStepData:
         selected_only: bool = False,
         visible_only: bool = False,
         replacement_input_text: str | None = None,
+        operation: str = "search_replace",
     ) -> None:
         self.step_name = step_name
         self.enabled = enabled
@@ -101,6 +103,16 @@ class MacroJsonStepData:
         self.selected_only = selected_only
         self.visible_only = visible_only
         self.replacement_input_text = replacement_input_text
+        self.operation = operation
+
+    @property
+    def operation(self) -> str:
+        """Return the operation selected for this step."""
+        return self._operation
+
+    @operation.setter
+    def operation(self, value: str) -> None:
+        self._operation = _string_value("operation", value)
 
     @property
     def replacement_input_text(self) -> str | None:
