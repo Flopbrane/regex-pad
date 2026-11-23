@@ -17,6 +17,19 @@ PROJECT_ROOT = Path(SPECPATH)
 PROJECT_DIR = PROJECT_ROOT
 sys.path.insert(0, str(PROJECT_DIR))
 
+
+def _is_codex_runtime_path(path):
+    """Ignore DLL search paths injected by the host application."""
+    normalized = str(path).replace("/", "\\").lower()
+    return "\\windowsapps\\openai.codexprimaryruntime." in normalized
+
+
+# A direct `pyinstaller regex-pad.spec` build needs the same isolation as build.ps1.
+os.environ["PATH"] = os.pathsep.join(
+    path for path in os.environ.get("PATH", "").split(os.pathsep)
+    if not _is_codex_runtime_path(path)
+)
+
 from preview.package_runtime import runtime_datas
 
 APP_NAME = "regex-pad"
@@ -124,6 +137,9 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+for binary in a.binaries:
+    if _is_codex_runtime_path(binary[1]):
+        raise RuntimeError(f"Host runtime DLL entered the application bundle: {binary[1]}")
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -158,6 +174,9 @@ cleaner_a = Analysis(
     noarchive=False,
     optimize=0,
 )
+for binary in cleaner_a.binaries:
+    if _is_codex_runtime_path(binary[1]):
+        raise RuntimeError(f"Host runtime DLL entered the cleaner bundle: {binary[1]}")
 cleaner_pyz = PYZ(cleaner_a.pure)
 
 cleaner_exe = EXE(

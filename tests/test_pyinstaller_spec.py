@@ -101,13 +101,16 @@ def test_pyinstaller_spec_builds_gui_app_without_upx() -> None:
     assert "upx=False" in spec_text
 
 
-def test_build_script_uses_clean_build_without_codex_runtime_path() -> None:
+def test_build_script_isolates_host_dlls_and_checks_bundled_qt() -> None:
     build_script = Path("build.ps1").read_text(encoding="utf-8")
+    spec_text = Path("regex-pad.spec").read_text(encoding="utf-8")
 
     assert "--clean" in build_script
     assert "codex-runtimes" in build_script
-    assert '$PyInstallerCachePath = Join-Path $env:LOCALAPPDATA "pyinstaller"' in build_script
-    assert "Remove-Item -LiteralPath $ResolvedCachePath -Recurse -Force" in build_script
+    assert "OpenAI\\.CodexPrimaryRuntime" in build_script
+    assert "Test-FrozenQtImports -AppDirectory $DistAppPath" in build_script
+    assert 'QtCore.pyd' in build_script
+    assert '_is_codex_runtime_path(binary[1])' in spec_text
 
 
 def test_build_script_copies_and_verifies_runtime_json_and_portable_settings() -> None:

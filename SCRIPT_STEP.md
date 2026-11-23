@@ -4980,3 +4980,9 @@ Canonical propagation and final concentrated-test results:
 - `regex-pad.spec`のJSON収集から`shortcutkey_ref.json`、`user_dictionaries/`、`macro/preset_json_files/`、`.deleted_presets/`を除外。翻訳、タグ・段落辞書、Linter基準辞書、WordPressプレビュー資材は同梱対象に維持した。`build.ps1`側の収集照合条件も合わせた。
 - `build.ps1`で再ビルド前にEXE横の設定・色設定・ショートカット・ユーザー辞書・プリセットを退避し、完成後に復元するよう変更。初回ビルドではプロジェクト側の対応ファイルをコピーする。コピーをハッシュ確認し、ビルド失敗時は退避場所を残す。開発フォルダーを指す既定のプリセット・ユーザー辞書パスは配布先で使用できる値に補正する。`main.py`は相対指定のユーザー辞書フォルダーをアプリ横として解決する。
 - 指定PythonでPyInstaller 6.22.2のフルビルドを2回実施し、WordPress資材234件を検証。配布先の辞書・翻訳・プリセットの配置と代表ファイルのSHA-256一致、再ビルド前後の設定・色設定・プリセットのSHA-256一致を確認。個人用JSONが`_internal`へ混入していないことを確認。PowerShell構文解析、利用者データのコピー・パス補正スモーク、全体pytest 972 passed / 1 deselected、Ruff全体、Pyright 0 errors / 0 warnings、git diff --checkを確認。全体pytestは結果表示後にプロセスが残るため手動停止。EXE実機GUI操作は未実施。
+## 2026-11-23 RegexPad EXE の Qt 起動エラー修正
+
+- `dist/regex-pad_ver.1.2.0` の起動失敗を調査。`Qt6Core.dll` は存在したが、PyInstaller がホストアプリの WindowsApps/Poppler から ICU 78 の `icuuc.dll` を収集していた。Qt が要求する `ucnv_open` と、同 DLL が公開する `ucnv_open_78` が一致せず、`PySide6.QtCore` の読み込みが WinError 127 で失敗していた。
+- `build.ps1` と `regex-pad.spec` の DLL 探索経路からホストアプリのランタイムを除外。spec 側では、万一そのランタイム由来の DLL が収集されたらビルドを停止する。ビルド後は `_internal/PySide6/Qt6Core.dll` と `QtCore.pyd` を別プロセスで読み込んで確認する。共有 PyInstaller キャッシュをビルド後に削除する処理は外した。
+- 指定の Python 環境で `build.ps1` を実行し、`dist/regex-pad` を作成。WordPress プレビュー234ファイル、JSON、辞書の検査と Qt DLL 読み込み検査に合格。新配布物には `icuuc.dll` がなく、Analysis/COLLECT にホストアプリのランタイム由来 DLL がないことを確認。EXE は起動後8秒間稼働し、起動エラーは再現しなかった。
+- 元の `dist/regex-pad_ver.1.2.0` は保持。新しい `dist/regex-pad/regex-pad.exe` を利用する。両フォルダーの設定・色設定・プリセット3件は一致。関連テスト10件、Ruff、PowerShell構文検査、`git diff --check` に合格。実際の編集操作の目視確認は未実施。

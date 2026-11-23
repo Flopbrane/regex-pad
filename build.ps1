@@ -7,7 +7,6 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PythonExe = "D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe"
 $SpecPath = Join-Path $ProjectRoot "regex-pad.spec"
-$PyInstallerCachePath = Join-Path $env:LOCALAPPDATA "pyinstaller"
 
 # PyInstallerで生成された onedir 版の EXE 名。
 # dist 配下にこのフォルダが作られている前提です。
@@ -232,6 +231,28 @@ function Set-PortableProjectPaths {
     }
 }
 
+function Test-FrozenQtImports {
+    param([Parameter(Mandatory = $true)] [string] $AppDirectory)
+
+    $InternalPath = Join-Path $AppDirectory "_internal"
+    $ProbeCode = @'
+import ctypes
+import os
+from pathlib import Path
+import sys
+
+internal = Path(sys.argv[1])
+handles = [os.add_dll_directory(str(internal / name)) for name in (".", "PySide6", "shiboken6")]
+ctypes.WinDLL(str(internal / "PySide6" / "Qt6Core.dll"))
+ctypes.WinDLL(str(internal / "PySide6" / "QtCore.pyd"))
+print("Bundled Qt DLL load: OK")
+'@
+    & $PythonExe -c $ProbeCode $InternalPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Bundled Qt DLL load failed: $AppDirectory"
+    }
+}
+
 if (-not (Test-Path -LiteralPath $PythonExe)) {
     throw "Python interpreter was not found: $PythonExe"
 }
@@ -274,7 +295,8 @@ try {
     $OriginalSkipWordPressRuntime = $env:REGEXPAD_SKIP_WORDPRESS_RUNTIME
     $env:Path = (($OriginalPath -split ";") | Where-Object {
             $_ -notmatch "\\\.cache\\codex-runtimes" -and
-            $_ -notmatch "\\\.codex\\tmp"
+            $_ -notmatch "\\\.codex\\tmp" -and
+            $_ -notmatch "[\\/]WindowsApps[\\/]OpenAI\.CodexPrimaryRuntime\."
         }) -join ";"
 
     if ($SkipWordPressRuntime) {
@@ -386,6 +408,8 @@ try {
 
     Copy-ReleaseDocumentation -SourceRoot $ProjectRoot -DestinationRoot $DistAppPath
 
+    Test-FrozenQtImports -AppDirectory $DistAppPath
+
     Write-Host "Build completed."
     Write-Host "Copied resources to: $(Join-Path $InternalPath 'resources')"
     Write-Host "Copied dictionaries to: $(Join-Path $InternalPath 'dictionaries')"
@@ -394,14 +418,6 @@ try {
     Write-Host "Copied release documentation beside regex-pad.exe: $DistAppPath"
     $BuildCompleted = $true
 
-    if (Test-Path -LiteralPath $PyInstallerCachePath) {
-        $LocalAppDataPath = (Resolve-Path -LiteralPath $env:LOCALAPPDATA).Path
-        $ResolvedCachePath = (Resolve-Path -LiteralPath $PyInstallerCachePath).Path
-        if (-not $ResolvedCachePath.StartsWith($LocalAppDataPath + [System.IO.Path]::DirectorySeparatorChar)) {
-            throw "Refusing to remove unexpected PyInstaller cache path: $ResolvedCachePath"
-        }
-        Remove-Item -LiteralPath $ResolvedCachePath -Recurse -Force
-    }
 }
 finally {
     if ($null -ne $OriginalPath) {
