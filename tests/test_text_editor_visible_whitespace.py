@@ -4,8 +4,8 @@ import os
 import sys
 
 import pytest
-from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
-from PySide6.QtGui import QImage, QMouseEvent, QWheelEvent
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, Qt
+from PySide6.QtGui import QImage, QMouseEvent, QPainter, QWheelEvent
 from PySide6.QtWidgets import QApplication, QPlainTextEdit
 
 from editor.text_editor import TextEditor
@@ -133,6 +133,42 @@ def test_visible_whitespace_paint_path_renders(app: QApplication) -> None:
     editor.viewport().render(image)
 
     assert editor.toPlainText() == source_text
+
+
+def test_visible_whitespace_paint_uses_local_utf16_positions(
+    app: QApplication, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    editor = TextEditor()
+    editor.resize(320, 160)
+    editor.setPlainText("😀 a\nβ\tc\n")
+    editor.set_visible_whitespace_options(
+        spaces_enabled=True, tabs_enabled=True, newlines_enabled=True,
+    )
+    editor.show()
+    app.processEvents()
+
+    positions: set[tuple[int, str]] = set()
+    original_paint = editor._paint_visible_whitespace_marker
+
+    def record_marker(
+        painter: QPainter, event_rect: QRect, cursor_position: int,
+        marker: str, character: str,
+    ) -> None:
+        positions.add((cursor_position, character))
+        original_paint(painter, event_rect, cursor_position, marker, character)
+
+    monkeypatch.setattr(editor, "_paint_visible_whitespace_marker", record_marker)
+    monkeypatch.setattr(
+        editor, "toPlainText", lambda: pytest.fail("Painting copied the whole document"),
+    )
+    monkeypatch.setattr(
+        editor, "text_position_to_cursor_position",
+        lambda _position: pytest.fail("Painting scanned the whole document"),
+    )
+    image = QImage(editor.viewport().size(), QImage.Format.Format_ARGB32)
+    editor.viewport().render(image)
+
+    assert {(2, " "), (4, "\n"), (6, "\t"), (8, "\n")} <= positions
 
 
 def test_fixed_column_wrap_overrides_wrap_mode_without_modifying_text(

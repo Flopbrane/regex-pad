@@ -531,7 +531,6 @@ class TextEditor(QPlainTextEdit):
         ):
             return
 
-        source_text: str = self.toPlainText()
         painter = QPainter(self.viewport())
         painter.setFont(self.font())
 
@@ -548,9 +547,7 @@ class TextEditor(QPlainTextEdit):
                 self._paint_block_visible_whitespace(
                     painter,
                     event.rect(),
-                    source_text,
-                    block.position(),
-                    block.text(),
+                    block,
                 )
 
             block = block.next()
@@ -561,33 +558,29 @@ class TextEditor(QPlainTextEdit):
         self,
         painter: QPainter,
         event_rect: QRect,
-        source_text: str,
-        block_position: int,
-        block_text: str,
+        block: QTextBlock,
     ) -> None:
         """指定されたブロック内の可視化する空白文字を描画するヘルパーメソッド"""
-        for character_index, character in enumerate(block_text):
+        cursor_position = block.position()
+        for character in block.text():
             marker = self._visible_whitespace_marker(character)
             if marker is not None:
                 self._paint_visible_whitespace_marker(
                     painter,
                     event_rect,
-                    block_position + character_index,
+                    cursor_position,
                     marker,
                     character,
                 )
+            cursor_position += 2 if ord(character) > 0xFFFF else 1
 
-        newline_position = block_position + len(block_text)
-        if (
-            newline_position < len(source_text)
-            and source_text[newline_position] == "\n"
-        ):
+        if block.next().isValid():
             marker = self._visible_whitespace_marker("\n")
             if marker is not None:
                 self._paint_visible_whitespace_marker(
                     painter,
                     event_rect,
-                    newline_position,
+                    cursor_position,
                     marker,
                     "\n",
                 )
@@ -596,15 +589,13 @@ class TextEditor(QPlainTextEdit):
         self,
         painter: QPainter,
         event_rect: QRect,
-        text_position: int,
+        cursor_position: int,
         marker: str,
         character: str,
     ) -> None:
         """指定された位置に可視化する空白文字のマーカーを描画するヘルパーメソッド"""
         cursor = QTextCursor(self.document())
-        cursor.setPosition(
-            self.text_position_to_cursor_position(text_position)
-            )
+        cursor.setPosition(cursor_position)
         marker_rect: QRect = self.cursorRect(cursor)
 
         if not marker_rect.intersects(
@@ -621,11 +612,7 @@ class TextEditor(QPlainTextEdit):
 
         if character != "\n":
             next_cursor = QTextCursor(self.document())
-            next_cursor.setPosition(
-                self.text_position_to_cursor_position(
-                    text_position + 1
-                )
-            )
+            next_cursor.setPosition(cursor_position + 1)
             next_rect: QRect = self.cursorRect(next_cursor)
 
             # 同じ表示行なら、現在位置～次文字位置を
