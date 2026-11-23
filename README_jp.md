@@ -63,8 +63,10 @@ Qt Virtual Keyboardを含む場合はGPLv3経路で扱い、
 
 詳しい操作とショートカットは[日本語の使い方](docs_jp/HOW_TO_USE_jp.md)をご覧ください。
 `Ctrl+U`では選択した文字を`<u style="">...</u>`で囲み、後からstyleを入力できます。
-**設定 > ショートカットキー設定一覧**でアプリのキーを変更し、定型文用のキーを追加できます。
-変更内容は`config.json`と同じ場所の`shortcutkey_ref.json`に保存します。Windows・標準キーは変更できません。
+**設定 > ショートカットキー設定一覧**で変更可能なアプリのキーを変更し、定型文用のキーを追加できます。
+変更不可の行は紫色の文字と灰色の背景で表示します。`Ctrl+N`、`Ctrl+O`、`Ctrl+S`、
+`Ctrl+Shift+S`、`Ctrl+F`も変更できません。変更内容は`config.json`と同じ場所の
+`shortcutkey_ref.json`に保存します。
 
 ## Unicode正規化置換
 

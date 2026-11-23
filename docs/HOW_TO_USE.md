@@ -462,13 +462,16 @@ bundled preview environment makes later preview use require preparation again.
 Color shortcuts can change in `color_presets.json`. Standard clipboard
 shortcuts are also available in the editor.
 
-Open **Options > Shortcut key settings** to review all assigned keys. Select an
+Open **Options > Shortcut key settings** to review all assigned keys. Fixed rows
+have purple text (`#4C3163`) and a gray background (`#DEDEDE`). `Ctrl+N`,
+`Ctrl+O`, `Ctrl+S`, `Ctrl+Shift+S`, and `Ctrl+F` are fixed. Select an
 editable application action and press **Edit** to change its main key. Use
 **Add** to give a named plain-text snippet its own key, **Edit** to revise it,
 and **Delete** to remove a custom snippet. **OK** saves changes to
 `shortcutkey_ref.json` beside `config.json`; **Cancel** discards them. A snippet
-replaces any selected text when inserted. Windows and standard editing keys
-appear as **Cannot change**, and duplicate or reserved keys are rejected.
+replaces any selected text when inserted. Fixed application actions and Windows
+and standard editing keys appear as **Cannot change**; duplicate or reserved
+keys are rejected.
 
 ## Troubleshooting
 

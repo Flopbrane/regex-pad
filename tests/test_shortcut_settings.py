@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
 from dialogs.shortcut_settings_dialog import (
     ShortcutEditorDialog,
     ShortcutSettingsDialog,
+    validate_shortcut_settings,
 )
 from localization.translator import Translator
 from main import MainWindow
@@ -87,12 +88,66 @@ def test_standard_keys_are_read_only_and_collisions_are_rejected(
     assert not dialog.delete_button.isEnabled()
     status = dialog.table.item(standard_row, 3)
     assert status is not None and status.text() == "変更不可"
+    standard_item = dialog.table.item(standard_row, 0)
+    assert standard_item is not None
+    assert standard_item.foreground().color().name() == "#4c3163"
+    assert standard_item.background().color().name() == "#dedede"
     warnings: list[str] = []
     monkeypatch.setattr(QMessageBox, "warning", lambda _parent, _title, message: warnings.append(message))
     assert not dialog._check_key("Ctrl+C")
     assert not dialog._check_key("Ctrl+F")
     assert not dialog._check_key("Meta+E")
     assert len(warnings) == 3
+
+    for identifier, key in (
+        ("new", "Ctrl+N"), ("open", "Ctrl+O"),
+        ("save", "Ctrl+S"), ("save_as", "Ctrl+Shift+S"),
+        ("find", "Ctrl+F"),
+    ):
+        assert window._shortcut_action_info[identifier].locked
+        row = next(
+            index for index in range(dialog.table.rowCount())
+            if (item := dialog.table.item(index, 0)) is not None
+            and item.data(Qt.ItemDataRole.UserRole) == ("app", identifier)
+        )
+        dialog.table.selectRow(row)
+        assert not dialog.edit_button.isEnabled()
+        key_item = dialog.table.item(row, 2)
+        assert key_item is not None and key_item.text() == key
+        for column in range(dialog.table.columnCount()):
+            item = dialog.table.item(row, column)
+            assert item is not None
+            assert item.foreground().color().name() == "#4c3163"
+            assert item.background().color().name() == "#dedede"
+
+    editable_row = next(
+        index for index in range(dialog.table.rowCount())
+        if (item := dialog.table.item(index, 0)) is not None
+        and item.data(Qt.ItemDataRole.UserRole) == ("app", "inline_underline")
+    )
+    editable_item = dialog.table.item(editable_row, 0)
+    assert editable_item is not None
+    assert editable_item.background().color().name() != "#dedede"
+    assert validate_shortcut_settings(
+        ShortcutSettings({"find": "Ctrl+Alt+F"}, []), window._shortcut_action_info
+    ) == "shortcut.invalid_config"
+
+
+def test_old_override_for_newly_fixed_key_keeps_other_custom_keys(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    _ = app
+    save_file_path = tmp_path / "shortcutkey_ref.json"
+    save_shortcut_settings(
+        save_file_path,
+        ShortcutSettings({"find": "Ctrl+Alt+F", "inline_underline": "Ctrl+Alt+U"}, []),
+    )
+    before = save_file_path.read_bytes()
+    window = MainWindow(settings_path=tmp_path / "config.json", restore_unsaved_backup=False)
+    assert not window.shortcut_settings_error
+    assert window.find_action.shortcut().toString() == "Ctrl+F"
+    assert window.inline_underline_action.shortcut().toString() == "Ctrl+Alt+U"
+    assert save_file_path.read_bytes() == before
 
 
 def test_add_and_edit_text_shortcut_in_dialog(

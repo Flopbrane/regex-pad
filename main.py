@@ -378,6 +378,13 @@ class MainWindow(QMainWindow):
         self.resize(900, 650)
         self._create_actions()
         self._shortcut_action_info = self._collect_shortcut_actions()
+        # Keep older portable overrides for newly fixed actions on disk, but
+        # ignore them in memory so other valid custom shortcuts keep working.
+        self.shortcut_settings.overrides = {
+            identifier: key for identifier, key in self.shortcut_settings.overrides.items()
+            if identifier not in self._shortcut_action_info
+            or not self._shortcut_action_info[identifier].locked
+        }
         if not self.shortcut_settings_error:
             problem = validate_shortcut_settings(
                 self.shortcut_settings, self._shortcut_action_info
@@ -688,7 +695,10 @@ class MainWindow(QMainWindow):
             f"color_{identifier}": action
             for identifier, action in self.inline_color_actions.items()
         })
-        locked = {"exit", "undo", "redo", "select_all", "help"}
+        locked = {
+            "new", "open", "save", "save_as", "find",
+            "exit", "undo", "redo", "select_all", "help",
+        }
         return {
             identifier: ShortcutActionInfo(
                 action,

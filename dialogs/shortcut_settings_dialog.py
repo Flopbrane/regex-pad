@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QColor, QKeySequence
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -43,6 +43,9 @@ WINDOWS_SHORTCUTS = (
     ("Ctrl+A", "shortcut.os.select_all"),
     ("Alt+F4", "shortcut.os.close_window"),
 )
+
+LOCKED_TEXT_COLOR = QColor("#4C3163")
+LOCKED_BACKGROUND_COLOR = QColor("#DEDEDE")
 
 
 def canonical_shortcut(value: str) -> str:
@@ -201,7 +204,9 @@ class ShortcutSettingsDialog(QDialog):
     ) -> None:
         row = self.table.rowCount()
         self.table.insertRow(row)
-        category = "standard" if locked else kind
+        category = "fixed_app" if locked and kind == "app" else (
+            "standard" if locked else kind
+        )
         labels = (
             self.translator.text("shortcut.category_" + category), name, shortcut,
             self.translator.text("shortcut.locked" if locked else "shortcut.editable"),
@@ -209,6 +214,9 @@ class ShortcutSettingsDialog(QDialog):
         for column, value in enumerate(labels):
             item = QTableWidgetItem(value)
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            if locked:
+                item.setForeground(LOCKED_TEXT_COLOR)
+                item.setBackground(LOCKED_BACKGROUND_COLOR)
             if column == 0:
                 item.setData(Qt.ItemDataRole.UserRole, (kind, identifier))
             self.table.setItem(row, column, item)

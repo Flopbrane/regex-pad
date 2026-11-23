@@ -4,8 +4,8 @@ import os
 import sys
 
 import pytest
-from PySide6.QtCore import QEvent, QPointF, Qt
-from PySide6.QtGui import QImage, QMouseEvent
+from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
+from PySide6.QtGui import QImage, QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import QApplication, QPlainTextEdit
 
 from editor.text_editor import TextEditor
@@ -155,6 +155,40 @@ def test_fixed_column_wrap_overrides_wrap_mode_without_modifying_text(
     editor.set_fixed_column_wrap_options(enabled=False, column=12)
 
     assert editor.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap
+
+
+def test_fixed_wrap_scrolls_with_wheel_on_blank_margin_and_side_areas(
+    app: QApplication,
+) -> None:
+    editor = TextEditor()
+    source_text = ("x" * 120 + "\n") * 80
+    editor.resize(1000, 300)
+    editor.setPlainText(source_text)
+    editor.set_fixed_column_wrap_options(enabled=True, column=20)
+    editor.show()
+    app.processEvents()
+
+    scroll_bar = editor.verticalScrollBar()
+    assert scroll_bar.maximum() > 0
+    assert editor.viewport().geometry().right() + 100 < editor.width()
+    targets = (
+        (editor.viewport(), editor.viewport().rect().center()),
+        (editor, QPoint(editor.viewport().geometry().right() + 100, 150)),
+        (editor.line_number_area, editor.line_number_area.rect().center()),
+        (editor.search_marker_area, editor.search_marker_area.rect().center()),
+    )
+    for target, point in targets:
+        scroll_bar.setValue(0)
+        global_point = target.mapToGlobal(point)
+        wheel = QWheelEvent(
+            QPointF(point), QPointF(global_point), QPoint(0, 0), QPoint(0, -120),
+            Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.ScrollUpdate, False,
+        )
+        QApplication.sendEvent(target, wheel)
+        app.processEvents()
+        assert scroll_bar.value() > 0
+    assert editor.toPlainText() == source_text
 
 
 def test_line_number_area_click_selects_line(app: QApplication) -> None:

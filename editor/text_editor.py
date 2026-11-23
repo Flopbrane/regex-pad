@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 
 from PySide6.QtCore import (
+    QEvent,
+    QObject,
     QRect,
     QSize,
     Qt,
@@ -24,8 +26,9 @@ from PySide6.QtGui import (
     QTextDocument,
     QTextFormat,
     QTextOption,
+    QWheelEvent,
 )
-from PySide6.QtWidgets import QPlainTextEdit, QTextEdit
+from PySide6.QtWidgets import QApplication, QPlainTextEdit, QTextEdit
 
 from editor.line_number_area import LineNumberArea
 from editor.search_marker_area import SearchMarkerArea
@@ -144,6 +147,8 @@ class TextEditor(QPlainTextEdit):
         super().__init__()
         self.line_number_area = LineNumberArea(self)
         self.search_marker_area = SearchMarkerArea(self)
+        self.line_number_area.installEventFilter(self)
+        self.search_marker_area.installEventFilter(self)
         self.line_numbers_enabled = True
         self.search_matches: list[SearchMatch] = []
         self.search_exclusion_matches: list[SearchMatch] = []
@@ -343,6 +348,31 @@ class TextEditor(QPlainTextEdit):
                 content_rect.height(),
             )
         )
+
+    def event(self, event: QEvent) -> bool:
+        """Scroll over the blank margin created by fixed-column wrapping."""
+        if (
+            event.type() == QEvent.Type.Wheel
+            and getattr(self, "fixed_column_wrap_enabled", False)
+            and isinstance(event, QWheelEvent)
+            and (event.angleDelta().y() or event.pixelDelta().y())
+            and not self.viewport().geometry().contains(event.position().toPoint())
+        ):
+            QApplication.sendEvent(self.verticalScrollBar(), event)
+            return event.isAccepted()
+        return super().event(event)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """Allow wheel scrolling while the pointer is on either side area."""
+        if (
+            watched in (self.line_number_area, self.search_marker_area)
+            and event.type() == QEvent.Type.Wheel
+            and isinstance(event, QWheelEvent)
+            and (event.angleDelta().y() or event.pixelDelta().y())
+        ):
+            QApplication.sendEvent(self.verticalScrollBar(), event)
+            return event.isAccepted()
+        return super().eventFilter(watched, event)
 
     def paintEvent(self, event: QPaintEvent) -> None:
         """ペイントイベントを処理するメソッド"""

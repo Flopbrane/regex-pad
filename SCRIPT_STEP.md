@@ -4986,3 +4986,14 @@ Canonical propagation and final concentrated-test results:
 - `build.ps1` と `regex-pad.spec` の DLL 探索経路からホストアプリのランタイムを除外。spec 側では、万一そのランタイム由来の DLL が収集されたらビルドを停止する。ビルド後は `_internal/PySide6/Qt6Core.dll` と `QtCore.pyd` を別プロセスで読み込んで確認する。共有 PyInstaller キャッシュをビルド後に削除する処理は外した。
 - 指定の Python 環境で `build.ps1` を実行し、`dist/regex-pad` を作成。WordPress プレビュー234ファイル、JSON、辞書の検査と Qt DLL 読み込み検査に合格。新配布物には `icuuc.dll` がなく、Analysis/COLLECT にホストアプリのランタイム由来 DLL がないことを確認。EXE は起動後8秒間稼働し、起動エラーは再現しなかった。
 - 元の `dist/regex-pad_ver.1.2.0` は保持。新しい `dist/regex-pad/regex-pad.exe` を利用する。両フォルダーの設定・色設定・プリセット3件は一致。関連テスト10件、Ruff、PowerShell構文検査、`git diff --check` に合格。実際の編集操作の目視確認は未実施。
+## 2026-11-24 ショートカット設定一覧の固定行と基本操作
+
+- 変更不可の行を文字色 `#4C3163`、背景色 `#DEDEDE` に統一。変更可能な行の表示は維持し、固定されたアプリ操作は「アプリ（固定）」と表示する。
+- `Ctrl+N`（新規）、`Ctrl+O`（開く）、`Ctrl+S`（保存）、`Ctrl+Shift+S`（名前を付けて保存）、`Ctrl+F`（検索）を変更不可にした。ダイアログの編集禁止、設定検証、実際のアクションへの適用を揃えた。既存の `shortcutkey_ref.json` にこれらの古い上書き指定があっても、該当キーのみメモリ上で無視し、他の有効なカスタム設定と元のファイルは保持する。
+- 英日翻訳、README、両言語の使い方を更新。関連テスト7件、Ruff全体、Pyright（0 errors / 0 warnings）、翻訳JSON構文、`git diff --check` に合格。
+- `build.ps1` で新しい `dist/regex-pad` を作成。WordPressプレビュー234ファイルとQt DLL読み込み検査に合格。元の `dist/regex-pad_Ver.1.2.0` は保持し、そこから定型文ショートカット設定をSHA-256照合付きで新配布物に引き継いだ。ユーザーのフォントサイズを保持し、プリセット保存先は新配布物内の標準フォルダーを使う設定とした。新しいEXEは起動後12秒間稼働し、Windowsのウィンドウ一覧で「無題 - Regex-Pad」の生成を確認。編集操作の目視確認は未実施。
+## 2026-11-24 固定文字数折り返し時の縦スクロール修正
+
+- メイン編集欄の縦スクロール不具合を再現。設定文字数で折り返す際、右側の広い余白を `setViewportMargins` で確保しており、余白上のホイールイベントは編集用viewportに届かなかった。20文字折り返し・幅1000pxではviewport幅が約300pxになり、右余白上のホイールではスクロール値が0のままだった。テキスト上では値が増え、縦スクロールバー自体は正常だった。
+- `TextEditor` で固定文字数折り返しの右余白に届いた縦ホイールイベントを縦スクロールバーへ転送。行番号と検索マーカーの補助領域上でも同様に転送する。折り返し位置・本文・編集領域上の従来のホイール処理は変更しない。
+- 右余白、本文、行番号、検索マーカーの4箇所からスクロールできる回帰テストを追加。関連テスト10件、Ruff全体、Pyright 0 errors / 0 warnings に合格。`build.ps1` による配布EXE再ビルド、WordPressプレビュー234ファイル、Qt DLL読み込み検査に合格。再ビルド前後で `config.json`、`color_presets.json`、`shortcutkey_ref.json`、プリセット3件のSHA-256が一致した。新EXEは「無題 - Regex-Pad」のウィンドウを生成した。実画面でのマウス操作は未確認。

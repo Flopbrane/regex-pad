@@ -63,8 +63,10 @@ Regular expression search and replacement use Python's standard-library `re` mod
 See the [user guide](docs/HOW_TO_USE.md) for step-by-step instructions and shortcuts.
 `Ctrl+U` wraps selected text in `<u style="">...</u>` so the style can be filled in later.
 **Options > Shortcut key settings** lists application and Windows/standard keys.
-Editable application keys and custom text shortcuts are saved locally in
-`shortcutkey_ref.json` beside `config.json`.
+Fixed rows are shown with purple text on a gray background. `Ctrl+N`, `Ctrl+O`,
+`Ctrl+S`, `Ctrl+Shift+S`, and `Ctrl+F` cannot be changed. Other editable
+application keys and custom text shortcuts are saved in `shortcutkey_ref.json`
+beside `config.json`.
 
 ## Unicode normalization replacement
 
