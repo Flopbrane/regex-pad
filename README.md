@@ -62,6 +62,7 @@ Regular expression search and replacement use Python's standard-library `re` mod
 Selected-text search keeps the editor's actual selection when the scope option is
 switched off. Closing Find / Replace clears its markers; reopen it to rescan.
 Successful replacement also clears the markers. Search again to mark the updated text.
+Click a row in the replacement preview to jump to its line in the source tab.
 
 See the [user guide](docs/HOW_TO_USE.md) for step-by-step instructions and shortcuts.
 `Ctrl+U` wraps selected text in `<u style="">...</u>` so the style can be filled in later.

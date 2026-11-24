@@ -38,6 +38,7 @@ class FindReplaceDialog(QDialog):
     replace_all_requested = Signal(str, str, SearchOptions)
     replace_marked_requested = Signal(str, str, SearchOptions)
     preview_requested = Signal(str, str, SearchOptions)
+    preview_line_requested = Signal(int)
     search_parameters_changed = Signal(str, SearchOptions)
     selection_scope_reset_requested = Signal()
     regex_help_requested = Signal()
@@ -469,6 +470,7 @@ class FindReplaceDialog(QDialog):
         self.replace_all_button.clicked.connect(self._emit_replace_all_requested)
         self.replace_marked_button.clicked.connect(self._emit_replace_marked_requested)
         self.preview_button.clicked.connect(self._emit_preview_requested)
+        self.preview_table.cellClicked.connect(self._emit_preview_line_requested)
         self.regex_help_button.clicked.connect(self.regex_help_requested.emit)
         self.normalise_button.clicked.connect(self._choose_normalise_operation)
         self.close_button.clicked.connect(self.close)
@@ -509,6 +511,12 @@ class FindReplaceDialog(QDialog):
         self.append_dot_to_circled_number_check_box.toggled.connect(
             self._emit_search_parameters_changed
         )
+
+    def _emit_preview_line_requested(self, row: int, _column: int) -> None:
+        """Request navigation to the line shown in the clicked preview row."""
+        line_item = self.preview_table.item(row, 0)
+        if line_item is not None:
+            self.preview_line_requested.emit(int(line_item.text()))
 
     def _search_options(self) -> SearchOptions:
         """Get the current search options based on the state of the checkboxes."""

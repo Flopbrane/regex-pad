@@ -288,6 +288,7 @@ class MainWindow(QMainWindow):
         self.current_encoding = settings.default_encoding
         self.newline_code = settings.newline_code
         self.find_replace_dialog: FindReplaceDialog | None = None
+        self._preview_source: tuple[TextEditor, int] | None = None
         self.macro_editor_window: MacroEditorWindow | None = None
         self.macro_editor_controller: MacroEditorController | None = None
         self.macro_execution_controller: MacroExecutionController | None = None
@@ -3659,6 +3660,9 @@ class MainWindow(QMainWindow):
                 self.replace_marked_matches
             )
             self.find_replace_dialog.preview_requested.connect(self.preview_matches)
+            self.find_replace_dialog.preview_line_requested.connect(
+                self._jump_to_preview_line
+            )
             self.find_replace_dialog.search_parameters_changed.connect(
                 self._search_parameters_changed
             )
@@ -3696,6 +3700,9 @@ class MainWindow(QMainWindow):
 
     def _on_find_replace_dialog_closed(self, _result: int) -> None:
         """Discard search decorations without changing the editor selection."""
+        self._preview_source = None
+        if self.find_replace_dialog is not None:
+            self.find_replace_dialog.clear_preview_rows()
         self._marked_source = None
         self._marked_editor = None
         self.search_scope = None
@@ -3927,7 +3934,7 @@ class MainWindow(QMainWindow):
                     scope_offset,
                 )
                 summary = self._replacement_preview_summary(len(matches), len(rows))
-                self.find_replace_dialog.set_preview_rows(rows, summary)
+                self._set_search_preview(rows, summary)
                 self._set_search_status(summary)
             if confirm and not self._confirm_replace_all(
                 target_text,
@@ -3995,7 +4002,7 @@ class MainWindow(QMainWindow):
         )
         summary = self._replacement_preview_summary(len(matches), len(rows))
         if self.find_replace_dialog is not None:
-            self.find_replace_dialog.set_preview_rows(rows, summary)
+            self._set_search_preview(rows, summary)
         self._set_search_status(summary)
 
         result = QMessageBox.question(
@@ -4254,6 +4261,13 @@ class MainWindow(QMainWindow):
         self, editor: TextEditor, qt_position: int, removed: int, added: int
     ) -> None:
         """Update literal markers around one edit; discard unsupported scopes safely."""
+        if self._preview_source is not None and editor is self._preview_source[0]:
+            self._preview_source = None
+            if (
+                not self._search_internal_text_change
+                and self.find_replace_dialog is not None
+            ):
+                self.find_replace_dialog.clear_preview_rows()
         if editor is self.editor and not self._search_internal_text_change:
             self.search_scope = None
         indexed_source = self._marked_source
@@ -4437,10 +4451,46 @@ class MainWindow(QMainWindow):
 
         summary = self._replacement_preview_summary(len(matches), len(rows))
 
-        self.find_replace_dialog.set_preview_rows(rows, summary)
+        self._set_search_preview(rows, summary)
         self._set_search_status(summary)
         self._search_highlights_suspended = False
         self.refresh_search_highlights(search_text, options)
+
+    def _set_search_preview(
+        self, rows: list[tuple[int, str, str]], summary: str
+    ) -> None:
+        """Associate displayed preview lines with the current document revision."""
+        if self.find_replace_dialog is None:
+            return
+        self._preview_source = (self.editor, self.editor.document().revision())
+        self.find_replace_dialog.set_preview_rows(rows, summary)
+
+    def _jump_to_preview_line(self, line_number: int) -> None:
+        """Open the preview's original tab and place the cursor at that line."""
+        if self._preview_source is None or self.find_replace_dialog is None:
+            return
+        preview_editor, revision = self._preview_source
+        tab_index = next(
+            (
+                index
+                for index in range(self.tab_widget.count())
+                if self._editor_at(index) is preview_editor
+            ),
+            -1,
+        )
+        if tab_index < 0 or preview_editor.document().revision() != revision:
+            self.find_replace_dialog.clear_preview_rows()
+            self._preview_source = None
+            return
+        block = preview_editor.document().findBlockByNumber(line_number - 1)
+        if not block.isValid():
+            return
+        self.tab_widget.setCurrentIndex(tab_index)
+        cursor = preview_editor.textCursor()
+        cursor.setPosition(block.position())
+        preview_editor.setTextCursor(cursor)
+        preview_editor.ensureCursorVisible()
+        preview_editor.setFocus()
 
     def _replacement_preview_summary(self, match_count: int, shown_count: int) -> str:
         if match_count == 0:

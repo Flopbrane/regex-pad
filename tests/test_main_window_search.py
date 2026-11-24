@@ -7,8 +7,9 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import QEventLoop, QTimer
+from PySide6.QtCore import QEventLoop, Qt, QTimer
 from PySide6.QtGui import QTextCursor
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from main import MainWindow
@@ -807,6 +808,71 @@ def test_preview_matches_shows_line_context_and_replacement(app: QApplication) -
     assert line_item.text() == "2"
     assert before_item.text() == "second  "
     assert after_item.text() == "second"
+
+
+def test_preview_row_click_jumps_to_original_tab_and_line(app: QApplication) -> None:
+    _ = app
+    window = MainWindow()
+    source_editor = window.editor
+    source_editor.setPlainText("first\nsecond  \nthird\nfourth  ")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    window.preview_matches(r"[ \t]+$", "", SearchOptions(regular_expression=True))
+    assert dialog.preview_table.rowCount() == 2
+
+    window.create_editor_tab(text="another document")
+    assert window.editor is not source_editor
+    after_item = dialog.preview_table.item(1, 2)
+    assert after_item is not None
+    dialog.preview_table.scrollToItem(after_item)
+    QApplication.processEvents()
+    QTest.mouseClick(
+        dialog.preview_table.viewport(),
+        Qt.MouseButton.LeftButton,
+        pos=dialog.preview_table.visualItemRect(after_item).center(),
+    )
+
+    assert window.editor is source_editor
+    assert source_editor.textCursor().blockNumber() == 3
+    assert source_editor.textCursor().positionInBlock() == 0
+    assert source_editor.toPlainText() == "first\nsecond  \nthird\nfourth  "
+
+
+def test_preview_rows_clear_after_source_edit(app: QApplication) -> None:
+    _ = app
+    window = MainWindow()
+    window.editor.setPlainText("first\nsecond  ")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    window.preview_matches(r"[ \t]+$", "", SearchOptions(regular_expression=True))
+    assert dialog.preview_table.rowCount() == 1
+
+    window.editor.insertPlainText("changed")
+
+    assert dialog.preview_table.rowCount() == 0
+
+
+def test_preview_click_does_not_target_another_tab_after_source_closes(
+    app: QApplication,
+) -> None:
+    _ = app
+    window = MainWindow()
+    window.editor.setPlainText("first\nsecond  ")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    window.preview_matches(r"[ \t]+$", "", SearchOptions(regular_expression=True))
+    assert dialog.preview_table.rowCount() == 1
+
+    other_editor = window.create_editor_tab(text="another document")
+    window.tab_widget.removeTab(0)
+    dialog.preview_table.cellClicked.emit(0, 0)
+
+    assert window.editor is other_editor
+    assert other_editor.textCursor().position() == 0
+    assert dialog.preview_table.rowCount() == 0
 
 
 def test_preview_matches_shows_line_after_all_same_line_replacements(

@@ -88,6 +88,9 @@ Open **Search > Find / Replace** (`Ctrl+F`). The fields are **Find text**,
    **Search only selected text**, or use **Search only visible text**.
 4. Use **Find** or the previous/next arrows to inspect matches.
 5. Choose **Preview** to compare before/after replacement rows.
+   Click a preview row to jump to that line in the original tab. Editing the
+   source manually clears outdated preview rows; run Preview again after editing
+   or replacing to update them.
 6. Use **Replace** for a match, **Replace All** for the selected scope, or
    **Replace Marked** for the current search markers.
 

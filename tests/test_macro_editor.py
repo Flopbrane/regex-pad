@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QMessageBox
+from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QFrame, QMessageBox
 
 from app_logging import AppLogger
 from dialogs.macro_editor_controller import MacroEditorController
@@ -80,6 +80,19 @@ def test_boolean_options_are_checkboxes_and_keep_editor_history(editor):
     assert checkbox.isChecked() is False
     controller.undo_stack.redo()
     assert checkbox.isChecked() is True
+
+
+def test_normalization_options_are_separated_from_search_scope(editor):
+    window, _controller = editor
+    step_editor = window.step_editor
+    form = step_editor.form
+    visible_row, _ = form.getWidgetPosition(step_editor.fields["visible_only"])
+    separator_row, _ = form.getWidgetPosition(step_editor.normalize_separator)
+    normalize_row, _ = form.getWidgetPosition(step_editor.fields["unicode_normalize"])
+
+    assert visible_row + 1 == separator_row
+    assert separator_row + 1 == normalize_row
+    assert step_editor.normalize_separator.frameShape() == QFrame.Shape.HLine
 
 
 def test_heading_numbering_step_upgrades_format_and_is_saveable(editor, tmp_path):

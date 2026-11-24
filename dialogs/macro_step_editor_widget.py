@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
+    QFrame,
     QLabel,
     QLineEdit,
     QWidget,
@@ -68,6 +69,12 @@ class MacroStepEditorWidget(QWidget):
             widget.setObjectName(name)
             self.fields[name] = widget
             self.form.addRow(translator.text("macro.editor." + name), widget)
+            if name == "visible_only":
+                self.normalize_separator = QFrame(self)
+                self.normalize_separator.setObjectName("normalize_separator")
+                self.normalize_separator.setFrameShape(QFrame.Shape.HLine)
+                self.normalize_separator.setFrameShadow(QFrame.Shadow.Sunken)
+                self.form.addRow(self.normalize_separator)
         self.set_step(self._step)
 
     def set_step(self, step: MacroEditorStepData) -> None:
