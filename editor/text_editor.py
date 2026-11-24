@@ -153,6 +153,7 @@ class TextEditor(QPlainTextEdit):
         self.search_matches: list[SearchMatch] = []
         self.search_exclusion_matches: list[SearchMatch] = []
         self.search_scope_bounds: tuple[int, int] | None = None
+        self._highlight_selection_bounds: tuple[int, int] | None = None
         self.search_marker_color = "#ffff00"
         self.current_match_marker_color = "#ff9900"
         self.search_scope_marker_color = "#dcecff"
@@ -664,18 +665,58 @@ class TextEditor(QPlainTextEdit):
 
     def _apply_search_highlights(self) -> None:
         """検索マッチのハイライトを適用するヘルパーメソッド"""
-        self._apply_extra_selections()
+        if not self.search_matches:
+            return
+        cursor = self.textCursor()
+        bounds = (
+            (cursor.selectionStart(), cursor.selectionEnd())
+            if cursor.hasSelection()
+            else None
+        )
+        if bounds != self._highlight_selection_bounds:
+            self._apply_extra_selections()
 
     def _apply_extra_selections(self) -> None:
         """文法エラーと検索マッチのハイライトを適用するヘルパーメソッド"""
+        cursor = self.textCursor()
+        self._highlight_selection_bounds = (
+            (cursor.selectionStart(), cursor.selectionEnd())
+            if cursor.hasSelection()
+            else None
+        )
         selections: list[QTextEdit.ExtraSelection] = self._grammar_issue_selections()
-        scope_selection = self._search_scope_selection()
+        position_map = self._search_cursor_positions()
+        scope_selection = self._search_scope_selection(position_map)
         if scope_selection is not None:
             selections.append(scope_selection)
-        selections.extend(self._search_match_selections())
+        selections.extend(self._search_match_selections(position_map))
         self.setExtraSelections(selections)
 
-    def _search_scope_selection(self) -> QTextEdit.ExtraSelection | None:
+    def _search_cursor_positions(self) -> dict[int, int]:
+        """Convert marker offsets to Qt UTF-16 positions in one document pass."""
+        positions: set[int] = set()
+        if self.search_scope_bounds is not None:
+            positions.update(self.search_scope_bounds)
+        for match in (*self.search_matches[:1000], *self.search_exclusion_matches[:1000]):
+            positions.update((match.start, match.end))
+        if not positions:
+            return {}
+        source_text = self.toPlainText()
+        position_map: dict[int, int] = {}
+        previous_text_position = 0
+        cursor_position = 0
+        for text_position in sorted(positions):
+            bounded_position = min(max(text_position, 0), len(source_text))
+            cursor_position += len(
+                source_text[previous_text_position:bounded_position].encode("utf-16-le")
+            ) // 2
+            position_map[text_position] = cursor_position
+            previous_text_position = bounded_position
+        return position_map
+
+    def _search_scope_selection(
+        self, position_map: dict[int, int]
+    ) -> QTextEdit.ExtraSelection | None:
         """Create the retained selected-range highlight used during scoped search."""
         if self.search_scope_bounds is None:
             return None
@@ -686,9 +727,9 @@ class TextEditor(QPlainTextEdit):
         scope_format = QTextCharFormat()
         scope_format.setBackground(QColor(self.search_scope_marker_color))
         scope_cursor = QTextCursor(self.document())
-        scope_cursor.setPosition(self.text_position_to_cursor_position(scope_start))
+        scope_cursor.setPosition(position_map[scope_start])
         scope_cursor.setPosition(
-            self.text_position_to_cursor_position(scope_end),
+            position_map[scope_end],
             QTextCursor.MoveMode.KeepAnchor,
         )
         selection = QTextEdit.ExtraSelection()
@@ -714,7 +755,9 @@ class TextEditor(QPlainTextEdit):
             selections.append(selection)
         return selections
 
-    def _search_match_selections(self) -> list[QTextEdit.ExtraSelection]:
+    def _search_match_selections(
+        self, position_map: dict[int, int]
+    ) -> list[QTextEdit.ExtraSelection]:
         """検索マッチに対するハイライトを適用するヘルパーメソッド"""
         highlight_format: QTextCharFormat = QTextCharFormat()
         highlight_format.setBackground(QColor(self.search_marker_color))
@@ -737,9 +780,9 @@ class TextEditor(QPlainTextEdit):
                 else highlight_format
             )
             match_cursor: QTextCursor = QTextCursor(self.document())
-            match_cursor.setPosition(self.text_position_to_cursor_position(match.start))
+            match_cursor.setPosition(position_map[match.start])
             match_cursor.setPosition(
-                self.text_position_to_cursor_position(match.end),
+                position_map[match.end],
                 QTextCursor.MoveMode.KeepAnchor,
             )
             selection.cursor = match_cursor
@@ -750,9 +793,9 @@ class TextEditor(QPlainTextEdit):
             selection: QTextEdit.ExtraSelection = QTextEdit.ExtraSelection()
             selection.format = exclusion_highlight_format
             match_cursor: QTextCursor = QTextCursor(self.document())
-            match_cursor.setPosition(self.text_position_to_cursor_position(match.start))
+            match_cursor.setPosition(position_map[match.start])
             match_cursor.setPosition(
-                self.text_position_to_cursor_position(match.end),
+                position_map[match.end],
                 QTextCursor.MoveMode.KeepAnchor,
             )
             selection.cursor = match_cursor

@@ -1,10 +1,26 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QCoreApplication, QEvent
+from PySide6.QtWidgets import QApplication
 
 from app_logging import AppLogger
+
+
+@pytest.fixture(autouse=True)
+def dispose_test_windows() -> Iterator[None]:
+    """Release windows and their timers before the next GUI test starts."""
+    yield
+    application = QApplication.instance()
+    if not isinstance(application, QApplication):
+        return
+    for widget in application.topLevelWidgets():
+        if widget.parent() is None:
+            widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 @pytest.fixture(autouse=True)

@@ -59,6 +59,9 @@ No commercial Qt entitlement or completed dependency-source delivery is assumed.
 | Recovery and appearance | Automatic session backups, saved-file generations, restore, ruler, wrapping, visible whitespace, colors |
 
 Regular expression search and replacement use Python's standard-library `re` module.
+Selected-text search keeps the editor's actual selection when the scope option is
+switched off. Closing Find / Replace clears its markers; reopen it to rescan.
+Successful replacement also clears the markers. Search again to mark the updated text.
 
 See the [user guide](docs/HOW_TO_USE.md) for step-by-step instructions and shortcuts.
 `Ctrl+U` wraps selected text in `<u style="">...</u>` so the style can be filled in later.

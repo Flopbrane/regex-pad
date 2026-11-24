@@ -95,6 +95,12 @@ Search, highlighting, and Preview do not alter the document. Invalid patterns
 or replacement references produce an error. After a replacement, use Undo if
 the result is unwanted. Selection/visible options constrain searches to that
 scope; clear them to return to a whole-document operation.
+Turning off selected-text scope keeps the editor selection. While the scope is
+enabled, use **Reset selection scope** to capture a new selection. Closing the
+dialog clears search, exclusion, and scope markers; reopening scans the active
+document again.
+After a successful replacement, the markers stay cleared while you edit the
+document. Change the search conditions or run Find/Preview to mark the updated text.
 
 ### Search/Replace Presets in the current source build
 

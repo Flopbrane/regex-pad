@@ -283,7 +283,7 @@ class MainWindow(QMainWindow):
         self.search_highlight_timer.setSingleShot(True)
         self.search_highlight_timer.setInterval(SEARCH_HIGHLIGHT_DELAY_MS)
         self.search_highlight_timer.timeout.connect(self._run_pending_search_highlight)
-        self.pending_search_highlight: tuple[str, SearchOptions] | None = None
+        self.pending_search_highlight: TextEditor | None = None
         self.auto_save_timer = QTimer(self)
         self.auto_save_timer.timeout.connect(self._save_unsaved_backup_snapshot)
         self.current_save_file_path: Path | None = None
@@ -312,6 +312,9 @@ class MainWindow(QMainWindow):
         self.wordpress_warmup_timer.setInterval(10000)
         self.wordpress_warmup_timer.timeout.connect(self._warm_wordpress_preview)
         self.search_scope: tuple[int, int] | None = None
+        self._search_internal_text_change = False
+        self._search_highlights_suspended = False
+        self._status_count_cache: tuple[TextEditor, int, int] | None = None
         self.wordpress_mode_label_key = settings.wordpress_mode_label_key
         self.hover_hints_enabled = settings.hover_hints_enabled
         self.user_dictionary_folder = settings.user_dictionary_folder
@@ -879,7 +882,9 @@ class MainWindow(QMainWindow):
         editor.textChanged.connect(self._update_status_bar)
         editor.textChanged.connect(self._update_tab_titles)
         editor.textChanged.connect(self._save_unsaved_backup)
-        editor.textChanged.connect(self._refresh_search_highlights_from_dialog)
+        editor.textChanged.connect(
+            lambda editor=editor: self._editor_text_changed_for_search(editor)
+        )
         editor.textChanged.connect(editor.clear_grammar_issue_lines)
         editor.textChanged.connect(
             lambda editor=editor: self._invalidate_grammar_lint_result(editor)
@@ -924,9 +929,19 @@ class MainWindow(QMainWindow):
         editor = self._editor_at(index)
         if editor is None:
             return
+        previous_editor = getattr(self, "editor", None)
+        self._cancel_pending_search_highlight()
+        if previous_editor is not None and previous_editor is not editor:
+            previous_editor.clear_search_matches()
         self.editor = editor
         self._sync_current_tab_state()
         self.search_scope = None
+        editor.clear_search_matches()
+        if self.find_replace_dialog is not None and self.find_replace_dialog.isVisible():
+            self.schedule_search_highlights(
+                self.find_replace_dialog.find_text_edit.text(),
+                self.find_replace_dialog.current_search_options(),
+            )
         self._update_status_bar()
         self._update_window_title()
         self._rebuild_insert_tag_menu()
@@ -3115,7 +3130,13 @@ class MainWindow(QMainWindow):
         cursor = self.editor.textCursor()
         line_number = cursor.blockNumber() + 1
         column_number = cursor.positionInBlock() + 1
-        character_count = len(self.editor.toPlainText())
+        revision = self.editor.document().revision()
+        cached = self._status_count_cache
+        if cached is None or cached[0] is not self.editor or cached[1] != revision:
+            character_count = len(self.editor.toPlainText())
+            self._status_count_cache = (self.editor, revision, character_count)
+        else:
+            character_count = cached[2]
         self.statusBar().showMessage(
             self.translator.text(
                 "status.position",
@@ -3638,7 +3659,7 @@ class MainWindow(QMainWindow):
             )
             self.find_replace_dialog.preview_requested.connect(self.preview_matches)
             self.find_replace_dialog.search_parameters_changed.connect(
-                self.schedule_search_highlights
+                self._search_parameters_changed
             )
             self.find_replace_dialog.selection_scope_reset_requested.connect(
                 self.reset_search_scope_reference
@@ -3650,7 +3671,9 @@ class MainWindow(QMainWindow):
             self.find_replace_dialog.preset_requested.connect(
                 self.capture_search_preset
             )
+            self.find_replace_dialog.finished.connect(self._on_find_replace_dialog_closed)
 
+        self._cancel_pending_search_highlight()
         selected_text = self.editor.textCursor().selectedText()
         if selected_text:
             cursor = self.editor.textCursor()
@@ -3662,18 +3685,28 @@ class MainWindow(QMainWindow):
         else:
             self.search_scope = None
         self.find_replace_dialog.clear_error()
-        if not self.reduced_error_check_enabled:
-            self.update_search_highlights(
-                self.find_replace_dialog.find_text_edit.text(),
-                self.find_replace_dialog.current_search_options(),
-            )
         self.find_replace_dialog.show()
         self.find_replace_dialog.raise_()
         self.find_replace_dialog.activateWindow()
+        self._search_highlights_suspended = False
+        self.schedule_search_highlights(
+            self.find_replace_dialog.find_text_edit.text(),
+            self.find_replace_dialog.current_search_options(),
+        )
+
+    def _on_find_replace_dialog_closed(self, _result: int) -> None:
+        """Discard search decorations without changing the editor selection."""
+        self._cancel_pending_search_highlight()
+        self.search_scope = None
+        for tab_index in range(self.tab_widget.count()):
+            editor = self._editor_at(tab_index)
+            if editor is not None:
+                editor.clear_search_matches()
 
     def reset_search_scope_reference(self) -> None:
         """Forget the old search scope and capture the editor's current selection."""
         self.search_scope = None
+        self._search_highlights_suspended = False
         if self.find_replace_dialog is None:
             return
         self.update_search_highlights(
@@ -3721,6 +3754,8 @@ class MainWindow(QMainWindow):
             )
         )
         self._set_search_status(self.translator.text("search.match_found"))
+        self._search_highlights_suspended = False
+        self.schedule_search_highlights(search_text, options)
 
     def find_previous(self, search_text: str, options: SearchOptions) -> None:
         """Find the previous occurrence of the search text using the specified search options."""
@@ -3766,6 +3801,8 @@ class MainWindow(QMainWindow):
             )
         )
         self._set_search_status(self.translator.text("search.match_found"))
+        self._search_highlights_suspended = False
+        self.schedule_search_highlights(search_text, options)
 
     def replace_current(
         self,
@@ -3841,8 +3878,13 @@ class MainWindow(QMainWindow):
             self._set_search_error(self.translator.text("search.no_current_match"))
             return
 
+        if options.selected_only and self.search_scope is not None:
+            scope_start, scope_end = self.search_scope
+            self.search_scope = (
+                scope_start, scope_end + len(result.text) - len(source_text)
+            )
         self._replace_document_text(result.text)
-        self._update_search_highlights_when_allowed(search_text, options)
+        self._clear_search_highlights_after_replace()
         replaced_end = len(result.text) - (len(source_text) - selected_match.end)
         self._set_cursor_position(replaced_end)
         self._set_search_status(self.translator.text("search.replaced_one"))
@@ -3919,7 +3961,7 @@ class MainWindow(QMainWindow):
             result_text = result.text
 
         self._replace_document_text(result_text)
-        self._update_search_highlights_when_allowed(search_text, options)
+        self._clear_search_highlights_after_replace()
         self._set_search_status(
             self.translator.text("search.replaced_many", count=result.count)
         )
@@ -3992,31 +4034,32 @@ class MainWindow(QMainWindow):
             return
 
         result_text = self.editor.toPlainText()
+        original_text = result_text
         replacement_count = 0
         try:
-            original_text = result_text
-            allowed_ranges = None
-            if options.exclusion_text:
-                scope_text, scope_offset = self._search_scope_text(options)
-                if options.selected_only and scope_text is None:
-                    self._set_search_error(self.translator.text("search.select_before_replace"))
-                    return
-                allowed_ranges = {
-                    (match.start + scope_offset, match.end + scope_offset)
-                    for match in self.search_engine.find_all(
-                        scope_text if scope_text is not None else original_text,
-                        search_text, options,
-                    )
-                }
+            scope_text, scope_offset = self._search_scope_text(options)
+            if options.selected_only and scope_text is None:
+                self._set_search_error(self.translator.text("search.select_before_replace"))
+                return
+            allowed_ranges = {
+                (match.start + scope_offset, match.end + scope_offset)
+                for match in self.search_engine.find_all(
+                    scope_text if scope_text is not None else original_text,
+                    search_text, options,
+                )
+            }
             preview_options = replace(options, exclusion_text="")
             for match in sorted(
                 self.editor.search_matches,
                 key=lambda search_match: search_match.start,
                 reverse=True,
             ):
-                if match.start < 0 or match.end > len(result_text):
+                if match.start < 0 or match.end > len(original_text):
                     continue
-                if allowed_ranges is not None and (match.start, match.end) not in allowed_ranges:
+                if (
+                    (match.start, match.end) not in allowed_ranges
+                    or original_text[match.start:match.end] != match.text
+                ):
                     continue
                 target_text = result_text[match.start : match.end]
                 preview_result = self.search_engine.preview_replacement(
@@ -4043,8 +4086,13 @@ class MainWindow(QMainWindow):
             self._set_search_error(self.translator.text("search.no_replacements"))
             return
 
+        if options.selected_only and self.search_scope is not None:
+            scope_start, scope_end = self.search_scope
+            self.search_scope = (
+                scope_start, scope_end + len(result_text) - len(original_text)
+            )
         self._replace_document_text(result_text)
-        self._update_search_highlights_when_allowed(search_text, options)
+        self._clear_search_highlights_after_replace()
         self._set_search_status(
             self.translator.text("search.replaced_many", count=replacement_count)
         )
@@ -4077,21 +4125,31 @@ class MainWindow(QMainWindow):
             result_text = result.text
 
         self._replace_document_text(result_text)
-        self._refresh_search_highlights_from_dialog()
+        self._clear_search_highlights_after_replace()
         self._set_search_status(
             self.translator.text("normalise.applied", count=result.count)
         )
         self._focus_find_text_after_replace_all()
 
-    def _update_search_highlights_when_allowed(
+    def _search_parameters_changed(
         self,
         search_text: str,
         options: SearchOptions,
     ) -> None:
-        if self.reduced_error_check_enabled:
-            self.editor.clear_search_matches()
-            return
+        """Resume marker calculation after the user changes search conditions."""
+        self._search_highlights_suspended = False
         self.schedule_search_highlights(search_text, options)
+
+    def _clear_search_highlights_after_replace(self) -> None:
+        """Keep markers off until the user explicitly searches again."""
+        self._search_highlights_suspended = True
+        self._cancel_pending_search_highlight()
+        self.editor.clear_search_matches()
+
+    def _cancel_pending_search_highlight(self) -> None:
+        """Stop a queued update before its editor or search state changes."""
+        self.search_highlight_timer.stop()
+        self.pending_search_highlight = None
 
     def schedule_search_highlights(
         self,
@@ -4099,16 +4157,33 @@ class MainWindow(QMainWindow):
         options: SearchOptions,
     ) -> None:
         """Delay automatic search highlighting so typing does not rescan on every key."""
+        self._cancel_pending_search_highlight()
         self.editor.clear_search_matches()
-        self.pending_search_highlight = (search_text, options)
+        if (
+            self.reduced_error_check_enabled
+            or self._search_highlights_suspended
+            or self.find_replace_dialog is None
+            or not self.find_replace_dialog.isVisible()
+        ):
+            return
+        self.pending_search_highlight = self.editor
         self.search_highlight_timer.start()
 
     def _run_pending_search_highlight(self) -> None:
-        if self.pending_search_highlight is None:
-            return
-        search_text, options = self.pending_search_highlight
+        pending_editor = self.pending_search_highlight
         self.pending_search_highlight = None
-        self.update_search_highlights(search_text, options)
+        dialog = self.find_replace_dialog
+        if (
+            pending_editor is None
+            or pending_editor is not self.editor
+            or dialog is None
+            or not dialog.isVisible()
+            or self.reduced_error_check_enabled
+        ):
+            return
+        self.update_search_highlights(
+            dialog.find_text_edit.text(), dialog.current_search_options()
+        )
 
     def _focus_find_text_after_replace_all(self) -> None:
         QTimer.singleShot(0, self._focus_find_text_after_replace_all_now)
@@ -4159,14 +4234,6 @@ class MainWindow(QMainWindow):
         scope_bounds: tuple[int, int] | None = None
         if options.selected_only:
             scope_bounds = (scope_offset, scope_offset + len(source_text))
-            cursor = self.editor.textCursor()
-            selection_bounds = (
-                self.editor.cursor_position_to_text_position(cursor.selectionStart()),
-                self.editor.cursor_position_to_text_position(cursor.selectionEnd()),
-            )
-            if cursor.hasSelection() and selection_bounds == scope_bounds:
-                cursor.clearSelection()
-                self.editor.setTextCursor(cursor)
 
         self.editor.set_search_matches(
             [
@@ -4190,12 +4257,29 @@ class MainWindow(QMainWindow):
 
     def _refresh_search_highlights_from_dialog(self) -> None:
         """Refresh the search highlights in the editor based on the current state of the find and replace dialog."""
-        if self.find_replace_dialog is None or not self.find_replace_dialog.isVisible():
+        if (
+            self._search_highlights_suspended
+            or self.find_replace_dialog is None
+            or not self.find_replace_dialog.isVisible()
+        ):
             return
-        self.update_search_highlights(
+        self.schedule_search_highlights(
             self.find_replace_dialog.find_text_edit.text(),
             self.find_replace_dialog.current_search_options(),
         )
+
+    def _editor_text_changed_for_search(self, editor: TextEditor) -> None:
+        """Drop stale positions after an edit and rescan the active document."""
+        if (
+            editor.search_matches
+            or editor.search_exclusion_matches
+            or editor.search_scope_bounds is not None
+        ):
+            editor.clear_search_matches()
+        if editor is not self.editor or self._search_internal_text_change:
+            return
+        self.search_scope = None
+        self._refresh_search_highlights_from_dialog()
 
     def preview_matches(
         self,
@@ -4234,6 +4318,8 @@ class MainWindow(QMainWindow):
 
         self.find_replace_dialog.set_preview_rows(rows, summary)
         self._set_search_status(summary)
+        self._search_highlights_suspended = False
+        self.schedule_search_highlights(search_text, options)
 
     def _replacement_preview_summary(self, match_count: int, shown_count: int) -> str:
         if match_count == 0:
@@ -4511,10 +4597,14 @@ class MainWindow(QMainWindow):
     def _replace_document_text(self, text: str) -> None:
         """Replace the entire text of the document in the editor with the given text."""
         cursor = self.editor.textCursor()
-        cursor.beginEditBlock()
-        cursor.select(QTextCursor.SelectionType.Document)
-        cursor.insertText(text)
-        cursor.endEditBlock()
+        self._search_internal_text_change = True
+        try:
+            cursor.beginEditBlock()
+            cursor.select(QTextCursor.SelectionType.Document)
+            cursor.insertText(text)
+            cursor.endEditBlock()
+        finally:
+            self._search_internal_text_change = False
 
     def _select_match(self, match: SearchMatch) -> None:
         """Select the text corresponding to the given match in the editor and focus the editor."""

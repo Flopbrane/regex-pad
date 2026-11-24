@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from main import MainWindow
 from search.html_typo_lint import HtmlTypoLintMessage
-from search.search_engine import SearchOptions
+from search.search_engine import SearchMatch, SearchOptions
 
 
 def _process_delayed_ui_events(delay_ms: int = 75) -> None:
@@ -929,7 +929,11 @@ def test_selected_scope_shows_search_and_exclusion_marker_colors(
         SearchOptions(selected_only=True, exclusion_text="[target]"),
     )
 
-    assert not window.editor.textCursor().hasSelection()
+    assert window.editor.textCursor().hasSelection()
+    assert (
+        window.editor.textCursor().selectionStart(),
+        window.editor.textCursor().selectionEnd(),
+    ) == (scope_start, scope_end)
     assert [match.text for match in window.editor.search_matches] == ["target"]
     assert [match.text for match in window.editor.search_exclusion_matches] == [
         "[target]"
@@ -940,6 +944,155 @@ def test_selected_scope_shows_search_and_exclusion_marker_colors(
     }
     assert marked_text_and_color["target"] == "#ffff00"
     assert marked_text_and_color["[target]"] == "#ff9900"
+
+
+def test_scope_toggle_close_and_reopen_keep_real_editor_selection(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("A target\nB target\n")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len("A target"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    assert dialog.find_text_edit.text() == "A target"
+    dialog.find_text_edit.setText("target")
+    dialog.selected_only_check_box.setChecked(True)
+    window._run_pending_search_highlight()
+    assert window.search_scope == (0, len("A target"))
+    assert window.editor.search_scope_bounds == window.search_scope
+    assert window.editor.textCursor().selectedText() == "A target"
+
+    dialog.selected_only_check_box.setChecked(False)
+    assert window.editor.textCursor().selectedText() == "A target"
+    assert window.search_scope == (0, len("A target"))
+    assert window.editor.search_scope_bounds is None
+    window._run_pending_search_highlight()
+    assert len(window.editor.search_matches) == 2
+
+    dialog.close()
+    assert window.editor.textCursor().selectedText() == "A target"
+    assert window.search_scope is None
+    assert window.editor.search_matches == []
+    cursor = window.editor.textCursor()
+    cursor.setPosition(len("A target\n"))
+    cursor.setPosition(len("A target\nB target"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    assert dialog.find_text_edit.text() == "B target"
+    dialog.selected_only_check_box.setChecked(True)
+    window._run_pending_search_highlight()
+    assert window.search_scope == (len("A target\n"), len("A target\nB target"))
+    dialog.selected_only_check_box.setChecked(False)
+    assert window.editor.textCursor().selectedText() == "B target"
+    window.preview_matches("target", "done", SearchOptions())
+    assert dialog.preview_table.rowCount() == 2
+
+
+def test_scope_reset_replaces_new_paragraph_without_revisiting_old_one(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    source = "A <strong > end\nB <strong > end\nC <strong > end"
+    window.editor.setPlainText(source)
+    cursor = window.editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len("A <strong > end"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("<strong >")
+    replacement = '<strong style="color: #333333;background-color: #FFDDEE">'
+    dialog.replace_text_edit.setText(replacement)
+    dialog.selected_only_check_box.setChecked(True)
+    dialog.replace_all_button.click()
+    assert window.editor.toPlainText().count(replacement) == 1
+    assert window.editor.toPlainText().count("<strong >") == 2
+    assert window.search_scope is not None
+    assert window.editor.search_matches == []
+    assert window.editor.search_scope_bounds is None
+
+    current_text = window.editor.toPlainText()
+    second_start = current_text.index("B <strong > end")
+    second_end = second_start + len("B <strong > end")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(second_start)
+    cursor.setPosition(second_end, QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    dialog.reset_selection_scope_button.click()
+    assert window.search_scope == (second_start, second_end)
+    dialog.replace_all_button.click()
+    assert window.editor.toPlainText().count(replacement) == 2
+    assert window.editor.toPlainText().count("<strong >") == 1
+    assert window.editor.search_matches == []
+    assert window.editor.search_scope_bounds is None
+    assert "C <strong > end" in window.editor.toPlainText()
+
+
+def test_close_cancels_pending_markers_after_replacement(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("target\n😀 target\n")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    dialog.replace_text_edit.setText("longer")
+    window._run_pending_search_highlight()
+    assert len(window.editor.search_matches) == 2
+    dialog.replace_all_button.click()
+    cursor_after_replace = window.editor.textCursor().position()
+    dialog.close()
+    _process_delayed_ui_events(300)
+    assert window.editor.toPlainText() == "longer\n😀 longer\n"
+    assert window.editor.textCursor().position() == cursor_after_replace
+    assert window.editor.search_matches == []
+    assert window.editor.search_exclusion_matches == []
+    assert window.editor.search_scope_bounds is None
+    assert window.pending_search_highlight is None
+
+
+def test_manual_edit_invalidates_scope_and_pending_highlights_follow_active_tab(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("target\n😀 target\n")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(len("target\n"))
+    cursor.setPosition(len("target\n😀 target"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    dialog.selected_only_check_box.setChecked(True)
+    window._run_pending_search_highlight()
+    assert window.search_scope is not None
+
+    cursor = window.editor.textCursor()
+    cursor.setPosition(0)
+    window.editor.setTextCursor(cursor)
+    cursor.insertText("X")
+    assert window.search_scope is None
+    assert window.editor.search_matches == []
+    window._run_pending_search_highlight()
+    assert window.editor.search_matches == []
+
+    dialog.selected_only_check_box.setChecked(False)
+    window._run_pending_search_highlight()
+    source = window.editor.toPlainText()
+    assert all(source[item.start:item.end] == item.text for item in window.editor.search_matches)
+    previous_editor = window.editor
+    dialog.find_text_edit.setText("target")
+    window.create_editor_tab("target in new tab")
+    window._run_pending_search_highlight()
+    assert previous_editor.search_matches == []
+    assert [item.text for item in window.editor.search_matches] == ["target"]
 
 
 def test_find_next_can_target_visible_text_only(
@@ -1204,6 +1357,144 @@ def test_reload_file_can_use_cp932_encoding(app: QApplication, tmp_path) -> None
 
     assert window.editor.toPlainText() == "日本語の文章です。"
     assert window.current_encoding == "cp932"
+
+
+@pytest.mark.parametrize("replace_kind", ["current", "all", "marked"])
+def test_successful_replacement_clears_markers_until_explicit_search(
+    app: QApplication, tmp_path: Path, replace_kind: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("target target")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    window._run_pending_search_highlight()
+    assert len(window.editor.search_matches) == 2
+    options = dialog.current_search_options()
+    if replace_kind == "current":
+        window.find_next("target", options)
+        window._run_pending_search_highlight()
+        window.replace_current("target", "done", options)
+        assert window.editor.toPlainText() == "done target"
+    elif replace_kind == "all":
+        window.replace_all("target", "done", options)
+        assert window.editor.toPlainText() == "done done"
+    else:
+        window.replace_marked_matches("target", "done", options)
+        assert window.editor.toPlainText() == "done done"
+
+    assert window.editor.search_matches == []
+    assert window.editor.search_exclusion_matches == []
+    assert window.editor.search_scope_bounds is None
+    assert window.pending_search_highlight is None
+    _process_delayed_ui_events(300)
+    assert window.editor.search_matches == []
+
+    with monkeypatch.context() as patcher:
+        patcher.setattr(
+            window,
+            "update_search_highlights",
+            lambda *_args: pytest.fail("replacement scheduled a search rescan"),
+        )
+        cursor = window.editor.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.insertText("!")
+        _process_delayed_ui_events(300)
+    assert window.editor.search_matches == []
+    assert window.pending_search_highlight is None
+
+    if replace_kind == "current":
+        window.find_next("target", options)
+        window._run_pending_search_highlight()
+        assert [match.text for match in window.editor.search_matches] == ["target"]
+
+    dialog.find_text_edit.setText("done")
+    window._run_pending_search_highlight()
+    expected = 1 if replace_kind == "current" else 2
+    assert len(window.editor.search_matches) == expected
+
+
+def test_normalise_operation_clears_markers_after_replacement(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("\uff21 \uff21")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("\uff21")
+    window._run_pending_search_highlight()
+    assert len(window.editor.search_matches) == 2
+
+    window.apply_regex_normalise_operation("fullwidth_alphabet_to_halfwidth")
+
+    assert window.editor.toPlainText() == "A A"
+    assert window.editor.search_matches == []
+    assert window.pending_search_highlight is None
+
+
+def test_empty_search_clears_all_markers_and_scope_background(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("target [target]\n")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len("target [target]"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    dialog.exclusion_text_edit.setText("[target]")
+    dialog.selected_only_check_box.setChecked(True)
+    window._run_pending_search_highlight()
+    assert window.editor.search_matches
+    assert window.editor.search_exclusion_matches
+    assert window.editor.search_scope_bounds is not None
+
+    dialog.find_text_edit.setText("")
+    window._run_pending_search_highlight()
+    assert window.editor.search_matches == []
+    assert window.editor.search_exclusion_matches == []
+    assert window.editor.search_scope_bounds is None
+    assert window.editor.textCursor().selectedText() == "target [target]"
+
+
+def test_cursor_motion_does_not_rebuild_unchanged_search_markers(
+    app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    editor = window.editor
+    editor.setPlainText("😀 target\ntarget\n")
+    editor.set_search_matches([
+        SearchMatch(2, 8, "target"),
+        SearchMatch(9, 15, "target"),
+    ])
+    marked_text = [
+        selection.cursor.selectedText() for selection in editor.extraSelections()
+    ]
+    assert marked_text == ["target", "target"]
+    calls = 0
+    original_apply = editor._apply_extra_selections
+
+    def count_apply() -> None:
+        nonlocal calls
+        calls += 1
+        original_apply()
+
+    monkeypatch.setattr(editor, "_apply_extra_selections", count_apply)
+    cursor = editor.textCursor()
+    cursor.setPosition(1)
+    editor.setTextCursor(cursor)
+    cursor.setPosition(2)
+    editor.setTextCursor(cursor)
+    assert calls == 0
+    cursor.setPosition(8, QTextCursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)
+    assert calls == 1
 
 
 def test_save_file_runs_pre_save_grammar_check_and_can_cancel(
