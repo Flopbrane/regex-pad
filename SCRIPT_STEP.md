@@ -5034,3 +5034,10 @@ Canonical propagation and final concentrated-test results:
 - バックアップは従来の編集時の復元用保存と、設定間隔ごとの履歴スナップショットを維持する。ウィンドウ正常終了時にはタイマーを停止する。バックアップ書き込みが長文入力遅延の主因という一時的な判断は誤りだったため、遅延保存への変更を戻した。12万文字を1行にした人工データでは入力中央値が約35 ms、約100文字ごとの複数行では約0.6 msであり、長い1行のQt描画条件が主因と判断した（offscreen測定、各20回）。
 - `README.md`、`README_jp.md`、英語・日本語ガイド、`docs_jp/EVENT_DRIVEN_REFACTOR_REPORT.md` に仕様と未確認範囲を記録。全体 pytest 998 passed、終了コード0、Ruff全体合格、Pyright 0 errors / 0 warnings、`git diff --check` 合格。診断用入力欄のイベント監視はローカルのgitignore対象スクリプトに反映した。EXE化と実機GUI操作は利用者側のビルド予定に従い、今回未実施。
 - 残る制限: 複雑な正規表現の検索マーカーは本文編集時に局所再計算せず消去する。分割されたWordPressコメントや文書横断の構文判定は全文チェックで確認する。実機GUIでの視認性、長文での体感速度、EXEでの操作確認は未確認。
+
+
+## 2026-11-24 色選択中の赤帯表示を修正
+
+- `style="color: ;"` の色メニューを開いた状態では、空のCSS値に `css_lint.empty_value` が出る。編集イベントの局所lintがその結果を行全体の赤い帯へ変換していたため、入力途中でもエラー表示になっていた。
+- 局所lintでは `css_lint.empty_value` だけを表示対象から外した。手動の文法チェックと保存時の全文lintは従来どおり空値を検出する。他のHTML構造エラーの局所表示も維持する。
+- 再現テストを追加し、空値を入力中は赤帯が出ず、全文lintでは検出されることを確認。関連100件成功、全体pytest 999 passed・終了コード0。Ruff全体合格、Pyright 0 errors / 0 warnings、`git diff --check` 合格。実機GUIとEXEでの見た目は未確認。

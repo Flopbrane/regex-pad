@@ -152,3 +152,26 @@ def test_self_closing_wordpress_block_keeps_its_shape(tmp_path: Path) -> None:
     window.editor.setPlainText(source)
     _replace_range(window, source.index("20px"), source.index("20px") + 2, "30")
     assert window.editor.grammar_issue_lines == []
+
+
+def test_empty_color_value_waits_for_explicit_full_check(tmp_path: Path) -> None:
+    app = QApplication.instance() or QApplication([])
+    assert isinstance(app, QApplication)
+    window = MainWindow(
+        settings_path=tmp_path / "settings.json",
+        unsaved_backup_path=tmp_path / "backup.json",
+        restore_unsaved_backup=False,
+    )
+    source = (
+        '<!-- wp:paragraph -->\n'
+        '<p><mark style="color:#333333;">本文</mark></p>\n'
+        '<!-- /wp:paragraph -->'
+    )
+    window.editor.setPlainText(source)
+    start = source.index("#333333")
+    _replace_range(window, start, start + len("#333333"), " ")
+    assert window.editor.grammar_issue_lines == []
+    assert any(
+        issue.message_key == "css_lint.empty_value"
+        for issue in window._lint_document(window.editor.toPlainText())
+    )

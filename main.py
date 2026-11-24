@@ -4386,6 +4386,8 @@ class MainWindow(QMainWindow):
                 message.line_number
                 for message in lint_html_typos(block_text)
                 if message.severity != "info"
+                # 色メニューで値を選ぶ間の空欄は一時的。手動・保存時の全文チェックでは検出する。
+                and message.message_key != "css_lint.empty_value"
             ]
         issue_lines: set[int] = set()
         for pair in self._structure_indices[editor].pairs:
