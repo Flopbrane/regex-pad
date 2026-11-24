@@ -14,6 +14,7 @@ import re
 import sys
 import tempfile
 import uuid
+from bisect import bisect_right
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -138,6 +139,8 @@ from preview.wordpress_preview import WordPressPreview
 from preview.wordpress_runtime import default_runtime_root
 from search.css_lint import CssLintIssue, lint_stylesheet
 from search.html_typo_lint import HtmlTypoLintMessage, lint_html_typos
+from search.incremental_markers import IndexedSource
+from search.local_structure_lint import CoreBlockIndex
 from search.search_engine import SearchEngine, SearchMatch, SearchOptions
 from settings.color_presets import ColorPreset, load_color_preset_catalog
 from settings.settings_manager import EditorSettings, SettingsManager
@@ -165,7 +168,6 @@ ENCODING_OPTIONS: dict[str, str] = {
     "UTF-16 LE": "utf-16-le",
     "UTF-16 BE": "utf-16-be",
 }
-SEARCH_HIGHLIGHT_DELAY_MS = 250
 MAX_AUTO_SEARCH_HIGHLIGHTS = 2000
 DEFAULT_AUTO_BACKUP_INTERVAL_MINUTES = 3
 FRAME_BLOCK_LABEL_KEYS = {
@@ -279,11 +281,6 @@ class MainWindow(QMainWindow):
             self._file_backup_folder_for_folder(settings.backup_folder)
         )
         self.search_engine = SearchEngine()
-        self.search_highlight_timer = QTimer(self)
-        self.search_highlight_timer.setSingleShot(True)
-        self.search_highlight_timer.setInterval(SEARCH_HIGHLIGHT_DELAY_MS)
-        self.search_highlight_timer.timeout.connect(self._run_pending_search_highlight)
-        self.pending_search_highlight: TextEditor | None = None
         self.auto_save_timer = QTimer(self)
         self.auto_save_timer.timeout.connect(self._save_unsaved_backup_snapshot)
         self.current_save_file_path: Path | None = None
@@ -307,13 +304,16 @@ class MainWindow(QMainWindow):
         self.wordpress_theme_preview: WordPressPreview | None = None
         self.wordpress_preview_snapshot: tuple[TextEditor, str] | None = None
         self.wordpress_theme_preview_snapshot: tuple[TextEditor, str] | None = None
-        self.wordpress_warmup_timer = QTimer(self)
-        self.wordpress_warmup_timer.setSingleShot(True)
-        self.wordpress_warmup_timer.setInterval(10000)
-        self.wordpress_warmup_timer.timeout.connect(self._warm_wordpress_preview)
         self.search_scope: tuple[int, int] | None = None
         self._search_internal_text_change = False
         self._search_highlights_suspended = False
+        self._marked_source: IndexedSource | None = None
+        self._marked_editor: TextEditor | None = None
+        self._marked_query = ""
+        self._marked_options = SearchOptions()
+        self._structure_sources: dict[TextEditor, IndexedSource] = {}
+        self._structure_indices: dict[TextEditor, CoreBlockIndex] = {}
+        self._structure_issues: dict[TextEditor, dict[int, list[int]]] = {}
         self._status_count_cache: tuple[TextEditor, int, int] | None = None
         self.wordpress_mode_label_key = settings.wordpress_mode_label_key
         self.hover_hints_enabled = settings.hover_hints_enabled
@@ -409,9 +409,6 @@ class MainWindow(QMainWindow):
             self._restore_unsaved_backup_if_available()
         if self.unsaved_backup_enabled:
             self.auto_save_timer.start()
-        # Normal pytest/offscreen runs must not start an optional WordPress runtime.
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
-            self.wordpress_warmup_timer.start()
         self._update_wordpress_status_label()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name
@@ -428,6 +425,7 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
         self._save_settings()
+        self.auto_save_timer.stop()
         self._clear_grammar_lint_results_on_window_close()
         self.stop_wordpress_preview()
         if getattr(sys, "frozen", False):
@@ -882,10 +880,19 @@ class MainWindow(QMainWindow):
         editor.textChanged.connect(self._update_status_bar)
         editor.textChanged.connect(self._update_tab_titles)
         editor.textChanged.connect(self._save_unsaved_backup)
-        editor.textChanged.connect(
-            lambda editor=editor: self._editor_text_changed_for_search(editor)
+        if "wp:" in text and "<!--" in text:
+            self._structure_sources[editor] = IndexedSource(text)
+            self._structure_indices[editor] = CoreBlockIndex(text)
+        editor.document().contentsChange.connect(
+            lambda position, removed, added, editor=editor: self._editor_contents_changed_for_search(
+                editor, position, removed, added
+            )
         )
-        editor.textChanged.connect(editor.clear_grammar_issue_lines)
+        editor.document().contentsChange.connect(
+            lambda position, removed, added, editor=editor: self._editor_contents_changed_for_structure(
+                editor, position, removed, added
+            )
+        )
         editor.textChanged.connect(
             lambda editor=editor: self._invalidate_grammar_lint_result(editor)
         )
@@ -930,7 +937,8 @@ class MainWindow(QMainWindow):
         if editor is None:
             return
         previous_editor = getattr(self, "editor", None)
-        self._cancel_pending_search_highlight()
+        self._marked_source = None
+        self._marked_editor = None
         if previous_editor is not None and previous_editor is not editor:
             previous_editor.clear_search_matches()
         self.editor = editor
@@ -938,7 +946,7 @@ class MainWindow(QMainWindow):
         self.search_scope = None
         editor.clear_search_matches()
         if self.find_replace_dialog is not None and self.find_replace_dialog.isVisible():
-            self.schedule_search_highlights(
+            self.refresh_search_highlights(
                 self.find_replace_dialog.find_text_edit.text(),
                 self.find_replace_dialog.current_search_options(),
             )
@@ -1177,10 +1185,16 @@ class MainWindow(QMainWindow):
         editor = self._editor_at(tab_index)
         self.tab_widget.removeTab(tab_index)
         if editor is not None:
+            if editor is self._marked_editor:
+                self._marked_source = None
+                self._marked_editor = None
             self._delete_grammar_lint_result(editor)
             self.tab_file_paths.pop(editor, None)
             self.tab_encodings.pop(editor, None)
             self.tab_grammar_result_paths.pop(editor, None)
+            self._structure_sources.pop(editor, None)
+            self._structure_indices.pop(editor, None)
+            self._structure_issues.pop(editor, None)
         if widget is not None:
             widget.deleteLater()
 
@@ -1930,10 +1944,8 @@ class MainWindow(QMainWindow):
         return self._internal_data_folder() / "backup"
 
     def _set_auto_save_timer_interval(self, interval_minutes: int) -> None:
-        """Set the automatic unsaved backup timer interval in minutes."""
-        self.auto_save_timer.setInterval(
-            max(1, interval_minutes) * 60 * 1000
-        )
+        """Set the interval of the recovery-only history timer."""
+        self.auto_save_timer.setInterval(max(1, interval_minutes) * 60 * 1000)
 
     def _apply_editor_font_to_all_tabs(self) -> None:
         """Apply the current editor font settings to all open tabs."""
@@ -2023,7 +2035,6 @@ class MainWindow(QMainWindow):
 
     def show_wordpress_preview(self) -> None:
         """Render the current source, export a neutral page, then stop WordPress."""
-        self.wordpress_warmup_timer.stop()
         self._ensure_simple_wordpress_preview()
         assert self.wordpress_preview is not None
         source_text = self.editor.toPlainText()
@@ -2034,13 +2045,6 @@ class MainWindow(QMainWindow):
         )
         self.stop_wordpress_preview_action.setEnabled(True)
         self.wordpress_preview.show_preview(title, source_text)
-
-    def _warm_wordpress_preview(self) -> None:
-        if any(preview is not None and preview.sequence > 0 for preview in (self.wordpress_preview, self.wordpress_theme_preview)):
-            return
-        self._ensure_simple_wordpress_preview()
-        assert self.wordpress_preview is not None
-        self.wordpress_preview.warm_up()
 
     def _ensure_simple_wordpress_preview(self) -> None:
         if self.wordpress_preview is None:
@@ -2060,7 +2064,6 @@ class MainWindow(QMainWindow):
 
     def show_wordpress_theme_preview(self) -> None:
         """Keep a Twenty Twenty-Five preview alive until explicitly stopped."""
-        self.wordpress_warmup_timer.stop()
         if self.wordpress_preview is not None and self.wordpress_preview.warming_up:
             self.wordpress_preview.stop()
         if self.wordpress_theme_preview is None:
@@ -2100,8 +2103,7 @@ class MainWindow(QMainWindow):
             if preview.state == "failed" and preview.last_error:
                 details.append(f"{mode}: {preview.last_error}")
         if not entries:
-            state = "waiting" if self.wordpress_warmup_timer.isActive() else "stopped"
-            entries.append(self.translator.text(f"wordpress_preview.status.{state}"))
+            entries.append(self.translator.text("wordpress_preview.status.stopped"))
         self.wordpress_status_label.setText(
             self.translator.text("wordpress_preview.status.label", details=" / ".join(entries))
         )
@@ -2144,7 +2146,6 @@ class MainWindow(QMainWindow):
         self.grammar_check_dialog.set_runtime_feedback(text)
 
     def stop_wordpress_preview(self) -> None:
-        self.wordpress_warmup_timer.stop()
         if self.wordpress_preview is not None:
             self.wordpress_preview.stop()
         if self.wordpress_theme_preview is not None:
@@ -3673,7 +3674,6 @@ class MainWindow(QMainWindow):
             )
             self.find_replace_dialog.finished.connect(self._on_find_replace_dialog_closed)
 
-        self._cancel_pending_search_highlight()
         selected_text = self.editor.textCursor().selectedText()
         if selected_text:
             cursor = self.editor.textCursor()
@@ -3689,14 +3689,15 @@ class MainWindow(QMainWindow):
         self.find_replace_dialog.raise_()
         self.find_replace_dialog.activateWindow()
         self._search_highlights_suspended = False
-        self.schedule_search_highlights(
+        self.refresh_search_highlights(
             self.find_replace_dialog.find_text_edit.text(),
             self.find_replace_dialog.current_search_options(),
         )
 
     def _on_find_replace_dialog_closed(self, _result: int) -> None:
         """Discard search decorations without changing the editor selection."""
-        self._cancel_pending_search_highlight()
+        self._marked_source = None
+        self._marked_editor = None
         self.search_scope = None
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
@@ -3755,7 +3756,7 @@ class MainWindow(QMainWindow):
         )
         self._set_search_status(self.translator.text("search.match_found"))
         self._search_highlights_suspended = False
-        self.schedule_search_highlights(search_text, options)
+        self.refresh_search_highlights(search_text, options)
 
     def find_previous(self, search_text: str, options: SearchOptions) -> None:
         """Find the previous occurrence of the search text using the specified search options."""
@@ -3802,7 +3803,7 @@ class MainWindow(QMainWindow):
         )
         self._set_search_status(self.translator.text("search.match_found"))
         self._search_highlights_suspended = False
-        self.schedule_search_highlights(search_text, options)
+        self.refresh_search_highlights(search_text, options)
 
     def replace_current(
         self,
@@ -4138,55 +4139,35 @@ class MainWindow(QMainWindow):
     ) -> None:
         """Resume marker calculation after the user changes search conditions."""
         self._search_highlights_suspended = False
-        self.schedule_search_highlights(search_text, options)
+        self.refresh_search_highlights(search_text, options)
 
     def _clear_search_highlights_after_replace(self) -> None:
         """Keep markers off until the user explicitly searches again."""
         self._search_highlights_suspended = True
-        self._cancel_pending_search_highlight()
+        self._marked_source = None
+        self._marked_editor = None
         self.editor.clear_search_matches()
 
-    def _cancel_pending_search_highlight(self) -> None:
-        """Stop a queued update before its editor or search state changes."""
-        self.search_highlight_timer.stop()
-        self.pending_search_highlight = None
-
-    def schedule_search_highlights(
+    def refresh_search_highlights(
         self,
         search_text: str,
         options: SearchOptions,
     ) -> None:
-        """Delay automatic search highlighting so typing does not rescan on every key."""
-        self._cancel_pending_search_highlight()
-        self.editor.clear_search_matches()
+        """Recalculate markers for the current explicit search event."""
         if (
             self.reduced_error_check_enabled
             or self._search_highlights_suspended
             or self.find_replace_dialog is None
             or not self.find_replace_dialog.isVisible()
         ):
+            self._marked_source = None
+            self._marked_editor = None
+            self.editor.clear_search_matches()
             return
-        self.pending_search_highlight = self.editor
-        self.search_highlight_timer.start()
-
-    def _run_pending_search_highlight(self) -> None:
-        pending_editor = self.pending_search_highlight
-        self.pending_search_highlight = None
-        dialog = self.find_replace_dialog
-        if (
-            pending_editor is None
-            or pending_editor is not self.editor
-            or dialog is None
-            or not dialog.isVisible()
-            or self.reduced_error_check_enabled
-        ):
-            return
-        self.update_search_highlights(
-            dialog.find_text_edit.text(), dialog.current_search_options()
-        )
+        self.update_search_highlights(search_text, options)
 
     def _focus_find_text_after_replace_all(self) -> None:
-        QTimer.singleShot(0, self._focus_find_text_after_replace_all_now)
+        self._focus_find_text_after_replace_all_now()
 
     def _focus_find_text_after_replace_all_now(self) -> None:
         if self.find_replace_dialog is None or not self.find_replace_dialog.isVisible():
@@ -4205,6 +4186,8 @@ class MainWindow(QMainWindow):
         options: SearchOptions,
     ) -> None:
         """Update the search highlights in the editor based on the current search text and options."""
+        self._marked_source = None
+        self._marked_editor = None
         if not search_text:
             self.editor.clear_search_matches()
             return
@@ -4235,51 +4218,187 @@ class MainWindow(QMainWindow):
         if options.selected_only:
             scope_bounds = (scope_offset, scope_offset + len(source_text))
 
-        self.editor.set_search_matches(
-            [
+        indexed_source = IndexedSource(self.editor.toPlainText())
+        adjusted_matches = [
                 SearchMatch(
                     match.start + scope_offset,
                     match.end + scope_offset,
                     match.text,
                 )
                 for match in matches
-            ],
-            [
+            ]
+        adjusted_exclusions = [
                 SearchMatch(
                     match.start + scope_offset,
                     match.end + scope_offset,
                     match.text,
                 )
                 for match in exclusion_matches
-            ],
+            ]
+        positions = {position for match in (*adjusted_matches, *adjusted_exclusions)
+                     for position in (match.start, match.end)}
+        if scope_bounds is not None:
+            positions.update(scope_bounds)
+        self.editor.set_search_matches(
+            adjusted_matches,
+            adjusted_exclusions,
             scope_bounds,
+            position_map={position: indexed_source.qt_position(position) for position in positions},
         )
+        self._marked_source = indexed_source
+        self._marked_editor = self.editor
+        self._marked_query = search_text
+        self._marked_options = options
 
-    def _refresh_search_highlights_from_dialog(self) -> None:
-        """Refresh the search highlights in the editor based on the current state of the find and replace dialog."""
-        if (
-            self._search_highlights_suspended
-            or self.find_replace_dialog is None
-            or not self.find_replace_dialog.isVisible()
-        ):
+    def _editor_contents_changed_for_search(
+        self, editor: TextEditor, qt_position: int, removed: int, added: int
+    ) -> None:
+        """Update literal markers around one edit; discard unsupported scopes safely."""
+        if editor is self.editor and not self._search_internal_text_change:
+            self.search_scope = None
+        indexed_source = self._marked_source
+        if indexed_source is None or editor is not self._marked_editor:
             return
-        self.schedule_search_highlights(
-            self.find_replace_dialog.find_text_edit.text(),
-            self.find_replace_dialog.current_search_options(),
-        )
-
-    def _editor_text_changed_for_search(self, editor: TextEditor) -> None:
-        """Drop stale positions after an edit and rescan the active document."""
-        if (
-            editor.search_matches
-            or editor.search_exclusion_matches
-            or editor.search_scope_bounds is not None
-        ):
+        if self._search_internal_text_change or self._search_highlights_suspended:
+            self._marked_source = None
+            self._marked_editor = None
             editor.clear_search_matches()
-        if editor is not self.editor or self._search_internal_text_change:
             return
-        self.search_scope = None
-        self._refresh_search_highlights_from_dialog()
+
+        options = self._marked_options
+        if (
+            options.regular_expression
+            or options.exclusion_text
+            or options.selected_only
+            or options.visible_only
+            or options.unicode_normalize
+        ):
+            self._marked_source = None
+            self._marked_editor = None
+            editor.clear_search_matches()
+            return
+
+        added_cursor = QTextCursor(editor.document())
+        added_cursor.setPosition(qt_position)
+        added_cursor.setPosition(
+            min(qt_position + added, editor.document().characterCount() - 1),
+            QTextCursor.MoveMode.KeepAnchor,
+        )
+        added_text = added_cursor.selectedText().replace("\u2029", "\n")
+        old_text_length = len(indexed_source.text)
+        start, old_end, delta = indexed_source.replace(qt_position, removed, added_text)
+
+        query_length = len(self._marked_query)
+        affected_left = max(0, start - query_length + 1)
+        affected_right = min(old_text_length, old_end + query_length)
+        scan_left = max(0, affected_left - 1)
+        scan_right = min(old_text_length, affected_right + 1)
+        new_affected_right = affected_right + delta
+        new_scan_right = scan_right + delta
+        retained = [
+            match for match in editor.search_matches if match.end <= affected_left
+        ]
+        retained.extend(
+            SearchMatch(match.start + delta, match.end + delta, match.text)
+            for match in editor.search_matches
+            if match.start >= affected_right
+        )
+        local_text = indexed_source.text[scan_left:new_scan_right]
+        try:
+            nearby = self.search_engine.find_all(
+                local_text, self._marked_query, options,
+                max_matches=MAX_AUTO_SEARCH_HIGHLIGHTS,
+            )
+        except RegexError:
+            self._marked_source = None
+            self._marked_editor = None
+            editor.clear_search_matches()
+            return
+        retained.extend(
+            SearchMatch(match.start + scan_left, match.end + scan_left, match.text)
+            for match in nearby
+            if match.end + scan_left > affected_left
+            and match.start + scan_left < new_affected_right
+        )
+        updated = sorted(retained, key=lambda match: match.start)[
+            :MAX_AUTO_SEARCH_HIGHLIGHTS
+        ]
+        if updated != editor.search_matches:
+            positions = {position for match in updated for position in (match.start, match.end)}
+            editor.set_search_matches(
+                updated,
+                position_map={position: indexed_source.qt_position(position) for position in positions},
+            )
+
+    def _editor_contents_changed_for_structure(
+        self, editor: TextEditor, qt_position: int, removed: int, added: int
+    ) -> None:
+        """Check known WordPress comment pairs around one document edit."""
+        source = self._structure_sources.get(editor)
+        if source is None:
+            block = editor.document().findBlock(qt_position)
+            if block.isValid() and "wp:" in block.text() and "<!--" in block.text():
+                source_text = editor.toPlainText()
+                source = IndexedSource(source_text)
+                index = CoreBlockIndex(source_text)
+                self._structure_sources[editor] = source
+                self._structure_indices[editor] = index
+                editor.set_grammar_issue_lines(
+                    [
+                        bisect_right(source.python_line_starts, pair.open_start)
+                        for pair in index.pairs if pair.broken
+                    ]
+                )
+            else:
+                editor.clear_grammar_issue_lines()
+            return
+
+        added_cursor = QTextCursor(editor.document())
+        added_cursor.setPosition(qt_position)
+        added_cursor.setPosition(
+            min(qt_position + added, editor.document().characterCount() - 1),
+            QTextCursor.MoveMode.KeepAnchor,
+        )
+        added_text = added_cursor.selectedText().replace("\u2029", "\n")
+        previous_length = len(source.text)
+        start, old_end, delta = source.replace(qt_position, removed, added_text)
+        if start == 0 and old_end == previous_length and removed > 0:
+            self._structure_indices[editor] = CoreBlockIndex(source.text)
+            self._structure_issues.pop(editor, None)
+            touched = []
+        else:
+            fragment_start = source.text.rfind("\n", 0, start) + 1
+            fragment_end = source.text.find("\n", start + len(added_text))
+            if fragment_end < 0:
+                fragment_end = len(source.text)
+            touched = self._structure_indices[editor].apply_change(
+                start, old_end, delta, added_text, source.text,
+                fragment=source.text[fragment_start:fragment_end],
+                fragment_start=fragment_start,
+            )
+        issues = self._structure_issues.setdefault(editor, {})
+        for pair in touched:
+            if pair.broken or pair.close_end is None:
+                issues.pop(id(pair), None)
+                continue
+            block_text = source.text[pair.open_start:pair.close_end]
+            issues[id(pair)] = [
+                message.line_number
+                for message in lint_html_typos(block_text)
+                if message.severity != "info"
+            ]
+        issue_lines: set[int] = set()
+        for pair in self._structure_indices[editor].pairs:
+            first_line = bisect_right(source.python_line_starts, pair.open_start)
+            if pair.broken:
+                issue_lines.add(first_line)
+            else:
+                issue_lines.update(
+                    first_line + relative_line - 1
+                    for relative_line in issues.get(id(pair), [])
+                )
+        if sorted(issue_lines) != editor.grammar_issue_lines:
+            editor.set_grammar_issue_lines(sorted(issue_lines))
 
     def preview_matches(
         self,
@@ -4319,7 +4438,7 @@ class MainWindow(QMainWindow):
         self.find_replace_dialog.set_preview_rows(rows, summary)
         self._set_search_status(summary)
         self._search_highlights_suspended = False
-        self.schedule_search_highlights(search_text, options)
+        self.refresh_search_highlights(search_text, options)
 
     def _replacement_preview_summary(self, match_count: int, shown_count: int) -> str:
         if match_count == 0:

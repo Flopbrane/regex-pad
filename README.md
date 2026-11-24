@@ -216,3 +216,15 @@ The source is split across `editor/`, `dialogs/`, `search/`, `fileio/`,
 [Development record](SCRIPT_STEP.md) records validation and acceptance boundaries.
 The record also covers the Gutenberg recovery observations that motivated
 the structural checks.
+
+## Event-driven editing updates
+
+Find/Replace markers refresh when search conditions change. While a simple
+literal search is active, typing updates matches near the edit. More complex
+search modes clear stale markers on editing; run the search again to refresh.
+Replacement clears all markers until the next explicit search.
+
+WordPress comment-pair damage and HTML errors in the changed core block are
+marked during editing. **Grammar Check** and save still perform the full
+document check. Preview starts when requested, and the configured periodic
+backup timer remains dedicated to recovery snapshots.

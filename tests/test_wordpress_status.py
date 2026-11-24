@@ -75,14 +75,13 @@ def test_right_status_persists_during_editing_and_language_changes(
 ) -> None:
     window = MainWindow(settings_path=tmp_path / "settings.json")
     try:
-        window.wordpress_warmup_timer.start()
         window._update_wordpress_status_label()
-        assert window.wordpress_status_label.text() == "WP：待機中"
+        assert window.wordpress_status_label.text() == "WP：停止"
         monkeypatch.setattr("preview.wordpress_preview.runtime_ready", lambda root: False)
-        window.wordpress_warmup_timer.stop()
-        window._warm_wordpress_preview()
-        assert window.wordpress_status_label.text() == "WP：簡易 未準備"
+        window._ensure_simple_wordpress_preview()
         assert window.wordpress_preview is not None
+        window.wordpress_preview.warm_up()
+        assert window.wordpress_status_label.text() == "WP：簡易 未準備"
         window.wordpress_preview._report_progress("boot")
         window.show()
         app.processEvents()

@@ -60,7 +60,6 @@ def editor(tmp_path, monkeypatch):
     app.processEvents()
     yield window, controller
     controller.session.modified = False
-    controller.timer.stop()
     window.close()
     window.deleteLater()
     app.processEvents()

@@ -513,6 +513,10 @@ def test_main_window_uses_configured_auto_backup_interval(
 
     assert window.auto_backup_interval_minutes == 5
     assert window.auto_save_timer.interval() == 5 * 60 * 1000
+    assert window.auto_save_timer.isActive()
+    window.editor.setPlainText("unsaved draft")
+    backup = UnsavedBackupManager(tmp_path / "autosave" / "unsaved_backup.json")
+    assert backup.load_session() is not None
 
 
 def test_main_window_restores_file_backup_into_editor(

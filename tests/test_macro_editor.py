@@ -23,7 +23,6 @@ def editor(tmp_path: Path):
     controller = MacroEditorController(window, AppLogger(tmp_path / "logs"))
     yield window, controller
     controller.session.modified = False
-    controller.timer.stop()
     window.close()
     window.deleteLater()
     app.processEvents()

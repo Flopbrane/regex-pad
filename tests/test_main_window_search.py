@@ -961,7 +961,6 @@ def test_scope_toggle_close_and_reopen_keep_real_editor_selection(
     assert dialog.find_text_edit.text() == "A target"
     dialog.find_text_edit.setText("target")
     dialog.selected_only_check_box.setChecked(True)
-    window._run_pending_search_highlight()
     assert window.search_scope == (0, len("A target"))
     assert window.editor.search_scope_bounds == window.search_scope
     assert window.editor.textCursor().selectedText() == "A target"
@@ -970,7 +969,6 @@ def test_scope_toggle_close_and_reopen_keep_real_editor_selection(
     assert window.editor.textCursor().selectedText() == "A target"
     assert window.search_scope == (0, len("A target"))
     assert window.editor.search_scope_bounds is None
-    window._run_pending_search_highlight()
     assert len(window.editor.search_matches) == 2
 
     dialog.close()
@@ -984,7 +982,6 @@ def test_scope_toggle_close_and_reopen_keep_real_editor_selection(
     window.show_find_replace_dialog()
     assert dialog.find_text_edit.text() == "B target"
     dialog.selected_only_check_box.setChecked(True)
-    window._run_pending_search_highlight()
     assert window.search_scope == (len("A target\n"), len("A target\nB target"))
     dialog.selected_only_check_box.setChecked(False)
     assert window.editor.textCursor().selectedText() == "B target"
@@ -1043,7 +1040,6 @@ def test_close_cancels_pending_markers_after_replacement(
     assert dialog is not None
     dialog.find_text_edit.setText("target")
     dialog.replace_text_edit.setText("longer")
-    window._run_pending_search_highlight()
     assert len(window.editor.search_matches) == 2
     dialog.replace_all_button.click()
     cursor_after_replace = window.editor.textCursor().position()
@@ -1054,7 +1050,7 @@ def test_close_cancels_pending_markers_after_replacement(
     assert window.editor.search_matches == []
     assert window.editor.search_exclusion_matches == []
     assert window.editor.search_scope_bounds is None
-    assert window.pending_search_highlight is None
+    assert not hasattr(window, "search_highlight_timer")
 
 
 def test_manual_edit_invalidates_scope_and_pending_highlights_follow_active_tab(
@@ -1071,7 +1067,6 @@ def test_manual_edit_invalidates_scope_and_pending_highlights_follow_active_tab(
     assert dialog is not None
     dialog.find_text_edit.setText("target")
     dialog.selected_only_check_box.setChecked(True)
-    window._run_pending_search_highlight()
     assert window.search_scope is not None
 
     cursor = window.editor.textCursor()
@@ -1080,17 +1075,14 @@ def test_manual_edit_invalidates_scope_and_pending_highlights_follow_active_tab(
     cursor.insertText("X")
     assert window.search_scope is None
     assert window.editor.search_matches == []
-    window._run_pending_search_highlight()
     assert window.editor.search_matches == []
 
     dialog.selected_only_check_box.setChecked(False)
-    window._run_pending_search_highlight()
     source = window.editor.toPlainText()
     assert all(source[item.start:item.end] == item.text for item in window.editor.search_matches)
     previous_editor = window.editor
     dialog.find_text_edit.setText("target")
     window.create_editor_tab("target in new tab")
-    window._run_pending_search_highlight()
     assert previous_editor.search_matches == []
     assert [item.text for item in window.editor.search_matches] == ["target"]
 
@@ -1196,13 +1188,13 @@ def test_invalid_regex_clears_search_highlights(app: QApplication) -> None:
     assert window.editor.extraSelections() == []
 
 
-def test_scheduled_search_clears_stale_highlights_immediately(app: QApplication) -> None:
+def test_search_refresh_clears_stale_highlights_immediately(app: QApplication) -> None:
     _ = app
     window = MainWindow()
     window.editor.setPlainText("alpha beta")
     window.update_search_highlights("alpha", SearchOptions())
 
-    window.schedule_search_highlights("nomatch", SearchOptions())
+    window.refresh_search_highlights("nomatch", SearchOptions())
 
     assert window.editor.search_matches == []
 
@@ -1323,7 +1315,8 @@ def test_preview_same_line_preserves_excluded_result(app: QApplication, tmp_path
     for row in range(2):
         item = dialog.preview_table.item(row, 2)
         assert item is not None and item.text() == "[target] done done"
-    assert window.editor.extraSelections() == []
+    assert [match.text for match in window.editor.search_matches] == ["target", "target"]
+    assert [match.text for match in window.editor.search_exclusion_matches] == ["[target]"]
 
 
 def test_main_window_can_switch_display_language(app: QApplication) -> None:
@@ -1370,12 +1363,10 @@ def test_successful_replacement_clears_markers_until_explicit_search(
     dialog = window.find_replace_dialog
     assert dialog is not None
     dialog.find_text_edit.setText("target")
-    window._run_pending_search_highlight()
     assert len(window.editor.search_matches) == 2
     options = dialog.current_search_options()
     if replace_kind == "current":
         window.find_next("target", options)
-        window._run_pending_search_highlight()
         window.replace_current("target", "done", options)
         assert window.editor.toPlainText() == "done target"
     elif replace_kind == "all":
@@ -1388,7 +1379,7 @@ def test_successful_replacement_clears_markers_until_explicit_search(
     assert window.editor.search_matches == []
     assert window.editor.search_exclusion_matches == []
     assert window.editor.search_scope_bounds is None
-    assert window.pending_search_highlight is None
+    assert not hasattr(window, "search_highlight_timer")
     _process_delayed_ui_events(300)
     assert window.editor.search_matches == []
 
@@ -1403,15 +1394,13 @@ def test_successful_replacement_clears_markers_until_explicit_search(
         cursor.insertText("!")
         _process_delayed_ui_events(300)
     assert window.editor.search_matches == []
-    assert window.pending_search_highlight is None
+    assert not hasattr(window, "search_highlight_timer")
 
     if replace_kind == "current":
         window.find_next("target", options)
-        window._run_pending_search_highlight()
         assert [match.text for match in window.editor.search_matches] == ["target"]
 
     dialog.find_text_edit.setText("done")
-    window._run_pending_search_highlight()
     expected = 1 if replace_kind == "current" else 2
     assert len(window.editor.search_matches) == expected
 
@@ -1425,14 +1414,13 @@ def test_normalise_operation_clears_markers_after_replacement(
     dialog = window.find_replace_dialog
     assert dialog is not None
     dialog.find_text_edit.setText("\uff21")
-    window._run_pending_search_highlight()
     assert len(window.editor.search_matches) == 2
 
     window.apply_regex_normalise_operation("fullwidth_alphabet_to_halfwidth")
 
     assert window.editor.toPlainText() == "A A"
     assert window.editor.search_matches == []
-    assert window.pending_search_highlight is None
+    assert not hasattr(window, "search_highlight_timer")
 
 
 def test_empty_search_clears_all_markers_and_scope_background(
@@ -1450,13 +1438,11 @@ def test_empty_search_clears_all_markers_and_scope_background(
     dialog.find_text_edit.setText("target")
     dialog.exclusion_text_edit.setText("[target]")
     dialog.selected_only_check_box.setChecked(True)
-    window._run_pending_search_highlight()
     assert window.editor.search_matches
     assert window.editor.search_exclusion_matches
     assert window.editor.search_scope_bounds is not None
 
     dialog.find_text_edit.setText("")
-    window._run_pending_search_highlight()
     assert window.editor.search_matches == []
     assert window.editor.search_exclusion_matches == []
     assert window.editor.search_scope_bounds is None

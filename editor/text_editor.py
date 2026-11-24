@@ -153,6 +153,7 @@ class TextEditor(QPlainTextEdit):
         self.search_matches: list[SearchMatch] = []
         self.search_exclusion_matches: list[SearchMatch] = []
         self.search_scope_bounds: tuple[int, int] | None = None
+        self._search_position_map: dict[int, int] | None = None
         self._highlight_selection_bounds: tuple[int, int] | None = None
         self.search_marker_color = "#ffff00"
         self.current_match_marker_color = "#ff9900"
@@ -437,11 +438,14 @@ class TextEditor(QPlainTextEdit):
         matches: list[SearchMatch],
         exclusion_matches: list[SearchMatch] | None = None,
         scope_bounds: tuple[int, int] | None = None,
+        *,
+        position_map: dict[int, int] | None = None,
     ) -> None:
         """検索マッチのリストを設定するメソッド"""
         self.search_matches = matches
         self.search_exclusion_matches = exclusion_matches or []
         self.search_scope_bounds = scope_bounds
+        self._search_position_map = position_map
         self._apply_extra_selections()
         self.search_marker_area.update()
 
@@ -694,6 +698,8 @@ class TextEditor(QPlainTextEdit):
 
     def _search_cursor_positions(self) -> dict[int, int]:
         """Convert marker offsets to Qt UTF-16 positions in one document pass."""
+        if self._search_position_map is not None:
+            return self._search_position_map
         positions: set[int] = set()
         if self.search_scope_bounds is not None:
             positions.update(self.search_scope_bounds)
@@ -768,15 +774,16 @@ class TextEditor(QPlainTextEdit):
 
         selections: list[QTextEdit.ExtraSelection] = []
         cursor: QTextCursor = self.textCursor()
-        selection_start: int = self.cursor_position_to_text_position(cursor.selectionStart())
-        selection_end: int = self.cursor_position_to_text_position(cursor.selectionEnd())
+        selection_start = cursor.selectionStart()
+        selection_end = cursor.selectionEnd()
         for match in self.search_matches[:1000]:
             if match.start == match.end:
                 continue
             selection: QTextEdit.ExtraSelection = QTextEdit.ExtraSelection()
             selection.format = (
                 current_highlight_format
-                if match.start == selection_start and match.end == selection_end
+                if position_map[match.start] == selection_start
+                and position_map[match.end] == selection_end
                 else highlight_format
             )
             match_cursor: QTextCursor = QTextCursor(self.document())
@@ -864,8 +871,9 @@ class TextEditor(QPlainTextEdit):
         area_width: int = self.search_marker_area.width()
         area_height: int = max(1, self.search_marker_area.height())
         block_count: int = max(1, self.blockCount())
+        position_map = self._search_cursor_positions()
         marked_lines: set[int] = {
-            self.document().findBlock(match.start).blockNumber()
+            self.document().findBlock(position_map[match.start]).blockNumber()
             for match in self.search_matches
             if match.start != match.end
         }

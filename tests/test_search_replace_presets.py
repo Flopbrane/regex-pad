@@ -22,7 +22,6 @@ def window(tmp_path: Path):
     yield main
     if main.macro_editor_controller is not None:
         main.macro_editor_controller.session.modified = False
-        main.macro_editor_controller.timer.stop()
     for editor in main.tab_file_paths:
         editor.document().setModified(False)
     main.close()

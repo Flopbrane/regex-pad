@@ -283,20 +283,19 @@ def test_prestart_does_not_download_or_report_background_error(
     assert not failures and not preview.running
 
 
-def test_delayed_warmup_timer_and_theme_handoff(
+def test_preview_starts_on_explicit_request_and_theme_handoff(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     window = MainWindow(settings_path=tmp_path / "settings.json")
     warmed = []
     monkeypatch.setattr(WordPressPreview, "warm_up", lambda preview: warmed.append(preview.mode))
     monkeypatch.setattr(WordPressPreview, "show_preview", lambda *args: None)
-    assert window.wordpress_warmup_timer.interval() == 10000
-    assert window.wordpress_warmup_timer.isSingleShot()
-    window.wordpress_warmup_timer.timeout.emit()
-    assert warmed == ["simple"]
+    assert window.wordpress_preview is None
+    window.show_wordpress_preview()
+    assert warmed == []
     assert window.wordpress_preview is not None
     window.wordpress_preview.warming_up = True
     window.show_wordpress_theme_preview()
     assert not window.wordpress_preview.warming_up
-    assert not window.wordpress_warmup_timer.isActive()
+    assert window.wordpress_theme_preview is not None
     window.close()

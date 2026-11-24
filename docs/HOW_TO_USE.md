@@ -573,3 +573,10 @@ color presets were customized, copy `color_presets.json` as well. For versions
 that used `settings.json`, place it beside the new EXE while no `config.json`
 exists; the first startup migrates it to `config.json`. Settings introduced by
 a newer version use their defaults when they are absent from the older file.
+
+
+## Editing and background checks
+
+Find/Replace updates its markers when you change the search text or options. A simple literal search follows nearby edits; editing under complex search options clears stale markers. After a replacement, all markers are cleared until you search again.
+
+When editing WordPress block HTML, a damaged known opening/closing comment pair and HTML errors inside the edited block can be marked immediately. Use **Grammar Check** for a complete check. Saving also runs the configured full check. WordPress preview starts on a Preview command. Unsaved recovery data is saved on edits, and the configured timer creates history snapshots.

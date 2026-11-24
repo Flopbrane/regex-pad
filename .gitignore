@@ -58,7 +58,8 @@ test_sample/
 *.zip
 /logs
 *.jsonl
-# OS / editor
+
+# OS / editor / ather files
 .DS_Store
 Thumbs.db
 .vscode/
@@ -68,6 +69,12 @@ NEXT_STEPS.md
 .depricated/
 regex_pad_selection_scope_codex_instructions.md
 regex_pad_event_driven_refactor_codex_instructions.md
+EVENT_DRIVEN_REFACTOR_AUDIT.md
+EVENT_DRIVEN_REFACTOR_REPORT.md
+
+
+
+
 # Temporary files
 /Temp/WordPressPreview/
 *.tmp

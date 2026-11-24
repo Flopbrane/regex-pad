@@ -3,7 +3,7 @@
 from copy import deepcopy
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
@@ -43,10 +43,6 @@ class MacroEditorController(QObject):
         window.redo_requested.connect(self.undo_stack.redo)
         window.tree.step_reorder_requested.connect(self.reorder_step)
         self._loading = False
-        self.timer = QTimer(self)
-        self.timer.setSingleShot(True)
-        self.timer.setInterval(300)
-        self.timer.timeout.connect(self.validate)
         window.confirm_close = self._confirm_close
         window.new_requested.connect(self.new_document)
         window.open_requested.connect(self.open_document)
@@ -131,7 +127,6 @@ class MacroEditorController(QObject):
     def _restore_history(
         self, document: MacroEditorDocumentData, selected: int
     ) -> None:
-        self.timer.stop()
         self.session.document = document
         self.session.modified = document != self._saved_document
         self._render_document(selected)
@@ -154,10 +149,9 @@ class MacroEditorController(QObject):
         self.window.editor_actions["save"].setEnabled(False)
         self.window.editor_actions["save_as"].setEnabled(False)
         self.window.editor_actions["run"].setEnabled(False)
-        self.timer.start()
+        self.validate()
 
     def validate(self) -> MacroJsonData | None:
-        self.timer.stop()
         try:
             prepared = self._manager().prepare_macro(
                 MacroEditorBridge.to_json_model(self.session.document)
