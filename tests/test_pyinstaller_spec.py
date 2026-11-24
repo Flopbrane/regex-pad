@@ -110,7 +110,26 @@ def test_build_script_isolates_host_dlls_and_checks_bundled_qt() -> None:
     assert "OpenAI\\.CodexPrimaryRuntime" in build_script
     assert "Test-FrozenQtImports -AppDirectory $DistAppPath" in build_script
     assert 'QtCore.pyd' in build_script
+    assert 'QtGui.pyd' in build_script
+    assert 'QtWidgets.pyd' in build_script
+    assert 'qwindows.dll' in build_script
     assert '_is_codex_runtime_path(binary[1])' in spec_text
+
+
+def test_direct_spec_build_excludes_the_same_host_dll_paths_as_build_script(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("REGEXPAD_SKIP_WORDPRESS_RUNTIME", "1")
+    spec_prefix = Path("regex-pad.spec").read_text(encoding="utf-8").split(
+        "a = Analysis", maxsplit=1
+    )[0]
+    namespace: dict[str, object] = {"SPECPATH": str(Path.cwd())}
+    exec(spec_prefix, namespace)  # noqa: S102 - Evaluate the project-owned spec guard.
+    is_host_path = cast(Callable[[str], bool], namespace["_is_codex_runtime_path"])
+    assert is_host_path(r"C:\Users\test\.cache\codex-runtimes\bin")
+    assert is_host_path(r"C:\Users\test\.codex\tmp\tools")
+    assert is_host_path(r"C:\Program Files\WindowsApps\OpenAI.CodexPrimaryRuntime.1")
+    assert not is_host_path(r"D:\Dev\venvs\venv_txt_edit312\Scripts")
 
 
 def test_build_script_copies_and_verifies_runtime_json_and_portable_settings() -> None:

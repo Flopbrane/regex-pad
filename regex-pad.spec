@@ -19,9 +19,13 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 
 def _is_codex_runtime_path(path):
-    """Ignore DLL search paths injected by the host application."""
+    """Ignore host DLL paths for both direct spec and build.ps1 builds."""
     normalized = str(path).replace("/", "\\").lower()
-    return "\\windowsapps\\openai.codexprimaryruntime." in normalized
+    return any(marker in normalized for marker in (
+        "\\.cache\\codex-runtimes",
+        "\\.codex\\tmp",
+        "\\windowsapps\\openai.codexprimaryruntime.",
+    ))
 
 
 # A direct `pyinstaller regex-pad.spec` build needs the same isolation as build.ps1.

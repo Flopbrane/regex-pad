@@ -173,7 +173,9 @@ def test_packaged_editor_close_records_its_newly_saved_settings(tmp_path: Path, 
     application = QApplication.instance() or QApplication([])
     assert application is not None
     template(tmp_path)
-    window = MainWindow(settings_path=tmp_path / "config.json")
+    window = MainWindow(
+        settings_path=tmp_path / "config.json", restore_unsaved_backup=False
+    )
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(main_module, "app_base_dir", lambda: tmp_path)
     monkeypatch.setattr(main_module, "bundled_base_dir", lambda: tmp_path / "_internal")

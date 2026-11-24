@@ -245,6 +245,11 @@ internal = Path(sys.argv[1])
 handles = [os.add_dll_directory(str(internal / name)) for name in (".", "PySide6", "shiboken6")]
 ctypes.WinDLL(str(internal / "PySide6" / "Qt6Core.dll"))
 ctypes.WinDLL(str(internal / "PySide6" / "QtCore.pyd"))
+ctypes.WinDLL(str(internal / "PySide6" / "Qt6Gui.dll"))
+ctypes.WinDLL(str(internal / "PySide6" / "QtGui.pyd"))
+ctypes.WinDLL(str(internal / "PySide6" / "Qt6Widgets.dll"))
+ctypes.WinDLL(str(internal / "PySide6" / "QtWidgets.pyd"))
+ctypes.WinDLL(str(internal / "PySide6" / "plugins" / "platforms" / "qwindows.dll"))
 print("Bundled Qt DLL load: OK")
 '@
     & $PythonExe -c $ProbeCode $InternalPath
