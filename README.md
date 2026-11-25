@@ -59,10 +59,16 @@ No commercial Qt entitlement or completed dependency-source delivery is assumed.
 | Recovery and appearance | Automatic session backups, saved-file generations, restore, ruler, wrapping, visible whitespace, colors |
 
 Regular expression search and replacement use Python's standard-library `re` module.
+The main title bar shows the active file's full path by default. Turn it off under
+**Options > View > Show full file path in title bar**. When saving an untitled tab,
+the first line appears as an editable `.md` filename suggestion.
 Selected-text search keeps the editor's actual selection when the scope option is
 switched off. Closing Find / Replace clears its markers; reopen it to rescan.
 Successful replacement also clears the markers. Search again to mark the updated text.
 Click a row in the replacement preview to jump to its line in the source tab.
+Clearing the search text also clears the replacement preview immediately.
+Find / Replace displays the file it was opened from. Its actions stay bound to that tab;
+switching tabs does not change the target. Closing that tab closes Find / Replace.
 
 See the [user guide](docs/HOW_TO_USE.md) for step-by-step instructions and shortcuts.
 `Ctrl+U` wraps selected text in `<u style="">...</u>` so the style can be filled in later.

@@ -58,6 +58,10 @@ visible whitespace depend on your settings.
 | Reload from disk | **File > Reload**, or **Reload with Encoding** |
 | Close, duplicate, or move a tab | Right-click its tab label |
 
+The main title bar shows the active file's full path by default. Toggle this in
+**Options > View > Show full file path in title bar**. For an untitled tab,
+Save suggests a `.md` filename based on the first line; edit it before confirming.
+
 An asterisk (`*`) on a tab/title indicates unsaved changes. Save explicitly
 when you want the original document updated; automatic recovery copies do not
 save the original file. A duplicated tab is an unsaved copy. Tab closing uses
@@ -80,6 +84,9 @@ deleting the source.
 
 Open **Search > Find / Replace** (`Ctrl+F`). The fields are **Find text**,
 **Exclude**, then **Replace with**.
+The file name shown at the top is the target captured when the dialog opens.
+Dialog actions return to that tab even if you switch tabs. Close and reopen the dialog
+to target another tab. Closing the target tab also closes the dialog.
 
 1. Enter a literal search string, or enable **Regular expression** for Python
    `re` syntax.
@@ -91,6 +98,8 @@ Open **Search > Find / Replace** (`Ctrl+F`). The fields are **Find text**,
    Click a preview row to jump to that line in the original tab. Editing the
    source manually clears outdated preview rows; run Preview again after editing
    or replacing to update them.
+   Clearing the search text clears the preview immediately, including in reduced
+   error-check mode.
 6. Use **Replace** for a match, **Replace All** for the selected scope, or
    **Replace Marked** for the current search markers.
 

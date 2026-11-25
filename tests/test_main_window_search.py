@@ -854,7 +854,57 @@ def test_preview_rows_clear_after_source_edit(app: QApplication) -> None:
     assert dialog.preview_table.rowCount() == 0
 
 
-def test_preview_click_does_not_target_another_tab_after_source_closes(
+def test_clearing_search_text_clears_preview_even_in_reduced_mode(
+    app: QApplication,
+) -> None:
+    _ = app
+    window = MainWindow()
+    window.editor.setPlainText("target")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    dialog.set_reduced_error_check_enabled(True)
+    window.preview_matches("target", "done", SearchOptions())
+    assert dialog.preview_table.rowCount() == 1
+    assert window._preview_source is not None
+
+    dialog.find_text_edit.clear()
+
+    assert dialog.preview_table.rowCount() == 0
+    assert dialog.preview_summary_label.text() == ""
+    assert window._preview_source is None
+
+
+def test_reopening_search_dialog_does_not_duplicate_find_handler(
+    app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("target target")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    for _ in range(50):
+        dialog.close()
+        window.show_find_replace_dialog()
+        assert window.find_replace_dialog is dialog
+
+    find_calls = 0
+    original_find_next = window.search_engine.find_next
+
+    def count_find(*args, **kwargs):
+        nonlocal find_calls
+        find_calls += 1
+        return original_find_next(*args, **kwargs)
+
+    monkeypatch.setattr(window.search_engine, "find_next", count_find)
+    dialog.find_button.click()
+    assert find_calls == 1
+
+
+def test_closing_preview_source_tab_clears_rows_and_target(
     app: QApplication,
 ) -> None:
     _ = app
@@ -867,12 +917,12 @@ def test_preview_click_does_not_target_another_tab_after_source_closes(
     assert dialog.preview_table.rowCount() == 1
 
     other_editor = window.create_editor_tab(text="another document")
-    window.tab_widget.removeTab(0)
-    dialog.preview_table.cellClicked.emit(0, 0)
+    window.remove_tab(0)
 
     assert window.editor is other_editor
     assert other_editor.textCursor().position() == 0
     assert dialog.preview_table.rowCount() == 0
+    assert window._preview_source is None
 
 
 def test_preview_matches_shows_line_after_all_same_line_replacements(
@@ -897,6 +947,32 @@ def test_preview_matches_shows_line_after_all_same_line_replacements(
     assert second_after_item is not None
     assert first_after_item.text() == '<h3 class="wp-block-heading"></h3>'
     assert second_after_item.text() == '<h3 class="wp-block-heading"></h3>'
+
+
+def test_preview_line_numbers_read_source_once_for_many_matches(
+    app: QApplication, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _ = app
+    window = MainWindow()
+    source = "x\n" * 200
+    window.editor.setPlainText(source)
+    options = SearchOptions()
+    matches = window.search_engine.find_all(source, "x", options)
+    original = window.editor.toPlainText
+    reads = 0
+
+    def count_read() -> str:
+        nonlocal reads
+        reads += 1
+        return original()
+
+    monkeypatch.setattr(window.editor, "toPlainText", count_read)
+    rows = window._preview_rows(source, matches, "x", "y", options, 0)
+
+    assert len(rows) == 200
+    assert rows[0][0] == 1
+    assert rows[-1][0] == 200
+    assert reads == 1
 
 
 def test_preview_matches_uses_selected_text_only(app: QApplication) -> None:
@@ -1119,7 +1195,7 @@ def test_close_cancels_pending_markers_after_replacement(
     assert not hasattr(window, "search_highlight_timer")
 
 
-def test_manual_edit_invalidates_scope_and_pending_highlights_follow_active_tab(
+def test_manual_edit_invalidates_scope_and_does_not_mark_another_tab(
     app: QApplication, tmp_path: Path,
 ) -> None:
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
@@ -1150,7 +1226,130 @@ def test_manual_edit_invalidates_scope_and_pending_highlights_follow_active_tab(
     dialog.find_text_edit.setText("target")
     window.create_editor_tab("target in new tab")
     assert previous_editor.search_matches == []
-    assert [item.text for item in window.editor.search_matches] == ["target"]
+    assert window.editor.search_matches == []
+
+
+def test_find_replace_dialog_stays_bound_to_opening_tab(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    source_editor = window.editor
+    source_editor.setPlainText("target target")
+    window._set_current_file_state(tmp_path / "source.md")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    assert "source.md" in dialog.windowTitle()
+    assert "source.md" in dialog.target_file_label.text()
+    dialog.find_text_edit.setText("target")
+    dialog.replace_text_edit.setText("done")
+
+    other_editor = window.create_editor_tab(text="target in other tab")
+    window.show_find_replace_dialog()  # Ctrl+F while already open must retain the original target.
+    assert window.editor is source_editor
+    window.tab_widget.setCurrentIndex(1)
+    dialog.find_button.click()
+    assert window.editor is source_editor
+    assert source_editor.textCursor().selectedText() == "target"
+    window.tab_widget.setCurrentIndex(1)
+    dialog.replace_all_button.click()
+    assert source_editor.toPlainText() == "done done"
+    assert other_editor.toPlainText() == "target in other tab"
+    assert dialog.target_file_name == "source.md"
+
+
+def test_find_replace_dialog_rebinds_only_after_close_and_reopen(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    source_editor = window.editor
+    source_editor.setPlainText("target")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    other_editor = window.create_editor_tab(text="target elsewhere")
+
+    window.remove_tab(0)
+    assert not dialog.isVisible()
+    assert window._find_replace_target is None
+    assert window.editor is other_editor
+    dialog.replace_all_requested.emit("target", "wrong", SearchOptions())
+    assert other_editor.toPlainText() == "target elsewhere"
+
+    window.show_find_replace_dialog()
+    assert window._find_replace_target is other_editor
+    dialog.replace_all_requested.emit("target", "done", SearchOptions())
+    assert other_editor.toPlainText() == "done elsewhere"
+
+
+def test_find_replace_dialog_close_then_reopen_from_other_tab(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    original_editor = window.editor
+    original_editor.setPlainText("target A")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    other_editor = window.create_editor_tab(text="target B")
+
+    dialog.close()
+    assert window._find_replace_target is None
+    window.show_find_replace_dialog()
+    assert window._find_replace_target is other_editor
+    dialog.replace_all_requested.emit("target", "done", SearchOptions())
+    assert original_editor.toPlainText() == "target A"
+    assert other_editor.toPlainText() == "done B"
+
+
+def test_selected_search_scope_survives_switching_tabs(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    source_editor = window.editor
+    source_editor.setPlainText("target outside\ntarget inside")
+    cursor = source_editor.textCursor()
+    cursor.setPosition(len("target outside\n"))
+    cursor.setPosition(len(source_editor.toPlainText()), QTextCursor.MoveMode.KeepAnchor)
+    source_editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.selected_only_check_box.setChecked(True)
+    dialog.find_text_edit.setText("target")
+    dialog.replace_text_edit.setText("done")
+    scope = window.search_scope
+
+    other_editor = window.create_editor_tab(text="target in another tab")
+    assert window.search_scope == scope
+    dialog.replace_all_button.click()
+    assert source_editor.toPlainText() == "target outside\ndone inside"
+    assert other_editor.toPlainText() == "target in another tab"
+
+
+def test_find_replace_dialog_uses_editor_identity_for_same_named_tabs(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    _ = app
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    source_editor = window.editor
+    source_editor.setPlainText("target A")
+    window._set_current_file_state(tmp_path / "same.md")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    other_editor = window.create_editor_tab(text="target B", save_file_path=tmp_path / "same.md")
+    dialog.replace_all_requested.emit("target", "done", SearchOptions())
+    assert window.editor is source_editor
+    assert source_editor.toPlainText() == "done A"
+    assert other_editor.toPlainText() == "target B"
+
+    window._set_current_file_state(tmp_path / "renamed.md")
+    assert "renamed.md" in dialog.target_file_label.text()
 
 
 def test_find_next_can_target_visible_text_only(

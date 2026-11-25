@@ -83,6 +83,7 @@ from dialogs.shortcut_settings_dialog import (
 from dialogs.tag_insert_dialog import TagInsertDialog
 from dialogs.user_help_dialog import UserHelpDialog
 from editor.dictionary_edit_service import DictionaryEditService
+from editor.document_character_count import DocumentCharacterCount
 from editor.editor_tab import EditorTab
 from editor.paragraph_insert_rules import (
     ParagraphInsertDictionaryError,
@@ -288,6 +289,8 @@ class MainWindow(QMainWindow):
         self.current_encoding = settings.default_encoding
         self.newline_code = settings.newline_code
         self.find_replace_dialog: FindReplaceDialog | None = None
+        self._find_replace_target: TextEditor | None = None
+        self._activating_find_replace_target = False
         self._preview_source: tuple[TextEditor, int] | None = None
         self.macro_editor_window: MacroEditorWindow | None = None
         self.macro_editor_controller: MacroEditorController | None = None
@@ -315,7 +318,7 @@ class MainWindow(QMainWindow):
         self._structure_sources: dict[TextEditor, IndexedSource] = {}
         self._structure_indices: dict[TextEditor, CoreBlockIndex] = {}
         self._structure_issues: dict[TextEditor, dict[int, list[int]]] = {}
-        self._status_count_cache: tuple[TextEditor, int, int] | None = None
+        self._document_character_counts: dict[TextEditor, DocumentCharacterCount] = {}
         self.wordpress_mode_label_key = settings.wordpress_mode_label_key
         self.hover_hints_enabled = settings.hover_hints_enabled
         self.user_dictionary_folder = settings.user_dictionary_folder
@@ -334,6 +337,7 @@ class MainWindow(QMainWindow):
         self.html_tag_color = settings.html_tag_color
         self.wordpress_core_block_color = settings.wordpress_core_block_color
         self.startup_restore_enabled = settings.startup_restore_enabled
+        self.show_full_path_in_title = settings.show_full_path_in_title
         self.search_marker_color = settings.search_marker_color
         self.current_match_marker_color = settings.current_match_marker_color
         self.visible_space_marker_color = settings.visible_space_marker_color
@@ -878,8 +882,14 @@ class MainWindow(QMainWindow):
         )
         editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         editor.customContextMenuRequested.connect(self._show_editor_context_menu)
+        self._document_character_counts[editor] = DocumentCharacterCount(editor.document())
+        editor.document().contentsChange.connect(
+            lambda position, removed, added, editor=editor: (
+                self._document_character_counts[editor].apply_change(position, removed, added)
+            )
+        )
         editor.textChanged.connect(self._update_status_bar)
-        editor.textChanged.connect(self._update_tab_titles)
+        editor.textChanged.connect(lambda editor=editor: self._update_tab_title(editor))
         editor.textChanged.connect(self._save_unsaved_backup)
         if "wp:" in text and "<!--" in text:
             self._structure_sources[editor] = IndexedSource(text)
@@ -898,7 +908,9 @@ class MainWindow(QMainWindow):
             lambda editor=editor: self._invalidate_grammar_lint_result(editor)
         )
         editor.cursorPositionChanged.connect(self._update_status_bar)
-        editor.document().modificationChanged.connect(self._update_tab_titles)
+        editor.document().modificationChanged.connect(
+            lambda _modified, editor=editor: self._update_tab_title(editor)
+        )
         editor.document().modificationChanged.connect(self._update_window_title)
 
         self.tab_file_paths[editor] = save_file_path
@@ -944,9 +956,15 @@ class MainWindow(QMainWindow):
             previous_editor.clear_search_matches()
         self.editor = editor
         self._sync_current_tab_state()
-        self.search_scope = None
+        if self._find_replace_target is None:
+            self.search_scope = None
         editor.clear_search_matches()
-        if self.find_replace_dialog is not None and self.find_replace_dialog.isVisible():
+        if (
+            editor is self._find_replace_target
+            and not self._activating_find_replace_target
+            and self.find_replace_dialog is not None
+            and self.find_replace_dialog.isVisible()
+        ):
             self.refresh_search_highlights(
                 self.find_replace_dialog.find_text_edit.text(),
                 self.find_replace_dialog.current_search_options(),
@@ -976,6 +994,8 @@ class MainWindow(QMainWindow):
             self.current_encoding = encoding
             self.tab_encodings[self.editor] = encoding
         self._update_tab_titles()
+        if self.editor is self._find_replace_target and self.find_replace_dialog is not None:
+            self.find_replace_dialog.set_target_file_name(self._find_replace_target_name())
 
     def _tab_title(self, editor: TextEditor) -> str:
         """Get the title for the tab corresponding to the given editor."""
@@ -985,8 +1005,7 @@ class MainWindow(QMainWindow):
 
     def _draft_title(self, editor: TextEditor) -> str:
         """Get the draft title for the given editor based on its content."""
-        lines = editor.toPlainText().splitlines()
-        first_line = lines[0].strip() if lines else ""
+        first_line = editor.document().firstBlock().text().strip()
         if not first_line:
             return self.translator.text("document.untitled")
         return first_line[:30]
@@ -997,6 +1016,13 @@ class MainWindow(QMainWindow):
             editor = self._editor_at(index)
             if editor is not None:
                 self.tab_widget.setTabText(index, self._tab_title(editor))
+
+    def _update_tab_title(self, editor: TextEditor) -> None:
+        """Update one tab's title after its own text or modified state changes."""
+        for index in range(self.tab_widget.count()):
+            if self._editor_at(index) is editor:
+                self.tab_widget.setTabText(index, self._tab_title(editor))
+                return
 
     def _set_current_word_wrap_enabled(self, enabled: bool) -> None:
         """Enable or disable word wrap for all open editors."""
@@ -1184,8 +1210,14 @@ class MainWindow(QMainWindow):
         """Remove the tab at the given index and clean up its associated resources."""
         widget = self.tab_widget.widget(tab_index)
         editor = self._editor_at(tab_index)
+        if editor is self._find_replace_target and self.find_replace_dialog is not None:
+            self.find_replace_dialog.close()
         self.tab_widget.removeTab(tab_index)
         if editor is not None:
+            if self._preview_source is not None and self._preview_source[0] is editor:
+                if self.find_replace_dialog is not None:
+                    self.find_replace_dialog.clear_preview_rows()
+                self._preview_source = None
             if editor is self._marked_editor:
                 self._marked_source = None
                 self._marked_editor = None
@@ -1196,6 +1228,7 @@ class MainWindow(QMainWindow):
             self._structure_sources.pop(editor, None)
             self._structure_indices.pop(editor, None)
             self._structure_issues.pop(editor, None)
+            self._document_character_counts.pop(editor, None)
         if widget is not None:
             widget.deleteLater()
 
@@ -1213,6 +1246,7 @@ class MainWindow(QMainWindow):
         self.fixed_column_wrap_column = settings.fixed_column_wrap_column
         self._apply_fixed_column_wrap_options_to_all_tabs()
         self.startup_restore_enabled = settings.startup_restore_enabled
+        self.show_full_path_in_title = settings.show_full_path_in_title
         self.auto_backup_interval_minutes = settings.auto_backup_interval_minutes
         self._set_auto_save_timer_interval(self.auto_backup_interval_minutes)
         self.default_encoding = settings.default_encoding
@@ -1259,6 +1293,7 @@ class MainWindow(QMainWindow):
             fixed_column_wrap_enabled=self.fixed_column_wrap_enabled,
             fixed_column_wrap_column=self.fixed_column_wrap_column,
             startup_restore_enabled=self.startup_restore_enabled,
+            show_full_path_in_title=self.show_full_path_in_title,
             language_code=self.translator.language_code,
             default_encoding=self.default_encoding,
             newline_code=self.newline_code,
@@ -1782,6 +1817,7 @@ class MainWindow(QMainWindow):
             fixed_column_wrap_enabled=self.fixed_column_wrap_enabled,
             fixed_column_wrap_column=self.fixed_column_wrap_column,
             startup_restore_enabled=self.startup_restore_enabled,
+            show_full_path_in_title=self.show_full_path_in_title,
             language_code=self.translator.language_code,
             default_encoding=self.default_encoding,
             newline_code=self.newline_code,
@@ -1875,6 +1911,8 @@ class MainWindow(QMainWindow):
         self.fixed_column_wrap_enabled = values.fixed_column_wrap_enabled
         self.fixed_column_wrap_column = values.fixed_column_wrap_column
         self.startup_restore_enabled = values.startup_restore_enabled
+        self.show_full_path_in_title = values.show_full_path_in_title
+        self._update_window_title()
         self.tab_width = values.tab_width
         self.unsaved_backup_manager = UnsavedBackupManager(
             self._unsaved_backup_path()
@@ -3132,13 +3170,7 @@ class MainWindow(QMainWindow):
         cursor = self.editor.textCursor()
         line_number = cursor.blockNumber() + 1
         column_number = cursor.positionInBlock() + 1
-        revision = self.editor.document().revision()
-        cached = self._status_count_cache
-        if cached is None or cached[0] is not self.editor or cached[1] != revision:
-            character_count = len(self.editor.toPlainText())
-            self._status_count_cache = (self.editor, revision, character_count)
-        else:
-            character_count = cached[2]
+        character_count = self._document_character_counts[self.editor].count
         self.statusBar().showMessage(
             self.translator.text(
                 "status.position",
@@ -3151,11 +3183,13 @@ class MainWindow(QMainWindow):
     def _update_window_title(self) -> None:
         """Update the main window title to reflect the current document name and modification status."""
         load_file_path = self.current_save_file_path
-        document_name = (
-            load_file_path.name
-            if load_file_path
-            else self.translator.text("document.untitled")
-        )
+        document_name = self.translator.text("document.untitled")
+        if load_file_path is not None:
+            document_name = (
+                str(load_file_path.absolute())
+                if self.show_full_path_in_title
+                else load_file_path.name
+            )
         changed_mark = "*" if self.editor.document().isModified() else ""
         self.setWindowTitle(
             f"{changed_mark}{document_name} - {self.translator.text('app.title')}"
@@ -3300,6 +3334,20 @@ class MainWindow(QMainWindow):
         self.current_encoding = selected_encoding
         return self._save_to_path(selected_save_file_path)
 
+    def _suggest_unsaved_file_name(self) -> str:
+        """Turn the unsaved tab's first-line title into a safe save suggestion."""
+        draft_title = self._draft_title(self.editor)
+        name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", draft_title).strip(" .")
+        if not name:
+            name = self.translator.text("document.untitled")
+        if name.split(".", 1)[0].upper() in {
+            "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
+            "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
+            "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        }:
+            name = f"_{name}"
+        return name if Path(name).suffix else f"{name}.md"
+
     def _get_save_file_path(self) -> tuple[Path | None, str]:
         """Show the save file dialog and return the selected file path and encoding."""
         dialog = QFileDialog(self, self.translator.text("dialog.save_as.title"))
@@ -3307,7 +3355,9 @@ class MainWindow(QMainWindow):
         dialog.setFileMode(QFileDialog.FileMode.AnyFile)
         dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
         dialog.selectFile(
-            self.current_save_file_path.name if self.current_save_file_path else ""
+            self.current_save_file_path.name
+            if self.current_save_file_path
+            else self._suggest_unsaved_file_name()
         )
 
         encoding_combo_box = QComboBox(dialog)
@@ -3642,6 +3692,37 @@ class MainWindow(QMainWindow):
         if self.unsaved_backup_enabled:
             self.unsaved_backup_manager.clear()
 
+    def _find_replace_target_name(self) -> str:
+        """Return the captured tab's current display name."""
+        target = self._find_replace_target
+        if target is None:
+            return ""
+        save_file_path = self.tab_file_paths.get(target)
+        return save_file_path.name if save_file_path is not None else self._draft_title(target)
+
+    def _activate_find_replace_target(self) -> bool:
+        """Show the captured tab before a dialog action; never use a fallback tab."""
+        target = self._find_replace_target
+        if target is None:
+            return False
+        for index in range(self.tab_widget.count()):
+            if self._editor_at(index) is target:
+                if self.editor is not target:
+                    self._activating_find_replace_target = True
+                    try:
+                        self.tab_widget.setCurrentIndex(index)
+                    finally:
+                        self._activating_find_replace_target = False
+                return self.editor is target
+        if self.find_replace_dialog is not None:
+            self.find_replace_dialog.close()
+        return False
+
+    def _run_bound_find_replace(self, action: Callable[..., object], *args: object) -> None:
+        """Route a Find/Replace dialog event only to its original editor."""
+        if self._activate_find_replace_target():
+            action(*args)
+
     def show_find_replace_dialog(self) -> None:
         """Show the find and replace dialog, initializing it with the current selection if available."""
         if self.find_replace_dialog is None:
@@ -3650,33 +3731,54 @@ class MainWindow(QMainWindow):
             self.find_replace_dialog.set_reduced_error_check_enabled(
                 self.reduced_error_check_enabled
             )
-            self.find_replace_dialog.find_requested.connect(self.find_next)
-            self.find_replace_dialog.find_previous_requested.connect(self.find_previous)
-            self.find_replace_dialog.replace_requested.connect(self.replace_current)
+            self.find_replace_dialog.find_requested.connect(
+                lambda *args: self._run_bound_find_replace(self.find_next, *args)
+            )
+            self.find_replace_dialog.find_previous_requested.connect(
+                lambda *args: self._run_bound_find_replace(self.find_previous, *args)
+            )
+            self.find_replace_dialog.replace_requested.connect(
+                lambda *args: self._run_bound_find_replace(self.replace_current, *args)
+            )
             self.find_replace_dialog.replace_all_requested.connect(
-                self._replace_all_from_dialog
+                lambda *args: self._run_bound_find_replace(self._replace_all_from_dialog, *args)
             )
             self.find_replace_dialog.replace_marked_requested.connect(
-                self.replace_marked_matches
+                lambda *args: self._run_bound_find_replace(self.replace_marked_matches, *args)
             )
-            self.find_replace_dialog.preview_requested.connect(self.preview_matches)
+            self.find_replace_dialog.preview_requested.connect(
+                lambda *args: self._run_bound_find_replace(self.preview_matches, *args)
+            )
             self.find_replace_dialog.preview_line_requested.connect(
-                self._jump_to_preview_line
+                lambda *args: self._run_bound_find_replace(self._jump_to_preview_line, *args)
+            )
+            self.find_replace_dialog.preview_cleared.connect(
+                self._clear_preview_source
             )
             self.find_replace_dialog.search_parameters_changed.connect(
-                self._search_parameters_changed
+                lambda *args: self._run_bound_find_replace(self._search_parameters_changed, *args)
             )
             self.find_replace_dialog.selection_scope_reset_requested.connect(
-                self.reset_search_scope_reference
+                lambda: self._run_bound_find_replace(self.reset_search_scope_reference)
             )
             self.find_replace_dialog.regex_help_requested.connect(self.show_regex_help_dialog)
             self.find_replace_dialog.normalise_requested.connect(
-                self.apply_regex_normalise_operation
+                lambda *args: self._run_bound_find_replace(self.apply_regex_normalise_operation, *args)
             )
             self.find_replace_dialog.preset_requested.connect(
-                self.capture_search_preset
+                lambda *args: self._run_bound_find_replace(self.capture_search_preset, *args)
             )
             self.find_replace_dialog.finished.connect(self._on_find_replace_dialog_closed)
+
+        if self.find_replace_dialog.isVisible():
+            if not self._activate_find_replace_target():
+                return
+            self.find_replace_dialog.raise_()
+            self.find_replace_dialog.activateWindow()
+            return
+
+        self._find_replace_target = self.editor
+        self.find_replace_dialog.set_target_file_name(self._find_replace_target_name())
 
         selected_text = self.editor.textCursor().selectedText()
         if selected_text:
@@ -3701,8 +3803,10 @@ class MainWindow(QMainWindow):
     def _on_find_replace_dialog_closed(self, _result: int) -> None:
         """Discard search decorations without changing the editor selection."""
         self._preview_source = None
+        self._find_replace_target = None
         if self.find_replace_dialog is not None:
             self.find_replace_dialog.clear_preview_rows()
+            self.find_replace_dialog.set_target_file_name("")
         self._marked_source = None
         self._marked_editor = None
         self.search_scope = None
@@ -3710,6 +3814,10 @@ class MainWindow(QMainWindow):
             editor = self._editor_at(tab_index)
             if editor is not None:
                 editor.clear_search_matches()
+
+    def _clear_preview_source(self) -> None:
+        """Forget the preview's document when its rows are cleared."""
+        self._preview_source = None
 
     def reset_search_scope_reference(self) -> None:
         """Forget the old search scope and capture the editor's current selection."""
@@ -4268,7 +4376,8 @@ class MainWindow(QMainWindow):
                 and self.find_replace_dialog is not None
             ):
                 self.find_replace_dialog.clear_preview_rows()
-        if editor is self.editor and not self._search_internal_text_change:
+        scope_owner = self._find_replace_target or self.editor
+        if editor is scope_owner and not self._search_internal_text_change:
             self.search_scope = None
         indexed_source = self._marked_source
         if indexed_source is None or editor is not self._marked_editor:
@@ -4665,9 +4774,14 @@ class MainWindow(QMainWindow):
         """Generate a preview of the replacement results for the given matches within the specified search scope."""
         rows: list[tuple[int, str, str]] = []
         preview_options = replace(options, exclusion_text="")
+        full_source_text = self.editor.toPlainText()
+        line_starts = [0] + [
+            index + 1 for index, character in enumerate(full_source_text)
+            if character == "\n"
+        ]
         for match in matches[:200]:
             absolute_start = scope_offset + match.start
-            line_number = self.editor.toPlainText().count("\n", 0, absolute_start) + 1
+            line_number = bisect_right(line_starts, absolute_start)
             before_text = self._line_context(source_text, match)
             preview_result = self.search_engine.preview_replacement(
                 match.text,

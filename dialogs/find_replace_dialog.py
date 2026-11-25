@@ -39,6 +39,7 @@ class FindReplaceDialog(QDialog):
     replace_marked_requested = Signal(str, str, SearchOptions)
     preview_requested = Signal(str, str, SearchOptions)
     preview_line_requested = Signal(int)
+    preview_cleared = Signal()
     search_parameters_changed = Signal(str, SearchOptions)
     selection_scope_reset_requested = Signal()
     regex_help_requested = Signal()
@@ -53,7 +54,9 @@ class FindReplaceDialog(QDialog):
         self.regex_lint = RegexLint()
         self.regex_lint_enabled: bool = True
         self.reduced_error_check_enabled: bool = False
+        self.target_file_name = ""
 
+        self.target_file_label = QLabel(self)
         self.find_text_edit = RegexInputEdit(self)
         self.exclusion_text_edit = RegexInputEdit(self)
         self.replace_text_edit = RegexInputEdit(self)
@@ -133,6 +136,16 @@ class FindReplaceDialog(QDialog):
         self.find_text_edit.setText(text)
         self.find_text_edit.selectAll()
 
+    def set_target_file_name(self, name: str) -> None:
+        """Show the file captured when this dialog was opened."""
+        self.target_file_name = name
+        title = self.translator.text("find.title")
+        self.setWindowTitle(f"{title} — {name}" if name else title)
+        self.target_file_label.setText(
+            self.translator.text("find.target_file", name=name) if name else ""
+        )
+        self.target_file_label.setVisible(bool(name))
+
     def set_error(self, message: str) -> None:
         """Set the error message in the error label."""
         self.error_label.setText(message)
@@ -199,6 +212,7 @@ class FindReplaceDialog(QDialog):
         """Clear the preview table rows and summary label."""
         self.preview_summary_label.clear()
         self.preview_table.setRowCount(0)
+        self.preview_cleared.emit()
 
     def clear_text_fields(self) -> None:
         """Clear the find, exclusion and replacement text fields."""
@@ -211,7 +225,7 @@ class FindReplaceDialog(QDialog):
 
     def apply_language(self) -> None:
         """Apply the current language translations to all UI elements."""
-        self.setWindowTitle(self.translator.text("find.title"))
+        self.set_target_file_name(self.target_file_name)
         self.find_text_label.setText(self.translator.text("find.find_text"))
         self.replace_text_label.setText(self.translator.text("find.replace_text"))
         self.exclusion_text_label.setText(self.translator.text("find.exclusion_text"))
@@ -315,6 +329,7 @@ class FindReplaceDialog(QDialog):
         button_layout.addWidget(self.close_button, 2, 2)
 
         root_layout = QVBoxLayout()
+        root_layout.addWidget(self.target_file_label)
         root_layout.addLayout(form_layout)
         root_layout.addLayout(button_layout)
         root_layout.addWidget(self.preset_separator)
@@ -323,8 +338,8 @@ class FindReplaceDialog(QDialog):
         root_layout.addWidget(self.error_label)
         root_layout.addWidget(self.preview_summary_label)
         root_layout.addWidget(self.preview_table)
-        root_layout.setStretch(0, 1)
-        root_layout.setStretch(7, 2)
+        root_layout.setStretch(1, 1)
+        root_layout.setStretch(9, 2)
         self.setLayout(root_layout)
 
     def _create_regex_insert_menu(self) -> None:
@@ -680,9 +695,9 @@ class FindReplaceDialog(QDialog):
 
     def _emit_search_parameters_changed(self, *_args: object) -> None:
         """Emit the search_parameters_changed signal with the current find text and search options."""
+        self.clear_preview_rows()
         if self.reduced_error_check_enabled:
             return
-        self.clear_preview_rows()
         self.search_parameters_changed.emit(
             self.find_text_edit.text(),
             self._search_options(),
