@@ -109,10 +109,12 @@ the result is unwanted. Selection/visible options constrain searches to that
 scope; clear them to return to a whole-document operation.
 Turning off selected-text scope keeps the editor selection. While the scope is
 enabled, use **Reset selection scope** to capture a new selection. Closing the
-dialog clears search, exclusion, and scope markers; reopening scans the active
-document again.
-After a successful replacement, the markers stay cleared while you edit the
-document. Change the search conditions or run Find/Preview to mark the updated text.
+dialog clears search, exclusion, and scope markers. Reopening keeps the text
+fields and checkboxes, even if another passage is selected in the editor. The
+search text becomes empty only when you delete it or press **Clear**. A successful
+Find or Replace clears result markers, preview rows, and the old selected-scope
+reference while keeping the input fields and checkboxes. Select a new passage
+or use **Reset selection scope** before another selected-only operation.
 
 ### Search/Replace Presets in the current source build
 
@@ -589,6 +591,6 @@ a newer version use their defaults when they are absent from the older file.
 
 ## Editing and background checks
 
-Find/Replace updates its markers when you change the search text or options. A simple literal search follows nearby edits; editing under complex search options clears stale markers. After a replacement, all markers are cleared until you search again.
+Find/Replace updates its markers when you change the search text or options. A simple literal search follows nearby manual edits; editing under complex search options clears stale markers. A completed Find or Replace clears result markers and preview rows until search conditions change or you request a new Preview.
 
 When editing WordPress block HTML, a damaged known opening/closing comment pair and HTML errors inside the edited block can be marked immediately. Use **Grammar Check** for a complete check. Saving also runs the configured full check. WordPress preview starts on a Preview command. Unsaved recovery data is saved on edits, and the configured timer creates history snapshots.

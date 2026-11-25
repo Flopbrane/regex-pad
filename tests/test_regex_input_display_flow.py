@@ -62,7 +62,7 @@ def test_replace_all_then_second_regex_input_keeps_display_and_regex_colors(
     _process_delayed_ui_events()
 
     assert window.editor.toPlainText() == "item-001\nitem-002\n"
-    assert dialog.preview_table.rowCount() == 2
+    assert dialog.preview_table.rowCount() == 0
     assert dialog.find_text_edit.hasFocus()
     assert dialog.find_text_edit.text() == r"line-(\d+)"
     assert dialog.replace_text_edit.text() == r"item-\1"

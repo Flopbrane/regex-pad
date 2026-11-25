@@ -63,8 +63,10 @@ The main title bar shows the active file's full path by default. Turn it off und
 **Options > View > Show full file path in title bar**. When saving an untitled tab,
 the first line appears as an editable `.md` filename suggestion.
 Selected-text search keeps the editor's actual selection when the scope option is
-switched off. Closing Find / Replace clears its markers; reopen it to rescan.
-Successful replacement also clears the markers. Search again to mark the updated text.
+switched off. Closing Find / Replace clears its markers but retains its input fields
+and checkboxes when reopened. A successful Find or Replace clears result markers,
+preview rows, and the old selected-scope reference. Select a fresh scope for the
+next selected-only operation.
 Click a row in the replacement preview to jump to its line in the source tab.
 Clearing the search text also clears the replacement preview immediately.
 Find / Replace displays the file it was opened from. Its actions stay bound to that tab;

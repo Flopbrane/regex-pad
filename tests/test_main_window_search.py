@@ -106,7 +106,7 @@ def test_replace_all_button_uses_unicode_normalization_route(
     QApplication.processEvents()
 
     assert window.editor.toPlainText() == "1. ＡＢＣ １２３ 2. 10. 20."
-    assert dialog.preview_table.rowCount() == 4
+    assert dialog.preview_table.rowCount() == 0
     window.editor.undo()
     assert window.editor.toPlainText() == "① ＡＢＣ １２３ ② ⑩ ⑳"
 
@@ -221,7 +221,7 @@ def test_replace_all_button_previews_and_replaces(
     QApplication.processEvents()
 
     assert window.editor.toPlainText() == "done done"
-    assert window.find_replace_dialog.preview_table.rowCount() == 2
+    assert window.find_replace_dialog.preview_table.rowCount() == 0
 
 
 def test_replace_all_button_replaces_wordpress_paragraph_gap_regex(
@@ -251,7 +251,7 @@ def test_replace_all_button_replaces_wordpress_paragraph_gap_regex(
     QApplication.processEvents()
 
     assert window.editor.toPlainText() == "first\nsecond\nthird"
-    assert window.find_replace_dialog.preview_table.rowCount() == 2
+    assert window.find_replace_dialog.preview_table.rowCount() == 0
 
 
 def test_low_load_mode_skips_auto_search_highlights(
@@ -1122,7 +1122,7 @@ def test_scope_toggle_close_and_reopen_keep_real_editor_selection(
     cursor.setPosition(len("A target\nB target"), QTextCursor.MoveMode.KeepAnchor)
     window.editor.setTextCursor(cursor)
     window.show_find_replace_dialog()
-    assert dialog.find_text_edit.text() == "B target"
+    assert dialog.find_text_edit.text() == "target"
     dialog.selected_only_check_box.setChecked(True)
     assert window.search_scope == (len("A target\n"), len("A target\nB target"))
     dialog.selected_only_check_box.setChecked(False)
@@ -1151,7 +1151,7 @@ def test_scope_reset_replaces_new_paragraph_without_revisiting_old_one(
     dialog.replace_all_button.click()
     assert window.editor.toPlainText().count(replacement) == 1
     assert window.editor.toPlainText().count("<strong >") == 2
-    assert window.search_scope is not None
+    assert window.search_scope is None
     assert window.editor.search_matches == []
     assert window.editor.search_scope_bounds is None
 
@@ -1170,6 +1170,106 @@ def test_scope_reset_replaces_new_paragraph_without_revisiting_old_one(
     assert window.editor.search_matches == []
     assert window.editor.search_scope_bounds is None
     assert "C <strong > end" in window.editor.toPlainText()
+
+
+def test_find_clears_old_scope_markers_and_preview_but_keeps_conditions(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("A target\nB target")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len("A target"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    dialog.replace_text_edit.setText("done")
+    dialog.selected_only_check_box.setChecked(True)
+    dialog.preview_button.click()
+    assert dialog.preview_table.rowCount() == 1
+
+    dialog.find_button.click()
+
+    assert window.editor.textCursor().selectedText() == "target"
+    assert window.search_scope is None
+    assert window.editor.search_matches == []
+    assert window.editor.search_scope_bounds is None
+    assert dialog.preview_table.rowCount() == 0
+    assert window._preview_source is None
+    assert dialog.find_text_edit.text() == "target"
+    assert dialog.replace_text_edit.text() == "done"
+    assert dialog.selected_only_check_box.isChecked()
+    dialog.find_button.click()
+    assert window.search_scope is None
+
+    cursor = window.editor.textCursor()
+    cursor.setPosition(len("A target\n"))
+    cursor.setPosition(len("A target\nB target"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    dialog.find_button.click()
+    assert window.editor.textCursor().selectedText() == "target"
+    assert window.search_scope is None
+
+
+def test_reopening_search_keeps_text_until_user_clears_it(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("first\nsecond")
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("first")
+    dialog.exclusion_text_edit.setText("second")
+    dialog.replace_text_edit.setText("done")
+    dialog.case_sensitive_check_box.setChecked(True)
+    dialog.close()
+    cursor = window.editor.textCursor()
+    cursor.setPosition(len("first\n"))
+    cursor.setPosition(len("first\nsecond"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    assert dialog.find_text_edit.text() == "first"
+    assert dialog.exclusion_text_edit.text() == "second"
+    assert dialog.replace_text_edit.text() == "done"
+    assert dialog.case_sensitive_check_box.isChecked()
+
+    dialog.clear_text_button.click()
+    dialog.close()
+    window.show_find_replace_dialog()
+    assert dialog.find_text_edit.text() == ""
+    assert dialog.exclusion_text_edit.text() == ""
+    assert dialog.replace_text_edit.text() == ""
+    assert dialog.case_sensitive_check_box.isChecked()
+
+
+def test_selected_only_find_then_replace_uses_current_match_not_old_scope(
+    app: QApplication, tmp_path: Path,
+) -> None:
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    window.editor.setPlainText("A target\nB target")
+    cursor = window.editor.textCursor()
+    cursor.setPosition(0)
+    cursor.setPosition(len("A target"), QTextCursor.MoveMode.KeepAnchor)
+    window.editor.setTextCursor(cursor)
+    window.show_find_replace_dialog()
+    dialog = window.find_replace_dialog
+    assert dialog is not None
+    dialog.find_text_edit.setText("target")
+    dialog.replace_text_edit.setText("done")
+    dialog.selected_only_check_box.setChecked(True)
+    dialog.find_button.click()
+    assert window.search_scope is None
+
+    dialog.replace_button.click()
+
+    assert window.editor.toPlainText() == "A done\nB target"
+    assert window.search_scope is None
+    assert window.editor.search_matches == []
+    assert dialog.find_text_edit.text() == "target"
+    assert dialog.selected_only_check_box.isChecked()
 
 
 def test_close_cancels_pending_markers_after_replacement(
@@ -1663,7 +1763,8 @@ def test_successful_replacement_clears_markers_until_explicit_search(
 
     if replace_kind == "current":
         window.find_next("target", options)
-        assert [match.text for match in window.editor.search_matches] == ["target"]
+        assert window.editor.textCursor().selectedText() == "target"
+        assert window.editor.search_matches == []
 
     dialog.find_text_edit.setText("done")
     expected = 1 if replace_kind == "current" else 2

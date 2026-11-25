@@ -309,6 +309,7 @@ class MainWindow(QMainWindow):
         self.wordpress_preview_snapshot: tuple[TextEditor, str] | None = None
         self.wordpress_theme_preview_snapshot: tuple[TextEditor, str] | None = None
         self.search_scope: tuple[int, int] | None = None
+        self._scope_selection_to_ignore: tuple[TextEditor, int, int] | None = None
         self._search_internal_text_change = False
         self._search_highlights_suspended = False
         self._marked_source: IndexedSource | None = None
@@ -3279,7 +3280,9 @@ class MainWindow(QMainWindow):
     def reload_file(self, encoding: str | None = None) -> None:
         """Reload the current file from disk, optionally using a specified encoding."""
         if self.current_save_file_path is None:
-            self._set_search_error(self.translator.text("dialog.reload_no_file"))
+            self._set_search_error(
+                self.translator.text("dialog.reload_no_file"), clear_results=False
+            )
             return
         if not self._confirm_reload_current_file():
             return
@@ -3725,6 +3728,7 @@ class MainWindow(QMainWindow):
 
     def show_find_replace_dialog(self) -> None:
         """Show the find and replace dialog, initializing it with the current selection if available."""
+        first_open = self.find_replace_dialog is None
         if self.find_replace_dialog is None:
             self.find_replace_dialog = FindReplaceDialog(self.translator, self)
             self.find_replace_dialog.set_regex_lint_enabled(self.regex_lint_enabled)
@@ -3783,22 +3787,23 @@ class MainWindow(QMainWindow):
         selected_text = self.editor.textCursor().selectedText()
         if selected_text:
             cursor = self.editor.textCursor()
-            self.search_scope = (
+            selection = (
+                self.editor,
                 self.editor.cursor_position_to_text_position(cursor.selectionStart()),
                 self.editor.cursor_position_to_text_position(cursor.selectionEnd()),
             )
-            self.find_replace_dialog.set_find_text(selected_text.replace("\u2029", "\n"))
+            self.search_scope = (
+                None if selection == self._scope_selection_to_ignore
+                else selection[1:]
+            )
+            if first_open:
+                self.find_replace_dialog.set_find_text(selected_text.replace("\u2029", "\n"))
         else:
             self.search_scope = None
         self.find_replace_dialog.clear_error()
         self.find_replace_dialog.show()
         self.find_replace_dialog.raise_()
         self.find_replace_dialog.activateWindow()
-        self._search_highlights_suspended = False
-        self.refresh_search_highlights(
-            self.find_replace_dialog.find_text_edit.text(),
-            self.find_replace_dialog.current_search_options(),
-        )
 
     def _on_find_replace_dialog_closed(self, _result: int) -> None:
         """Discard search decorations without changing the editor selection."""
@@ -3822,6 +3827,7 @@ class MainWindow(QMainWindow):
     def reset_search_scope_reference(self) -> None:
         """Forget the old search scope and capture the editor's current selection."""
         self.search_scope = None
+        self._scope_selection_to_ignore = None
         self._search_highlights_suspended = False
         if self.find_replace_dialog is None:
             return
@@ -3870,8 +3876,7 @@ class MainWindow(QMainWindow):
             )
         )
         self._set_search_status(self.translator.text("search.match_found"))
-        self._search_highlights_suspended = False
-        self.refresh_search_highlights(search_text, options)
+        self._clear_search_results_after_operation()
 
     def find_previous(self, search_text: str, options: SearchOptions) -> None:
         """Find the previous occurrence of the search text using the specified search options."""
@@ -3917,8 +3922,7 @@ class MainWindow(QMainWindow):
             )
         )
         self._set_search_status(self.translator.text("search.match_found"))
-        self._search_highlights_suspended = False
-        self.refresh_search_highlights(search_text, options)
+        self._clear_search_results_after_operation()
 
     def replace_current(
         self,
@@ -3939,6 +3943,14 @@ class MainWindow(QMainWindow):
             cursor.selectedText().replace("\u2029", "\n"),
         )
         scope_text, scope_offset = self._search_scope_text(options)
+        selected_reference = (self.editor, selected_match.start, selected_match.end)
+        if (
+            options.selected_only
+            and scope_text is None
+            and cursor.hasSelection()
+            and selected_reference == self._scope_selection_to_ignore
+        ):
+            scope_text, scope_offset = selected_match.text, selected_match.start
         if options.selected_only and scope_text is None:
             self._set_search_error(self.translator.text("search.select_before_replace"))
             return
@@ -3994,15 +4006,10 @@ class MainWindow(QMainWindow):
             self._set_search_error(self.translator.text("search.no_current_match"))
             return
 
-        if options.selected_only and self.search_scope is not None:
-            scope_start, scope_end = self.search_scope
-            self.search_scope = (
-                scope_start, scope_end + len(result.text) - len(source_text)
-            )
         self._replace_document_text(result.text)
-        self._clear_search_highlights_after_replace()
         replaced_end = len(result.text) - (len(source_text) - selected_match.end)
         self._set_cursor_position(replaced_end)
+        self._clear_search_results_after_operation()
         self._set_search_status(self.translator.text("search.replaced_one"))
         self._focus_find_text_after_replace_all()
 
@@ -4071,13 +4078,11 @@ class MainWindow(QMainWindow):
             scope_start = scope_offset
             scope_end = scope_offset + len(scope_text)
             result_text = source_text[:scope_start] + result.text + source_text[scope_end:]
-            if options.selected_only:
-                self.search_scope = (scope_start, scope_start + len(result.text))
         else:
             result_text = result.text
 
         self._replace_document_text(result_text)
-        self._clear_search_highlights_after_replace()
+        self._clear_search_results_after_operation()
         self._set_search_status(
             self.translator.text("search.replaced_many", count=result.count)
         )
@@ -4202,13 +4207,8 @@ class MainWindow(QMainWindow):
             self._set_search_error(self.translator.text("search.no_replacements"))
             return
 
-        if options.selected_only and self.search_scope is not None:
-            scope_start, scope_end = self.search_scope
-            self.search_scope = (
-                scope_start, scope_end + len(result_text) - len(original_text)
-            )
         self._replace_document_text(result_text)
-        self._clear_search_highlights_after_replace()
+        self._clear_search_results_after_operation()
         self._set_search_status(
             self.translator.text("search.replaced_many", count=replacement_count)
         )
@@ -4235,13 +4235,11 @@ class MainWindow(QMainWindow):
             scope_start = scope_offset
             scope_end = scope_offset + len(scope_text)
             result_text = source_text[:scope_start] + result.text + source_text[scope_end:]
-            if options.selected_only:
-                self.search_scope = (scope_start, scope_start + len(result.text))
         else:
             result_text = result.text
 
         self._replace_document_text(result_text)
-        self._clear_search_highlights_after_replace()
+        self._clear_search_results_after_operation()
         self._set_search_status(
             self.translator.text("normalise.applied", count=result.count)
         )
@@ -4256,11 +4254,23 @@ class MainWindow(QMainWindow):
         self._search_highlights_suspended = False
         self.refresh_search_highlights(search_text, options)
 
-    def _clear_search_highlights_after_replace(self) -> None:
-        """Keep markers off until the user explicitly searches again."""
+    def _clear_search_results_after_operation(self) -> None:
+        """Discard result markers, preview, and the previous selected scope."""
         self._search_highlights_suspended = True
         self._marked_source = None
         self._marked_editor = None
+        self.search_scope = None
+        self._preview_source = None
+        cursor = self.editor.textCursor()
+        self._scope_selection_to_ignore = (
+            (
+                self.editor,
+                self.editor.cursor_position_to_text_position(cursor.selectionStart()),
+                self.editor.cursor_position_to_text_position(cursor.selectionEnd()),
+            ) if cursor.hasSelection() else None
+        )
+        if self.find_replace_dialog is not None:
+            self.find_replace_dialog.clear_preview_rows()
         self.editor.clear_search_matches()
 
     def refresh_search_highlights(
@@ -4705,10 +4715,14 @@ class MainWindow(QMainWindow):
             cursor = self.editor.textCursor()
             if not cursor.hasSelection():
                 return None
-            self.search_scope = (
+            selection = (
+                self.editor,
                 self.editor.cursor_position_to_text_position(cursor.selectionStart()),
                 self.editor.cursor_position_to_text_position(cursor.selectionEnd()),
             )
+            if selection == self._scope_selection_to_ignore:
+                return None
+            self.search_scope = selection[1:]
 
         scope_start, scope_end = self.search_scope
         if scope_start >= scope_end or scope_end > source_length:
@@ -4908,8 +4922,10 @@ class MainWindow(QMainWindow):
         cursor.setPosition(self.editor.text_position_to_cursor_position(position))
         self.editor.setTextCursor(cursor)
 
-    def _set_search_error(self, message: str) -> None:
+    def _set_search_error(self, message: str, *, clear_results: bool = True) -> None:
         """Display the given search error message in the find and replace dialog and the status bar."""
+        if clear_results:
+            self._clear_search_results_after_operation()
         if self.find_replace_dialog is not None:
             self.find_replace_dialog.set_error(message)
         self.statusBar().showMessage(message)
