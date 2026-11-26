@@ -81,6 +81,7 @@ from dialogs.shortcut_settings_dialog import (
     validate_shortcut_settings,
 )
 from dialogs.tag_insert_dialog import TagInsertDialog
+from dialogs.unicode_character_info_dialog import UnicodeCharacterInfoDialog
 from dialogs.user_help_dialog import UserHelpDialog
 from editor.dictionary_edit_service import DictionaryEditService
 from editor.document_character_count import DocumentCharacterCount
@@ -113,6 +114,7 @@ from editor.tag_insert import (
     wordpress_snippets_for_mode,
 )
 from editor.text_editor import TextEditor
+from editor.unicode_character_info import inspect_character
 from editor.wordpress_markdown_converter import (
     WordPressMarkdownConversionError,
     convert_complex_markdown_blocks_to_wordpress_html,
@@ -303,6 +305,7 @@ class MainWindow(QMainWindow):
         self.tag_insert_dialog: TagInsertDialog | None = None
         self.user_help_dialog: UserHelpDialog | None = None
         self.schema_reference_dialog: SchemaReferenceDialog | None = None
+        self.unicode_character_info_dialog: UnicodeCharacterInfoDialog | None = None
         self.options_dialog: OptionsDialog | None = None
         self.wordpress_preview: WordPressPreview | None = None
         self.wordpress_theme_preview: WordPressPreview | None = None
@@ -631,6 +634,11 @@ class MainWindow(QMainWindow):
         self.grammar_check_action.setShortcut("F7")
         self.grammar_check_action.triggered.connect(self.run_grammar_check)
 
+        self.unicode_character_info_action = QAction(self)
+        self.unicode_character_info_action.triggered.connect(
+            self.show_unicode_character_info_dialog
+        )
+
         self.wordpress_preview_action = QAction(self)
         self.wordpress_preview_action.setShortcut("Ctrl+Alt+P")
         self.wordpress_preview_action.triggered.connect(self.show_wordpress_preview)
@@ -805,6 +813,8 @@ class MainWindow(QMainWindow):
         self.view_menu.addAction(self.line_numbers_action)
         self.view_menu.addAction(self.word_wrap_action)
         self.view_menu.addAction(self.ruler_action)
+        self.view_menu.addSeparator()
+        self.view_menu.addAction(self.unicode_character_info_action)
         self.view_menu.addSeparator()
         self.view_menu.addAction(self.wordpress_preview_action)
         self.view_menu.addAction(self.wordpress_theme_preview_action)
@@ -1425,6 +1435,9 @@ class MainWindow(QMainWindow):
         self._rebuild_insert_tag_menu()
         self.find_action.setText(self.translator.text("action.find_replace"))
         self.grammar_check_action.setText(self.translator.text("action.grammar_check"))
+        self.unicode_character_info_action.setText(
+            self.translator.text("action.unicode_character_info")
+        )
         self.wordpress_preview_action.setText(self.translator.text("action.wordpress_preview"))
         self.wordpress_theme_preview_action.setText(self.translator.text("action.wordpress_theme_preview"))
         self.stop_wordpress_preview_action.setText(self.translator.text("action.stop_wordpress_preview"))
@@ -1453,6 +1466,8 @@ class MainWindow(QMainWindow):
             self.user_help_dialog.apply_language()
         if self.schema_reference_dialog is not None:
             self.schema_reference_dialog.apply_language()
+        if self.unicode_character_info_dialog is not None:
+            self.unicode_character_info_dialog.apply_language()
         if self.options_dialog is not None:
             self.options_dialog.apply_language()
         self._update_status_bar()
@@ -4666,6 +4681,31 @@ class MainWindow(QMainWindow):
             self.schema_reference_dialog.place_next_to(self)
         self.schema_reference_dialog.raise_()
         self.schema_reference_dialog.activateWindow()
+
+    def show_unicode_character_info_dialog(self) -> None:
+        """選択先頭またはカーソル位置の1文字を読み取り専用で表示する。"""
+        cursor = QTextCursor(self.editor.textCursor())
+        from_selection = cursor.hasSelection()
+        cursor.setPosition(cursor.selectionStart() if from_selection else cursor.position())
+        if not cursor.movePosition(
+            QTextCursor.MoveOperation.NextCharacter,
+            QTextCursor.MoveMode.KeepAnchor,
+        ) and not from_selection:
+            cursor.movePosition(
+                QTextCursor.MoveOperation.PreviousCharacter,
+                QTextCursor.MoveMode.KeepAnchor,
+            )
+        character = cursor.selectedText().replace("\u2029", "\n")
+        info = inspect_character(character[0]) if character else None
+        if self.unicode_character_info_dialog is None:
+            self.unicode_character_info_dialog = UnicodeCharacterInfoDialog(
+                info, from_selection, self.translator, self
+            )
+        else:
+            self.unicode_character_info_dialog.set_character(info, from_selection)
+        self.unicode_character_info_dialog.show()
+        self.unicode_character_info_dialog.raise_()
+        self.unicode_character_info_dialog.activateWindow()
 
     def _insert_regex_pattern(self, pattern: str) -> None:
         """Insert the given regex pattern into the find text field of the find and replace dialog."""

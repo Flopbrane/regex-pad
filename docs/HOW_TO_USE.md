@@ -376,6 +376,11 @@ tabs/newlines, fixed-column wrapping, and other settings. Visible whitespace
 markers and wrapping change the display; they do not insert source characters.
 Click a ruler column to choose the column used when fixed-column wrap is enabled.
 
+In the current source build, **View > Unicode Character Information** displays the code point, Unicode name,
+category, and NFKC result for the first selected character. With no selection,
+it inspects the character at the cursor (or the preceding one at the document
+end). The document is not changed.
+
 `F1` opens the built-in help. **Help > HTML / CSS / WordPress Reference Tables**
 opens a modeless reference you can keep beside the editable document. The
 reference tables are generated from the bundled lint schemas. The standalone

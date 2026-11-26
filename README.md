@@ -80,6 +80,14 @@ Fixed rows are shown with purple text on a gray background. `Ctrl+N`, `Ctrl+O`,
 application keys and custom text shortcuts are saved in `shortcutkey_ref.json`
 beside `config.json`.
 
+## Unicode character information (current source build)
+
+Select a character, then choose **View > Unicode Character Information**. The
+window shows its code point, Unicode name, category, and NFKC result. For a
+longer selection it shows the first character. Without a selection it shows the
+character at the cursor, or the previous character at the end of the document.
+This inspection does not change the text.
+
 ## Unicode normalization replacement
 
 Open **Search > Find / Replace** (`Ctrl+F`) to normalize only the text matched by

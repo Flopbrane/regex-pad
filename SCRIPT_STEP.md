@@ -5041,3 +5041,8 @@ Canonical propagation and final concentrated-test results:
 - `style="color: ;"` の色メニューを開いた状態では、空のCSS値に `css_lint.empty_value` が出る。編集イベントの局所lintがその結果を行全体の赤い帯へ変換していたため、入力途中でもエラー表示になっていた。
 - 局所lintでは `css_lint.empty_value` だけを表示対象から外した。手動の文法チェックと保存時の全文lintは従来どおり空値を検出する。他のHTML構造エラーの局所表示も維持する。
 - 再現テストを追加し、空値を入力中は赤帯が出ず、全文lintでは検出されることを確認。関連100件成功、全体pytest 999 passed・終了コード0。Ruff全体合格、Pyright 0 errors / 0 warnings、`git diff --check` 合格。実機GUIとEXEでの見た目は未確認。
+
+## 2026-11-25 Unicode文字情報を追加
+
+- 現在の計画と詳細は `SCRIPT_STEPS.md` を参照。表示メニューから選択先頭・カーソル位置の文字情報を参照できる。正規化置換とは独立した読み取り専用機能。
+- canonical project `D:\PC\Python\regex_pad_project` で pytest 1027件成功、Ruff・Pyright成功。実機GUIとEXEの確認は未実施。
