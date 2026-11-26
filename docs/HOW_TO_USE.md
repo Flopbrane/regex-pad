@@ -277,6 +277,15 @@ text and lint markers currently do not provide hover explanations.
 | Warning | Suspicious spelling, placement, or compatibility that needs review |
 | Info | Supplementary guidance; Info alone does not trigger the pre-save confirmation |
 
+In the current source build, paragraph `fontSize` and the matching `<p>` class
+on only one side are reported as a static consistency concern. A styled `<u>`
+inside a paragraph receives an extension-specific warning: an observed VS Code
+WordPress extension action removed its formatting while preserving text and
+`<br>`. Plain `<u>` remains allowed. An inner `<strong>` font size alongside a
+paragraph font size receives an editing note. These findings do not reproduce
+WordPress core block validation; confirm the result by saving and re-editing in
+your Gutenberg environment.
+
 Checks include HTML tag/attribute typos and nesting, incomplete tags, misplaced
 attributes after an opener, CSS structure/properties/values, Gutenberg comment
 pairs, selected parent/child constraints, root element shapes, and JSON syntax

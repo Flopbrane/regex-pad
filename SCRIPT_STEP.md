@@ -5046,3 +5046,8 @@ Canonical propagation and final concentrated-test results:
 
 - 現在の計画と詳細は `SCRIPT_STEPS.md` を参照。表示メニューから選択先頭・カーソル位置の文字情報を参照できる。正規化置換とは独立した読み取り専用機能。
 - canonical project `D:\PC\Python\regex_pad_project` で pytest 1027件成功、Ruff・Pyright成功。実機GUIとEXEの確認は未実施。
+
+## 2026-11-26 Gutenberg段落Linterの診断追加
+
+- 主記録は`SCRIPT_STEPS.md`。段落の`fontSize`/クラスの静的疑義、`<u style>`のVS Code拡張機能由来の注意、編集上のInfo、壊れた`<u>`の構文Errorを分離。原稿の自動修正なし。
+- canonical project `D:\PC\Python\regex_pad_project` でpytest 1040件成功、Ruff・Pyright成功。Gutenberg本体の検証器、実機GUI、EXEは未確認。

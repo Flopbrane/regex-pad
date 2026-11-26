@@ -80,3 +80,9 @@ D:\Dev\venvs\venv_txt_edit312\Scripts\python.exe
 - **表示 > Unicode文字情報**を追加。選択範囲の先頭文字、未選択ならカーソル位置の文字、文末なら直前の文字について、コードポイント、Unicode名、カテゴリ、NFKC結果を読み取り専用で表示する。空文書では文字なしを案内する。
 - `editor/unicode_character_info.py` の標準ライブラリ `unicodedata` を利用。日英リソース、README日英、使用ガイド日英を更新。
 - 自動テスト全体1027件成功（終了コード0）。Ruff全体成功、Pyright 0 errors / 0 warnings、`git diff --check`成功。実機GUIと利用者ビルドのEXEでの表示確認は未実施。
+
+## Gutenberg段落Linterの互換性診断（2026-11-26）
+
+- `regex_pad_gutenberg_linter_enhancement_instructions.md`の観察結果を、WordPress本体の検証結果とは分けて反映。`fontSize`と`<p>`クラスの片側欠落は静的な整合疑義（Warning）、段落と内側の`<strong>`の文字サイズ共存および`fontSize`と`<u>`の共存はビジュアル編集上の注意（Info）。`<u style>`はVS Code WordPress拡張機能の「不明な書式を削除」で装飾が失われた実測に基づく別のWarningとする。閉じ忘れ・対応違いの`<u>`はHTML構文Error。
+- 新規規則ID: `paragraph_font_class_without_attribute`（Warning）、`paragraph_u_style_extension_warning`（Warning）、`paragraph_u_font_size_visual_caution`（Info）、`paragraph_nested_font_size_caution`（Info）。既存の`wordpress_block_attribute_html_mismatch`は属性とHTMLの静的な疑義として表示する。`wp:html`には段落専用規則を適用しない。自動修正は追加しない。
+- 実測前後を別のテストフィクスチャに保存し、ブロック属性・`<p>`クラス・本文・`<br>`の保持と装飾喪失を照合。関連392件、全体1040件のpytestが成功。Ruff・Pyright全体成功。実際のGutenberg `parse`/`serialize`/ブロック検証器による差分取得、実機GUI・利用者ビルドEXEでの確認は未実施。確定したシリアライズ不一致を示すErrorは発行しない。

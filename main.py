@@ -2499,8 +2499,13 @@ class MainWindow(QMainWindow):
         severity_label = self.translator.text(
             f"grammar_check.severity.{message.severity}"
         )
+        kind_label = (
+            self.translator.text(f"grammar_check.kind.{message.diagnostic_kind}") + " "
+            if isinstance(message, HtmlTypoLintMessage) and message.diagnostic_kind
+            else ""
+        )
         return (
-            f"{severity_label} "
+            f"{severity_label} {kind_label}"
             f"{self._html_typo_lint_message_text(message)}"
         )
 

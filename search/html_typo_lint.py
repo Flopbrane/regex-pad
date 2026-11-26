@@ -466,6 +466,7 @@ class HtmlTypoLintMessage:
     message_key: str
     line_number: int
     values: dict[str, str] | None = None
+    diagnostic_kind: str | None = None
 
     @property
     def message(self) -> str:
@@ -550,7 +551,7 @@ def lint_html_typos(load_data: str) -> list[HtmlTypoLintMessage]:
     for message in messages:
         signature = (
             message.severity, message.message_key, message.line_number,
-            tuple(sorted((message.values or {}).items())),
+            tuple(sorted((message.values or {}).items())), message.diagnostic_kind,
         )
         unique_messages.setdefault(signature, message)
     boundary_keys: set[str] = {
@@ -1532,6 +1533,13 @@ def _lint_wordpress_block_structure(
                                             and not any(tag == "p" for tag, _ in root_collector.root_tags)),
                 )
             )
+            if root_collector is not None and root_collector.root_tags:
+                messages.extend(_lint_wordpress_paragraph_inline_compatibility(
+                    block_attributes if block_attributes_valid else {},
+                    root_collector,
+                    open_line_number,
+                    _line_number_at(open_end, line_starts) - 1,
+                ))
             paragraph_key = _paragraph_duplicate_key(own_body)
             if paragraph_key:
                 previous_line = paragraph_prefix_lines.get(paragraph_key)
@@ -1581,6 +1589,7 @@ def _lint_wordpress_block_structure(
                     own_body,
                     open_line_number,
                     root_collector,
+                    _line_number_at(open_end, line_starts) - 1,
                 )
             )
 
@@ -1861,6 +1870,7 @@ def _lint_wordpress_block_attribute_html_consistency(
     block_body: str,
     line_number: int,
     root_collector: _BlockRootCollector | None = None,
+    body_line_offset: int = 0,
 ) -> list[HtmlTypoLintMessage]:
     if block_name == "group" and root_collector is not None:
         return _lint_wordpress_group_root_attributes(
@@ -1869,7 +1879,10 @@ def _lint_wordpress_block_attribute_html_consistency(
             line_number,
         )
     if block_name == "paragraph" and root_collector is not None:
-        return _lint_wordpress_paragraph_attributes(block_attributes, root_collector, line_number)
+        return _lint_wordpress_paragraph_attributes(
+            block_attributes, root_collector, line_number,
+            body_line_offset + (root_collector.first_content_line or 1),
+        )
     if block_name in WORDPRESS_SERIALIZATION_RULES and root_collector is not None:
         return _lint_verified_wordpress_serialization(
             block_name,
@@ -2131,7 +2144,8 @@ def _lint_wordpress_block_html_shape(
 
 
 def _lint_wordpress_paragraph_attributes(
-    block_attributes: dict[str, Any], collector: _BlockRootCollector, line_number: int,
+    block_attributes: dict[str, Any], collector: _BlockRootCollector,
+    line_number: int, paragraph_line: int,
 ) -> list[HtmlTypoLintMessage]:
     if len(collector.root_tags) != 1 or collector.root_tags[0][0] != "p":
         return []
@@ -2194,6 +2208,16 @@ def _lint_wordpress_paragraph_attributes(
                 line_number, "paragraph", attribute, value,
                 html_attributes.get("class", "(absent)"),
             ))
+    if not block_attributes.get("fontSize"):
+        for class_name in sorted(classes):
+            if re.fullmatch(r"has-[a-z0-9-]+-font-size", class_name):
+                messages.append(HtmlTypoLintMessage(
+                    "warning",
+                    "html_typo_lint.paragraph_font_class_without_attribute",
+                    paragraph_line,
+                    {"block_line": str(line_number), "class_name": class_name},
+                    "attribute_html_suspect",
+                ))
     messages.extend(
         _lint_verified_wordpress_serialization(
             "paragraph",
@@ -2202,6 +2226,58 @@ def _lint_wordpress_paragraph_attributes(
             line_number,
         )
     )
+    return messages
+
+
+def _lint_wordpress_paragraph_inline_compatibility(
+    block_attributes: dict[str, Any],
+    collector: _BlockRootCollector,
+    block_line: int,
+    body_line_offset: int,
+) -> list[HtmlTypoLintMessage]:
+    """段落内の書式について、確認済みの拡張機能挙動と編集上の注意を分ける。"""
+    if len(collector.root_tags) != 1 or collector.root_tags[0][0] != "p":
+        return []
+    messages: list[HtmlTypoLintMessage] = []
+    font_size = block_attributes.get("fontSize")
+    visual_noted = False
+    coexistence_noted = False
+    for tag, attrs, relative_line in collector.tag_details:
+        tag_line = body_line_offset + relative_line
+        style = attrs.get("style", "").strip()
+        if tag == "u":
+            if style:
+                messages.append(HtmlTypoLintMessage(
+                    "warning",
+                    "html_typo_lint.paragraph_u_style_extension_warning",
+                    tag_line,
+                    {"block_line": str(block_line), "style": style},
+                    "extension_unknown_inline_format",
+                ))
+            if font_size and not visual_noted:
+                messages.append(HtmlTypoLintMessage(
+                    "info",
+                    "html_typo_lint.paragraph_u_font_size_visual_caution",
+                    tag_line,
+                    {"block_line": str(block_line), "font_size": str(font_size)},
+                    "visual_edit_compatibility",
+                ))
+                visual_noted = True
+        elif tag == "strong" and font_size and not coexistence_noted:
+            css_values = parse_inline_style_values(style) if style else {}
+            if css_values and css_values.get("font-size"):
+                messages.append(HtmlTypoLintMessage(
+                    "info",
+                    "html_typo_lint.paragraph_nested_font_size_caution",
+                    tag_line,
+                    {
+                        "block_line": str(block_line),
+                        "font_size": str(font_size),
+                        "inline_size": css_values["font-size"],
+                    },
+                    "visual_edit_compatibility",
+                ))
+                coexistence_noted = True
     return messages
 
 
@@ -2317,6 +2393,7 @@ def _wordpress_attribute_html_mismatch_message(
             "attribute_value": attribute_value,
             "html_value": html_value,
         },
+        "attribute_html_suspect",
     )
 
 
@@ -2770,18 +2847,21 @@ class HtmlTypoLintParser(HTMLParser):
         )
         if matching_index is None:
             self.messages.append(HtmlTypoLintMessage(
-                "warning", "html_typo_lint.unexpected_inline_closing_tag", line_number,
+                "error" if tag == "u" else "warning",
+                "html_typo_lint.unexpected_inline_closing_tag", line_number,
                 {"tag": tag},
+                "html_syntax" if tag == "u" else None,
             ))
             return
 
         expected_tag: str = self.inline_stack[-1][0]
         self.messages.append(
             HtmlTypoLintMessage(
-                "warning",
+                "error" if tag == "u" or expected_tag == "u" else "warning",
                 "html_typo_lint.inline_tag_closing_order",
                 line_number,
                 {"tag": expected_tag, "closing_tag": tag},
+                "html_syntax" if tag == "u" or expected_tag == "u" else None,
             )
         )
         del self.inline_stack[matching_index]
@@ -2798,10 +2878,11 @@ class HtmlTypoLintParser(HTMLParser):
             tag, line_number, _ = self.inline_stack.pop()
             self.messages.append(
                 HtmlTypoLintMessage(
-                    "warning",
+                    "error" if tag == "u" else "warning",
                     "html_typo_lint.inline_tag_unclosed_before_parent",
                     line_number,
                     {"tag": tag, "parent": parent_tag},
+                    "html_syntax" if tag == "u" else None,
                 )
             )
         del self.inline_boundaries[boundary_index:]
@@ -2812,10 +2893,11 @@ class HtmlTypoLintParser(HTMLParser):
             tag, line_number, _ = self.inline_stack.pop()
             self.messages.append(
                 HtmlTypoLintMessage(
-                    "warning",
+                    "error" if tag == "u" else "warning",
                     "html_typo_lint.inline_tag_unclosed_at_document_end",
                     line_number,
                     {"tag": tag},
+                    "html_syntax" if tag == "u" else None,
                 )
             )
 
@@ -2946,6 +3028,7 @@ class _BlockRootCollector(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.root_tags: list[tuple[str, dict[str, str]]] = []
         self.all_tags: list[tuple[str, dict[str, str]]] = []
+        self.tag_details: list[tuple[str, dict[str, str], int]] = []
         self.open_tags: list[str] = []
         self.has_root_text = False
         self.first_content_line: int | None = None
@@ -2964,6 +3047,7 @@ class _BlockRootCollector(HTMLParser):
         """ルート要素を記録する。"""
         attribute_values: dict[str, str] = {name: value or "" for name, value in attrs}
         self.all_tags.append((tag, attribute_values))
+        self.tag_details.append((tag, attribute_values, self.getpos()[0]))
         if not self.open_tags:
             if self.first_content_line is None:
                 self.first_content_line = self.getpos()[0]

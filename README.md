@@ -151,6 +151,13 @@ parent/child relationships, and JSON syntax and selected attributes inside block
 comments. It is a paste-safety aid with a bundled dictionary, rather than a full
 browser validator or the Gutenberg editor's `save()` validation.
 
+For `wp:paragraph`, the current source build also flags a `fontSize`/`<p>`
+font-size class found on only one side as a **Warning**, and notes overlapping
+paragraph and inner `<strong>` font sizes. A styled `<u>` receives a separate
+**Warning** about formatting removed in an observed VS Code WordPress extension
+action; it is not a claim that WordPress core rejects the tag. A plain `<u>`
+remains allowed. Check visual editing and re-saving in your WordPress environment.
+
 Grammar Check and Preview do not automatically repair or rewrite the article.
 Search and replacement preview also leave it unchanged. Text-changing actions
 such as Replace, Regex Rewrite, snippet insertion, and Markdown conversion are
