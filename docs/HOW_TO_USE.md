@@ -265,6 +265,15 @@ text and lint markers currently do not provide hover explanations.
 
 ## Grammar Check
 
+For supported WordPress repair suggestions in the current source build, use
+**Search > Core Block Check / Repair**. Select a row to see why it was proposed
+and compare before and after. Check only the candidates you want, then choose
+**Apply selected repairs**. One Undo restores the selected edits together. If
+the document changes while reviewing, reopen the repair window. Candidates
+cover missing heading `level`, recognized root classes, and missing CSS
+declarations with matching comment attributes. Check the saved result in the
+target Gutenberg environment.
+
 1. Activate the document's tab and choose **Search > Grammar Check** (`F7`).
 2. Review findings in severity order. Click a result to jump to its source line.
 3. Keep the window open while editing, then use **Refresh** or run `F7` again.
@@ -381,7 +390,8 @@ this local baseline. Remote browser assets still require their external URLs.
 
 In the current source build, enable **Show inline color swatches** in Options
 (off by default). Swatches appear after supported six-digit hex colors in
-`.css` files, HTML `<style>` elements, and single-line `style` attributes.
+`.css` files, HTML `<style>` elements, and `style` attributes in tags that
+span multiple lines. Six-digit color stops in CSS gradients are also supported.
 Click a swatch to open the picker at that color. **Apply** updates that one code,
 and Undo restores the original. If the target changes while the picker is open,
 select the swatch again. Only the color code is copied or saved.
@@ -395,7 +405,8 @@ Click a ruler column to choose the column used when fixed-column wrap is enabled
 In the current source build, **View > Unicode Character Information** displays the code point, Unicode name,
 category, and NFKC result for the first selected character. With no selection,
 it inspects the character at the cursor (or the preceding one at the document
-end). The document is not changed.
+end). The unit is one Unicode code point, so a combining mark can be inspected
+separately. The document is not changed.
 
 `F1` opens the built-in help. **Help > HTML / CSS / WordPress Reference Tables**
 opens a modeless reference you can keep beside the editable document. The

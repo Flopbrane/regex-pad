@@ -37,7 +37,11 @@ class UnicodeCharacterInfoDialog(QDialog):
         self.field_labels = [QLabel(self) for _ in range(5)]
         self.value_labels = [QLabel(self) for _ in range(5)]
         for field_label, value_label in zip(self.field_labels, self.value_labels, strict=True):
-            value_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            value_label.setTextFormat(Qt.TextFormat.PlainText)
+            value_label.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse
+                | Qt.TextInteractionFlag.TextSelectableByKeyboard
+            )
             self.form.addRow(field_label, value_label)
         self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, self)
         self.buttons.rejected.connect(self.close)

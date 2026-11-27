@@ -91,7 +91,8 @@ occurrence. Undo restores the previous code. Swatches are editor decorations.
 Select a character, then choose **View > Unicode Character Information**. The
 window shows its code point, Unicode name, category, and NFKC result. For a
 longer selection it shows the first character. Without a selection it shows the
-character at the cursor, or the previous character at the end of the document.
+character at the cursor, or the previous code point at the end of the document.
+Each inspection covers one code point. A combining mark can have its own entry.
 This inspection does not change the text.
 
 ## Unicode normalization replacement
@@ -147,6 +148,11 @@ This feature has been verified in the Python source build. The packaged EXE
 has not yet been rebuilt or checked for this change.
 
 ## Check article source before pasting
+
+The current source build offers **Search > Core Block Check / Repair**. Review
+the before and after previews, check individual candidates, and apply your
+selection. One Undo restores the document. Available candidates cover selected
+missing heading JSON, root classes, and CSS declarations.
 
 Choose **Search > Grammar Check** (`F7`) to see **Error**, **Warning**, and **Info**
 findings for the active tab. Click a result to visit its line, edit the source,

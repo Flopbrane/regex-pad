@@ -66,6 +66,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 from config import default_config_path, migrate_legacy_settings_if_needed
+from dialogs.core_block_repair_controller import repair_core_blocks
 from dialogs.dictionary_editor_dialog import DictionaryEditorDialog
 from dialogs.find_replace_dialog import FindReplaceDialog
 from dialogs.grammar_check_dialog import GrammarCheckDialog
@@ -115,7 +116,7 @@ from editor.tag_insert import (
     wordpress_snippets_for_mode,
 )
 from editor.text_editor import TextEditor
-from editor.unicode_character_info import inspect_character
+from editor.unicode_character_info import character_at_cursor, inspect_character
 from editor.wordpress_markdown_converter import (
     WordPressMarkdownConversionError,
     convert_complex_markdown_blocks_to_wordpress_html,
@@ -635,6 +636,8 @@ class MainWindow(QMainWindow):
         self.grammar_check_action = QAction(self)
         self.grammar_check_action.setShortcut("F7")
         self.grammar_check_action.triggered.connect(self.run_grammar_check)
+        self.core_block_repair_action = QAction(self)
+        self.core_block_repair_action.triggered.connect(self.show_core_block_repair)
 
         self.unicode_character_info_action = QAction(self)
         self.unicode_character_info_action.triggered.connect(
@@ -793,6 +796,7 @@ class MainWindow(QMainWindow):
         self.search_menu = QMenu(self)
         self.search_menu.addAction(self.find_action)
         self.search_menu.addAction(self.grammar_check_action)
+        self.search_menu.addAction(self.core_block_repair_action)
         self.preset_menu = QMenu(self)
         self.preset_new_action = QAction(self)
         self.preset_run_action = QAction(self)
@@ -895,6 +899,9 @@ class MainWindow(QMainWindow):
         )
         editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         editor.customContextMenuRequested.connect(self._show_editor_context_menu)
+        self.tab_file_paths[editor] = save_file_path
+        # Rehighlighting can emit editor signals before the tab becomes active.
+        self._apply_inline_color_preview(editor)
         self._document_character_counts[editor] = DocumentCharacterCount(editor.document())
         editor.document().contentsChange.connect(
             lambda position, removed, added, editor=editor: (
@@ -926,8 +933,6 @@ class MainWindow(QMainWindow):
         )
         editor.document().modificationChanged.connect(self._update_window_title)
 
-        self.tab_file_paths[editor] = save_file_path
-        self._apply_inline_color_preview(editor)
         editor.inline_color_clicked.connect(
             lambda start, code: self._choose_inline_color(editor, start, code)
         )
@@ -1444,6 +1449,7 @@ class MainWindow(QMainWindow):
         self._rebuild_insert_tag_menu()
         self.find_action.setText(self.translator.text("action.find_replace"))
         self.grammar_check_action.setText(self.translator.text("action.grammar_check"))
+        self.core_block_repair_action.setText(self.translator.text("core_repair.title"))
         self.unicode_character_info_action.setText(
             self.translator.text("action.unicode_character_info")
         )
@@ -2258,11 +2264,24 @@ class MainWindow(QMainWindow):
         self.stop_wordpress_preview_action.setEnabled(False)
         self._update_wordpress_status_label()
 
+    def show_core_block_repair(self) -> None:
+        """元タブのWordPress修復候補を確認する。"""
+        repair_core_blocks(
+            self.editor, lambda: self._editor_at(self.tab_widget.currentIndex()),
+            str(self.current_save_file_path or self._draft_title(self.editor)), self.translator, self,
+        )
+
     def run_grammar_check(self) -> None:
         """Run the CSS or HTML / WordPress grammar check for the current document."""
         source_text = self.editor.toPlainText()
         messages = self._lint_document(source_text)
         if not messages:
+            index = self._structure_indices.get(self.editor)
+            if index is not None and any(pair.broken for pair in index.pairs):
+                # A clean full check supersedes delimiter positions kept during editing.
+                self._structure_sources[self.editor] = IndexedSource(source_text)
+                self._structure_indices[self.editor] = CoreBlockIndex(source_text)
+                self._structure_issues.pop(self.editor, None)
             self.editor.clear_grammar_issue_lines()
             status_message = self.translator.text("grammar_check.no_issues")
             self.statusBar().showMessage(status_message)
@@ -4737,18 +4756,9 @@ class MainWindow(QMainWindow):
 
     def show_unicode_character_info_dialog(self) -> None:
         """選択先頭またはカーソル位置の1文字を読み取り専用で表示する。"""
-        cursor = QTextCursor(self.editor.textCursor())
+        cursor = self.editor.textCursor()
         from_selection = cursor.hasSelection()
-        cursor.setPosition(cursor.selectionStart() if from_selection else cursor.position())
-        if not cursor.movePosition(
-            QTextCursor.MoveOperation.NextCharacter,
-            QTextCursor.MoveMode.KeepAnchor,
-        ) and not from_selection:
-            cursor.movePosition(
-                QTextCursor.MoveOperation.PreviousCharacter,
-                QTextCursor.MoveMode.KeepAnchor,
-            )
-        character = cursor.selectedText().replace("\u2029", "\n")
+        character = character_at_cursor(cursor)
         info = inspect_character(character[0]) if character else None
         if self.unicode_character_info_dialog is None:
             self.unicode_character_info_dialog = UnicodeCharacterInfoDialog(

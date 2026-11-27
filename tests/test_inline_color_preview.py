@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -36,6 +37,29 @@ def test_css_and_html_color_contexts() -> None:
     ):
         _, context, depth = find_colors(opener, ColorContext.HTML, 0, stylesheet=False)
         assert not find_colors(fragment, context, depth, stylesheet=False)[0]
+
+
+def test_multiline_tag_and_gradient_show_color_stops_without_matching_urls() -> None:
+    lines = [
+        "<!-- wp:html -->",
+        "<div",
+        ' title="line one',
+        " style='color:#123456' still in title",
+        '"',
+        ' style="--separator-color: #79b7d8;',
+        ' background: linear-gradient(90deg, #79b7d8 0%, #f0b84a 100%);',
+        ' mask: url(#234567); color: /* #345678 */ #112233;"',
+        ' aria-hidden="true"></div>',
+        "<!-- /wp:html -->",
+    ]
+    context, depth = ColorContext.HTML, 0
+    results: list[tuple[int, list[str]]] = []
+    for index, line in enumerate(lines):
+        hits, context, depth = find_colors(line, context, depth, stylesheet=False)
+        if hits:
+            assert all(line[start:start + len(code)] == code for start, code in hits)
+            results.append((index, [code for _, code in hits]))
+    assert results == [(5, ["#79b7d8"]), (6, ["#79b7d8", "#f0b84a"]), (7, ["#112233"])]
 
 
 def test_swatch_spacing_is_display_only_and_updates_after_edit() -> None:
@@ -126,7 +150,7 @@ def test_click_apply_cancel_and_stale_target(tmp_path: Path) -> None:
     window.show_options_dialog()
     assert SettingsManager(tmp_path / "settings.json").load().inline_color_preview_enabled
     editor = window.editor
-    source = '<p style="color:#112233; background-color:#112233;">本文</p>'
+    source = '<p\n style="color:#112233; background-color:#112233;">本文</p>'
     editor.setPlainText(source)
     window.resize(1100, 400)
     window.show()
@@ -170,3 +194,15 @@ def test_click_apply_cancel_and_stale_target(tmp_path: Path) -> None:
     dialog.accept()
     assert editor.toPlainText() == edited
     window.hide()
+
+    # Reopen with the saved setting already on, as in a portable EXE rebuild.
+    startup_errors: list[BaseException] = []
+    with MonkeyPatch.context() as patch:
+        patch.setattr(sys, "excepthook", lambda _kind, error, _trace: startup_errors.append(error))
+        reopened = MainWindow(
+            settings_path=tmp_path / "settings.json",
+            unsaved_backup_path=tmp_path / "reopened-backup.json",
+            restore_unsaved_backup=False,
+        )
+        assert reopened.inline_color_preview_enabled
+        assert not startup_errors

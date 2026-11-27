@@ -70,6 +70,43 @@ def test_typing_inside_paragraph_keeps_pair_valid(tmp_path: Path) -> None:
     assert window.editor.grammar_issue_lines == []
 
 
+def test_moving_heading_tail_into_paragraph_removes_stale_red_band(tmp_path: Path, monkeypatch) -> None:
+    app = QApplication.instance() or QApplication([])
+    assert isinstance(app, QApplication)
+    window = MainWindow(
+        settings_path=tmp_path / "settings.json",
+        unsaved_backup_path=tmp_path / "backup.json",
+        restore_unsaved_backup=False,
+    )
+    heading = (
+        '<!-- wp:heading -->\n<h2 class="wp-block-heading">'
+        "小見出しの前半 後半の文</h2>\n<!-- /wp:heading -->"
+    )
+    next_heading = '\n<!-- wp:heading -->\n<h2 class="wp-block-heading">次の見出し</h2>\n<!-- /wp:heading -->'
+    window.editor.setPlainText(heading + next_heading)
+    new_ending = (
+        '</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n'
+        '<p><span style="font-size: 26px;">後半の文</span></p>\n<!-- /wp:paragraph -->'
+    )
+    original_lint = window._lint_document
+    monkeypatch.setattr(
+        window, "_lint_document",
+        lambda _source: (_ for _ in ()).throw(AssertionError("full lint on typing")),
+    )
+    start = heading.index(" 後半")
+    _replace_range(window, start, len(heading), new_ending)
+    edited = window.editor.toPlainText()
+    assert edited == heading[:start] + new_ending + next_heading
+    assert window.editor.grammar_issue_lines == []
+    index = window._structure_indices[window.editor]
+    assert index.pairs[0].close_start == edited.index("<!-- /wp:heading -->")
+    assert index.pairs[1].close_start == edited.rindex("<!-- /wp:heading -->")
+    assert original_lint(edited) == []
+    window.editor.undo()
+    assert window.editor.toPlainText() == heading + next_heading
+    assert window.editor.grammar_issue_lines == []
+
+
 def test_typing_deleted_closing_comment_recovers_pair(tmp_path: Path) -> None:
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)

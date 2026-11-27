@@ -48,12 +48,12 @@ class CoreBlockIndex:
                     pair.close_end = end
                 else:
                     stack.append(pair)
+            elif any(pair.close_start == start for pair in self.pairs):
+                continue
             elif stack and stack[-1].name == name:
                 pair = stack.pop()
                 pair.close_start = start
                 pair.close_end = end
-            elif any(pair.close_start == start for pair in self.pairs):
-                continue
             elif not stack:
                 candidate = next(
                     (
@@ -87,9 +87,20 @@ class CoreBlockIndex:
     ) -> list[CoreBlockPair]:
         """Shift known pairs, then recheck only touched delimiters and new fragment."""
         touched: list[CoreBlockPair] = []
+        surviving: list[CoreBlockPair] = []
+        replaced_closers: list[CoreBlockPair] = []
         for pair in self.pairs:
             old_open_start, old_open_end = pair.open_start, pair.open_end
             old_close_start, old_close_end = pair.close_start, pair.close_end
+            if (
+                old_start < old_end and old_start <= old_open_start
+                and (old_close_end if old_close_end is not None else old_open_end) <= old_end
+            ):
+                # The fragment will supply any replacement blocks. Expire the old diagnoses.
+                pair.broken = True
+                touched.append(pair)
+                continue
+            surviving.append(pair)
             repairing_open = (
                 pair.broken and old_start == old_end == old_open_end
                 and old_open_end - old_open_start < len(f"<!-- wp:{pair.name} -->")
@@ -141,6 +152,15 @@ class CoreBlockIndex:
                 touched.append(pair)
             if delimiter_touched:
                 pair.broken = not self._pair_is_valid(pair, source_text)
+            if (
+                pair.broken and old_start < old_end
+                and old_close_start is not None and old_close_end is not None
+                and old_start <= old_close_start and old_close_end <= old_end
+                and old_open_end <= old_start and old_open_start < old_start
+            ):
+                replaced_closers.append(pair)
+        self.pairs[:] = surviving
+        self._restore_replaced_closer(replaced_closers, old_start, added_text, source_text)
         if fragment and "wp:" in fragment:
             previous_count = len(self.pairs)
             previous_state = {
@@ -156,6 +176,30 @@ class CoreBlockIndex:
                 )
             )
         return touched
+
+    def _restore_replaced_closer(
+        self, candidates: list[CoreBlockPair], start: int, added_text: str, source_text: str,
+    ) -> None:
+        """残った開始コメントに、同じ編集で書き直した終了コメントを対応させる。"""
+        if len(candidates) != 1:
+            return
+        pair = candidates[0]
+        token = BLOCK_COMMENT_PATTERN.search(added_text)
+        if token is None or not token.group(1) or token.group(2) != pair.name:
+            return
+        close_start = start + token.start()
+        if any(
+            other is not pair
+            and (pair.open_start < other.open_start < close_start or other.close_start == close_start)
+            for other in self.pairs
+        ):
+            return
+        previous_close = pair.close_start, pair.close_end
+        pair.close_start, pair.close_end = close_start, start + token.end()
+        if self._pair_is_valid(pair, source_text):
+            pair.broken = False
+        else:
+            pair.close_start, pair.close_end = previous_close
 
     @staticmethod
     def _intersects(start: int, end: int, token_start: int, token_end: int) -> bool:

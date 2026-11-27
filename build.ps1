@@ -1,5 +1,7 @@
 param(
-    [switch] $SkipWordPressRuntime
+    [switch] $SkipWordPressRuntime,
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]*$')]
+    [string] $DistSubdirectory
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,6 +13,17 @@ $SpecPath = Join-Path $ProjectRoot "regex-pad.spec"
 # PyInstallerで生成された onedir 版の EXE 名。
 # dist 配下にこのフォルダが作られている前提です。
 $AppDistName = "regex-pad"
+$ProjectDistRoot = Join-Path $ProjectRoot "dist"
+$DistRoot = $ProjectDistRoot
+if ($DistSubdirectory) {
+    $DistRoot = Join-Path $DistRoot $DistSubdirectory
+}
+foreach ($OutputPath in @($ProjectDistRoot, $DistRoot, (Join-Path $DistRoot $AppDistName))) {
+    if ((Test-Path -LiteralPath $OutputPath) -and
+        ((Get-Item -LiteralPath $OutputPath).Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        throw "Refusing to build into a linked distribution directory: $OutputPath"
+    }
+}
 
 # アプリ実行時に読み込む外部リソース。
 # PyInstallerのspec側で同梱していない場合でも、ビルド後に確実にコピーします。
@@ -21,9 +34,10 @@ $WordPressRuntimePath = Join-Path $ProjectRoot "runtime\wordpress-preview"
 $DeletionListSourcePath = Join-Path $ProjectRoot "DELET_ITEMS_LIST.md"
 $ConfigSourcePath = Join-Path $ProjectRoot "config.json"
 $ColorPresetsSourcePath = Join-Path $ProjectRoot "color_presets.json"
-$ExistingDistAppPath = Join-Path (Join-Path $ProjectRoot "dist") $AppDistName
+$ExistingDistAppPath = Join-Path $DistRoot $AppDistName
 $PortableFiles = @("config.json", "color_presets.json", "shortcutkey_ref.json")
 $PortableFolders = @("user_dictionaries", "macro\preset_json_files")
+$ExistingRecoveryFolders = @("_internal\autosave", "_internal\backup")
 $PreservedPortableDataPath = $null
 $BuildCompleted = $false
 
@@ -284,7 +298,7 @@ if (-not (Test-Path -LiteralPath $ColorPresetsSourcePath -PathType Leaf)) {
 
 Push-Location $ProjectRoot
 try {
-    foreach ($PortableName in @($PortableFiles) + @($PortableFolders)) {
+    foreach ($PortableName in @($PortableFiles) + @($PortableFolders) + @($ExistingRecoveryFolders)) {
         $ExistingPath = Join-Path $ExistingDistAppPath $PortableName
         if (Test-Path -LiteralPath $ExistingPath) {
             if ($null -eq $PreservedPortableDataPath) {
@@ -315,12 +329,12 @@ try {
         }
     }
 
-    & $PythonExe -m PyInstaller --noconfirm --clean $SpecPath
+    & $PythonExe -m PyInstaller --noconfirm --clean --distpath $DistRoot $SpecPath
     if ($LASTEXITCODE -ne 0) {
         throw "PyInstaller failed with exit code $LASTEXITCODE"
     }
 
-    $DistAppPath = Join-Path (Join-Path $ProjectRoot "dist") $AppDistName
+    $DistAppPath = Join-Path $DistRoot $AppDistName
     if (-not (Test-Path -LiteralPath $DistAppPath)) {
         throw "PyInstaller dist directory was not found: $DistAppPath"
     }
@@ -374,6 +388,12 @@ try {
         $PortableFilePath = Join-Path $DistAppPath $PortableFileName
         if (-not (Test-Path -LiteralPath $PortableFilePath -PathType Leaf)) {
             throw "Portable settings file was not copied beside regex-pad.exe: $PortableFilePath"
+        }
+    }
+    if ($null -ne $PreservedPortableDataPath) {
+        foreach ($RecoveryFolder in $ExistingRecoveryFolders) {
+            Copy-PortableEntry -SourcePath (Join-Path $PreservedPortableDataPath $RecoveryFolder) `
+                -DestinationPath (Join-Path $DistAppPath $RecoveryFolder)
         }
     }
 

@@ -9,10 +9,10 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtGui import QTextCursor
+from PySide6.QtGui import QTextCursor, QTextDocument
 from PySide6.QtWidgets import QApplication
 
-from editor.unicode_character_info import inspect_character
+from editor.unicode_character_info import character_at_cursor, inspect_character
 from main import MainWindow
 
 
@@ -34,6 +34,27 @@ def test_unicode_character_attributes() -> None:
         inspect_character("ab")
 
 
+@pytest.mark.parametrize(
+    ("source", "position", "expected"),
+    [
+        ("か\u3099", 2, "\u3099"),
+        ("😀", 2, "😀"),
+        ("😀", 1, "😀"),
+        ("a\u00a0b", 1, "\u00a0"),
+        ("a\u2028b", 1, "\u2028"),
+        ("a\nb", 1, "\n"),
+    ],
+)
+def test_code_point_at_utf16_position(
+    app: QApplication, source: str, position: int, expected: str,
+) -> None:
+    document = QTextDocument()
+    document.setPlainText(source)
+    cursor = QTextCursor(document)
+    cursor.setPosition(position)
+    assert character_at_cursor(cursor) == expected
+
+
 def test_dialog_uses_selection_then_cursor_without_editing(
     app: QApplication, tmp_path: Path
 ) -> None:
@@ -48,12 +69,14 @@ def test_dialog_uses_selection_then_cursor_without_editing(
     cursor.setPosition(1)
     cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
     window.editor.setTextCursor(cursor)
-    window.show_unicode_character_info_dialog()
+    assert window.unicode_character_info_action in window.view_menu.actions()
+    window.unicode_character_info_action.trigger()
     dialog = window.unicode_character_info_dialog
     assert dialog is not None
     assert dialog.info is not None
     assert dialog.info.code_point == "U+1F600"
     assert dialog.from_selection
+    assert window.editor.textCursor().selectedText() == "😀"
 
     cursor = window.editor.textCursor()
     cursor.clearSelection()
