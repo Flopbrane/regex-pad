@@ -1,3 +1,5 @@
+"""既定の文字列正規化操作を実行し、置換結果を作る。"""
+
 from __future__ import annotations
 
 import re
@@ -8,6 +10,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class NormaliseOperation:
+    """画面で選択できる正規化操作を表す。"""
     operation_id: str
     label_key: str
     pattern: re.Pattern[str]
@@ -16,6 +19,7 @@ class NormaliseOperation:
 
 @dataclass(frozen=True)
 class NormaliseResult:
+    """正規化後の本文と変更件数を保持する。"""
     text: str
     count: int
 
@@ -55,16 +59,19 @@ NORMALISE_OPERATIONS: tuple[NormaliseOperation, ...] = (
 
 
 def normalise_operations() -> tuple[NormaliseOperation, ...]:
+    """利用できる正規化操作を返す。"""
     return NORMALISE_OPERATIONS
 
 
 def apply_normalise_operation(text: str, operation_id: str) -> NormaliseResult:
+    """指定された正規化操作を対象の文字列に適用する。"""
     operation = _operation_by_id(operation_id)
     normalised_text, count = operation.pattern.subn(operation.replacement, text)
     return NormaliseResult(normalised_text, count)
 
 
 def _operation_by_id(operation_id: str) -> NormaliseOperation:
+    """操作IDから正規化操作を取得する。"""
     for operation in NORMALISE_OPERATIONS:
         if operation.operation_id == operation_id:
             return operation

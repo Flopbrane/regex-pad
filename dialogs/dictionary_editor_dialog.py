@@ -1,4 +1,4 @@
-"""Dictionary pane opened from the preset editor for editable insertion JSON."""
+"""プリセットエディターから挿入辞書のJSONを編集する画面を提供する。"""
 
 from __future__ import annotations
 
@@ -33,12 +33,13 @@ from localization.translator import Translator
 
 
 class DictionaryEditorDialog(QDialog):
-    """Edit string fields by outline or the complete JSON with validation."""
+    """アウトラインで文字列の項目を編集するか、JSON全体を編集して検証する。"""
 
     def __init__(
         self, translator: Translator, service: DictionaryEditService,
         on_saved: Callable[[Path], None], parent: QWidget | None = None,
     ) -> None:
+        """辞書編集画面の一覧とJSON編集欄を用意する。"""
         super().__init__(parent)
         self.translator = translator
         self.service = service
@@ -104,6 +105,7 @@ class DictionaryEditorDialog(QDialog):
         self._load_name(EDITABLE_DICTIONARIES[0])
 
     def _load_name(self, name: str) -> bool:
+        """指定辞書を読み込んで編集状態を更新する。"""
         try:
             data = self.service.load(name)
         except DictionaryEditError as error:
@@ -125,6 +127,7 @@ class DictionaryEditorDialog(QDialog):
         return True
 
     def _file_changed(self, _index: int) -> None:
+        """ファイル選択が変わったときに対象辞書を切り替える。"""
         name = self.files.currentData()
         if not isinstance(name, str) or not self.current_name or name == self.current_name:
             return
@@ -139,6 +142,7 @@ class DictionaryEditorDialog(QDialog):
             self.files.blockSignals(False)
 
     def _render_tree(self) -> None:
+        """辞書の構造をツリーに表示する。"""
         self._loading = True
         self.current_path = None
         self.tree.clear()
@@ -147,6 +151,7 @@ class DictionaryEditorDialog(QDialog):
         self.field_label.setText(self.translator.text("dictionary.editor.select_field"))
 
         def add(parent: QTreeWidgetItem | None, value: object, path: tuple[str | int, ...], label: str) -> None:
+            """値と参照位置を対応するツリー項目に追加する。"""
             item = QTreeWidgetItem([label])
             if parent is None:
                 self.tree.addTopLevelItem(item)
@@ -166,6 +171,7 @@ class DictionaryEditorDialog(QDialog):
         self._loading = False
 
     def _selection_changed(self, current: QTreeWidgetItem | None, _previous: QTreeWidgetItem | None) -> None:
+        """選択された項目の値を編集欄に表示する。"""
         if self._loading:
             return
         path = current.data(0, Qt.ItemDataRole.UserRole) if current is not None else None
@@ -183,12 +189,14 @@ class DictionaryEditorDialog(QDialog):
         self._loading = False
 
     def _get_path(self, path: tuple[str | int, ...]) -> str:
+        """辞書内で指定された階層の値を取得する。"""
         value = self.current_data
         for part in path:
             value = value[part]  # type: ignore[index]
         return str(value)
 
     def _value_changed(self) -> None:
+        """入力欄の変更を選択中の辞書項目に反映する。"""
         if self._loading or self.current_path is None:
             return
         target = self.current_data
@@ -199,11 +207,13 @@ class DictionaryEditorDialog(QDialog):
         self._update_title()
 
     def _raw_changed(self) -> None:
+        """JSON編集欄の変更を未保存として記録する。"""
         if not self._loading:
             self._dirty = True
             self._update_title()
 
     def _tab_changed(self, index: int) -> None:
+        """編集タブの切り替えに応じて表示を同期する。"""
         if self._tab_index == 0 and index == 1:
             self._loading = True
             self.raw_edit.setPlainText(json.dumps(self.current_data, ensure_ascii=False, indent=2))
@@ -221,6 +231,7 @@ class DictionaryEditorDialog(QDialog):
         self._tab_index = index
 
     def _current_model(self) -> object:
+        """現在の編集内容から検証対象の辞書データを取得する。"""
         if self.tabs.currentIndex() == 1:
             try:
                 return json.loads(self.raw_edit.toPlainText())
@@ -229,6 +240,7 @@ class DictionaryEditorDialog(QDialog):
         return self.current_data
 
     def validate_current(self) -> bool:
+        """編集中の辞書を検証して結果を表示する。"""
         try:
             self.service.validate(self.current_name, self._current_model())
         except DictionaryEditError as error:
@@ -241,6 +253,7 @@ class DictionaryEditorDialog(QDialog):
         return True
 
     def save_current(self) -> bool:
+        """現在の辞書を検証してユーザー用の保存先へ書き込む。"""
         try:
             data = self._current_model()
             save_file_path = self.service.save(self.current_name, data)
@@ -256,6 +269,7 @@ class DictionaryEditorDialog(QDialog):
         return True
 
     def _confirm_discard(self) -> bool:
+        """未保存変更を破棄してよいか確認する。"""
         if not self._dirty:
             return True
         answer = QMessageBox.question(
@@ -270,14 +284,17 @@ class DictionaryEditorDialog(QDialog):
         return answer == QMessageBox.StandardButton.Discard
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        """未保存編集の確認結果に従って画面を閉じる。"""
         if self._confirm_discard():
             event.accept()
         else:
             event.ignore()
 
     def _update_title(self) -> None:
+        """辞書名と未保存状態をタイトルに反映する。"""
         title = self.translator.text("dictionary.editor.title")
         self.setWindowTitle(f"{title} — {self.current_name}{' *' if self._dirty else ''}")
 
     def _warning(self, message: str) -> None:
+        """辞書操作の警告を表示する。"""
         QMessageBox.warning(self, self.translator.text("dictionary.editor.title"), message)

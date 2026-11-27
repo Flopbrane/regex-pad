@@ -1,2 +1,2 @@
-"""Markdown converters used by the embedded WordPress conversion core."""
+"""同梱のWordPress変換処理で使うMarkdown変換モジュールをまとめる。"""
 

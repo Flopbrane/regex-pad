@@ -1,4 +1,4 @@
-"""Portable application logging for Regex Pad."""
+"""Regex Padのポータブルなアプリケーションログを扱う。"""
 
 from app_logging.app_logger import (
     AppLogger,

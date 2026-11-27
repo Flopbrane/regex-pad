@@ -1,3 +1,5 @@
+"""HTMLの表記ミスの文法チェックを検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -29,6 +31,7 @@ QUALIFICATION_ARTICLE_CASE = (
 ])
 @pytest.mark.parametrize("value", ['"example"', "'example'", "example"])
 def test_lint_reports_attribute_outside_completed_opener(attribute: str, value: str) -> None:
+    """文法チェックが属性の外の完了した開始記号を報告することを確認する。"""
     source = f'<!-- wp:html -->\n<div>\n  {attribute}={value}\n>\nBody\n</div>\n<!-- /wp:html -->'
     findings = [message for message in lint_html_typos(source) if message.message_key in MALFORMED_OPENING_KEYS]
     assert [(message.message_key, message.line_number, message.values) for message in findings] == [
@@ -38,6 +41,7 @@ def test_lint_reports_attribute_outside_completed_opener(attribute: str, value: 
 
 @pytest.mark.parametrize("tag", ["div", "span", "p", "a", "img", "section"])
 def test_lint_checks_orphan_attributes_in_plain_html(tag: str) -> None:
+    """文法チェックが孤立した属性内のプレーンテキストのHTMLを検査することを確認する。"""
     source = f'<{tag}>\nstyle="color:red"\n>\nBody'
     assert any(
         message.message_key == "html_typo_lint.html_attribute_outside_opening_tag"
@@ -48,6 +52,7 @@ def test_lint_checks_orphan_attributes_in_plain_html(tag: str) -> None:
 
 
 def test_lint_reports_attribute_only_continuation_without_extra_delimiter() -> None:
+    """追加の区切り記号を省いた場合、文法チェックが属性だけの続きを報告することを確認する。"""
     source = '<div>\nstyle="color:red"\n</div>'
     assert any(
         message.message_key == "html_typo_lint.html_attribute_outside_opening_tag"
@@ -56,6 +61,7 @@ def test_lint_reports_attribute_only_continuation_without_extra_delimiter() -> N
 
 
 def test_lint_consolidates_br_attribute_continuation_at_first_attribute() -> None:
+    """brタグの属性が続く場合、最初の属性の位置に診断をまとめることを確認する。"""
     source = '<!-- wp:html -->\n<div>\nstyle="color:red"<br><br>\naria-hidden="true"<br><br>\n></div>\n<!-- /wp:html -->'
     findings = [message for message in lint_html_typos(source) if message.message_key in MALFORMED_OPENING_KEYS]
     assert [(message.message_key, message.line_number, message.values) for message in findings] == [
@@ -65,6 +71,7 @@ def test_lint_consolidates_br_attribute_continuation_at_first_attribute() -> Non
 
 @pytest.mark.parametrize("break_tag", ["<br>", "<br/>", "<BR />"])
 def test_lint_recognizes_live_break_tokens_in_attribute_continuation(break_tag: str) -> None:
+    """継続する属性内の改行トークンを文法チェックで認識できることを確認する。"""
     source = f'<div>\nstyle="color:red"{break_tag}\n>\nBody</div>'
     assert any(
         message.message_key == "html_typo_lint.malformed_html_attribute_continuation"
@@ -73,6 +80,7 @@ def test_lint_recognizes_live_break_tokens_in_attribute_continuation(break_tag: 
 
 
 def test_lint_reports_contextual_stray_tag_delimiter() -> None:
+    """文法チェックが文脈に応じたの孤立したタグの区切り記号を報告することを確認する。"""
     source = '<!-- wp:html -->\n<div>\n>\nBody\n</div>\n<!-- /wp:html -->'
     findings = [message for message in lint_html_typos(source) if message.message_key in MALFORMED_OPENING_KEYS]
     assert [(message.message_key, message.line_number) for message in findings] == [
@@ -104,16 +112,19 @@ def test_lint_reports_contextual_stray_tag_delimiter() -> None:
     '<!-- wp:heading {"level":4} --><h4 class="wp-block-heading">Title</h4><!-- /wp:heading -->',
 ])
 def test_lint_preserves_valid_markup_and_attribute_prose(source: str) -> None:
+    """文法チェックが正しいのマークアップと属性の本文を維持することを確認する。"""
     assert not any(message.message_key in MALFORMED_OPENING_KEYS for message in lint_html_typos(source))
 
 
 @pytest.mark.parametrize("wrapper", ["code", "pre", "textarea", "script", "style"])
 def test_orphan_attribute_rules_ignore_display_and_raw_text_regions(wrapper: str) -> None:
+    """孤立した属性の規則の無視の表示と生の文字列の領域を確認する。"""
     source = f'<{wrapper}><div>\nstyle="color:red"<br>\n>\n</div></{wrapper}>'
     assert not any(message.message_key in MALFORMED_OPENING_KEYS for message in lint_html_typos(source))
 
 
 def test_orphan_attribute_state_resumes_after_code_region() -> None:
+    """コードの領域後、孤立した属性の状態が再開することを確認する。"""
     source = '<code>&lt;div&gt;</code>\n<div>\nstyle="color:red"\n>\n</div>'
     assert [
         message.line_number for message in lint_html_typos(source)
@@ -122,6 +133,7 @@ def test_orphan_attribute_state_resumes_after_code_region() -> None:
 
 
 def test_orphan_attribute_quoted_values_do_not_end_at_embedded_delimiters() -> None:
+    """孤立した属性の引用符で囲まれたの値の行わないの末尾での組み込みの区切り記号を確認する。"""
     source = '<div>\ntitle="a > b"\nstyle="color:red"\n>\nBody</div>'
     findings = [message for message in lint_html_typos(source) if message.message_key in MALFORMED_OPENING_KEYS]
     assert len(findings) == 1 and findings[0].line_number == 2
@@ -129,6 +141,7 @@ def test_orphan_attribute_quoted_values_do_not_end_at_embedded_delimiters() -> N
 
 
 def test_orphan_attribute_detection_does_not_stop_after_first_broken_element() -> None:
+    """孤立した属性の検出の行わないの停止後の最初の壊れたの要素を確認する。"""
     source = '<div>\nstyle="color:red"\n>\nA</div>\n<section>\ndata-note="x"\n>\nB</section>'
     assert [
         message.line_number for message in lint_html_typos(source)
@@ -137,6 +150,7 @@ def test_orphan_attribute_detection_does_not_stop_after_first_broken_element() -
 
 
 def test_separator_code_cascade_does_not_suppress_following_orphan_attribute() -> None:
+    """区切りのコードの連鎖の行わないの抑制の直後の孤立した属性を確認する。"""
     source = (
         '<!-- wp:separator -->\n<hr class="wp-block-separator"><code><code>\n'
         '<!-- /wp:separator -->\n<!-- wp:html -->\n<div>\nstyle="color:red"\n>\nBody</div>\n<!-- /wp:html -->'
@@ -149,6 +163,7 @@ def test_separator_code_cascade_does_not_suppress_following_orphan_attribute() -
 
 @pytest.mark.parametrize("newline", ["\n", "\r\n"])
 def test_orphan_attribute_source_lines_and_read_only_behavior(newline: str) -> None:
+    """孤立した属性の原文の行と読み取り専用の動作を確認する。"""
     source = newline.join(['<!-- wp:html -->', '<div>', '  STYLE="color:red"', '>', '</div>', '<!-- /wp:html -->'])
     original = source
     findings = [message for message in lint_html_typos(source) if message.message_key in MALFORMED_OPENING_KEYS]
@@ -158,6 +173,7 @@ def test_orphan_attribute_source_lines_and_read_only_behavior(newline: str) -> N
 
 
 def test_qualification_article_broken_sample_reports_all_11_malformed_openers() -> None:
+    """修飾の原稿の壊れたのサンプルがすべての11の壊れたの開始記号を報告することを確認する。"""
     source = (QUALIFICATION_ARTICLE_CASE / "broken.wp_html").read_text(encoding="utf-8-sig")
     findings = [message for message in lint_html_typos(source) if message.message_key in MALFORMED_OPENING_KEYS]
     assert [message.line_number for message in findings] == [22, 82, 109, 127, 151, 211, 288, 361, 430, 496, 523]
@@ -165,6 +181,7 @@ def test_qualification_article_broken_sample_reports_all_11_malformed_openers() 
 
 
 def test_qualification_article_fixed_sample_has_no_malformed_opening_findings() -> None:
+    """修飾の原稿の固定のサンプルがなしの壊れたの開始の指摘を持つことを確認する。"""
     source = (QUALIFICATION_ARTICLE_CASE / "fixed.wp_html").read_text(encoding="utf-8-sig")
     assert not any(message.message_key in MALFORMED_OPENING_KEYS for message in lint_html_typos(source))
 
@@ -172,6 +189,7 @@ def test_qualification_article_fixed_sample_has_no_malformed_opening_findings() 
 @pytest.mark.parametrize("language", ["ja", "en"])
 @pytest.mark.parametrize("key", sorted(MALFORMED_OPENING_KEYS))
 def test_malformed_opening_messages_have_formattable_translations(language: str, key: str) -> None:
+    """壊れたの開始のメッセージが整形できるの翻訳を持つことを確認する。"""
     translator = Translator(Path("resources"), language)
     message = translator.text(key, tag="div", attribute="style")
     assert message != key
@@ -180,6 +198,7 @@ def test_malformed_opening_messages_have_formattable_translations(language: str,
 
 
 def test_lint_reports_full_width_html_open_delimiter() -> None:
+    """HTMLの開始区切りに全角文字を使うと診断することを確認する。"""
     source = '＜span style="color: #65FFCD">文章</span>'
     findings = [
         message for message in lint_html_typos(source)
@@ -191,6 +210,7 @@ def test_lint_reports_full_width_html_open_delimiter() -> None:
 
 
 def test_lint_reports_full_width_html_syntax_punctuation() -> None:
+    """文法チェックが全角のHTMLの構文の句読点を報告することを確認する。"""
     source = "＜／span＞"
     findings = [
         message for message in lint_html_typos(source)
@@ -204,6 +224,7 @@ def test_lint_reports_full_width_html_syntax_punctuation() -> None:
 
 
 def test_lint_reports_full_width_space_in_core_block_html_tag() -> None:
+    """文法チェックが全角の空白内のコアブロックのHTMLのタグを報告することを確認する。"""
     source = (
         '<!-- wp:paragraph -->\n<p　class="has-text-color">文章</p>\n'
         '<!-- /wp:paragraph -->'
@@ -225,6 +246,7 @@ def test_lint_reports_full_width_space_in_core_block_html_tag() -> None:
 def test_lint_does_not_report_full_width_html_syntax_in_values_or_examples(
     source: str,
 ) -> None:
+    """文法チェックの行わないの報告の全角のHTMLの構文内の値または例を確認する。"""
     assert not any(
         message.message_key in FULL_WIDTH_HTML_SYNTAX_KEYS
         for message in lint_html_typos(source)
@@ -233,6 +255,7 @@ def test_lint_does_not_report_full_width_html_syntax_in_values_or_examples(
 
 @pytest.mark.parametrize("language", ["ja", "en"])
 def test_full_width_html_messages_have_formattable_translations(language: str) -> None:
+    """全角のHTMLのメッセージが整形できるの翻訳を持つことを確認する。"""
     translator = Translator(Path("resources"), language)
     syntax_message = translator.text(
         "html_typo_lint.full_width_html_syntax",
@@ -248,6 +271,7 @@ def test_full_width_html_messages_have_formattable_translations(language: str) -
 @pytest.mark.parametrize("tag", ["strong", "span", "mark", "em", "a", "b", "i", "small", "code"])
 @pytest.mark.parametrize("prefix", ["", "<em>"])
 def test_lint_reports_unmatched_inline_close(tag: str, prefix: str) -> None:
+    """文法チェックが対応のないインラインの閉じる操作を報告することを確認する。"""
     if prefix == "<em>" and tag == "em":
         prefix = "<strong>"
     messages = lint_html_typos(f"<p>{prefix}Body\n</{tag}></p>")
@@ -262,6 +286,7 @@ def test_lint_reports_unmatched_inline_close(tag: str, prefix: str) -> None:
 @pytest.mark.parametrize("level", range(1, 7))
 @pytest.mark.parametrize("wordpress", [False, True])
 def test_lint_checks_heading_pairs(level: int, wordpress: bool) -> None:
+    """文法チェックが見出しの対応する組を検査することを確認する。"""
     html = f"<h{level}>Heading</h{level % 6 + 1}>"
     if wordpress:
         html = f"<!-- wp:heading -->{html}<!-- /wp:heading -->"
@@ -331,6 +356,7 @@ def test_lint_checks_heading_pairs(level: int, wordpress: bool) -> None:
     ],
 )
 def test_reported_lint_gaps(html: str, key: str) -> None:
+    """報告された文法チェックの欠落を確認する。"""
     assert any(message.message_key == f"html_typo_lint.{key}" for message in lint_html_typos(html))
 
 
@@ -344,6 +370,7 @@ def test_reported_lint_gaps(html: str, key: str) -> None:
     ],
 )
 def test_lint_accepts_wordpress_self_closing_comments(comment: str) -> None:
+    """文法チェックがWordPressの自己終了のコメントを受け入れることを確認する。"""
     assert lint_html_typos(comment) == []
 
 
@@ -365,6 +392,7 @@ def test_lint_accepts_wordpress_self_closing_comments(comment: str) -> None:
     ],
 )
 def test_lint_preserves_valid_html_around_reported_gaps(html: str) -> None:
+    """文法チェックが正しいのHTMLの周辺の報告された欠落を維持することを確認する。"""
     assert lint_html_typos(html) == []
 
 
@@ -398,6 +426,7 @@ def test_lint_preserves_valid_html_around_reported_gaps(html: str) -> None:
 def test_paragraph_style_and_preset_consistency(
     attributes: dict[str, object], html: str, mismatch: bool,
 ) -> None:
+    """段落のスタイルとプリセットの整合性を確認する。"""
     text = f"<!-- wp:paragraph {json.dumps(attributes)} -->{html}<!-- /wp:paragraph -->"
     messages = lint_html_typos(text)
     assert any(
@@ -429,10 +458,12 @@ def test_paragraph_style_and_preset_consistency(
     ],
 )
 def test_valid_wordpress_containers_keep_both_stacks_balanced(html: str) -> None:
+    """正しいのWordPressのコンテナの保持するの両方のスタックの対応が取れたを確認する。"""
     assert lint_html_typos(html) == []
 
 
 def test_invalid_json_in_self_closing_block_does_not_open_a_block() -> None:
+    """不正なJSON内の自己終了のブロックの行わないの開く操作のブロックを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:latest-posts {"postsToShow":} /-->\n'
         '<!-- wp:paragraph --><p>Following text</p><!-- /wp:paragraph -->'
@@ -443,10 +474,12 @@ def test_invalid_json_in_self_closing_block_does_not_open_a_block() -> None:
 
 
 def test_self_closing_paragraph_does_not_affect_pair_counts() -> None:
+    """自己終了の段落ブロックが開始・終了コメントの対の集計に影響しないことを確認する。"""
     assert lint_html_typos("<!-- wp:paragraph /-->") == []
 
 
 def test_html_outside_wordpress_blocks_is_still_checked() -> None:
+    """WordPressブロックの外にあるHTMLも検査対象になることを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:paragraph --><p>Body</p><!-- /wp:paragraph -->\n<div>'
     )
@@ -458,6 +491,7 @@ def test_html_outside_wordpress_blocks_is_still_checked() -> None:
 
 
 def test_nested_containers_do_not_duplicate_the_same_html_diagnostic() -> None:
+    """入れ子のコンテナの行わないの重複した同じHTMLの診断を確認する。"""
     messages = lint_html_typos(
         '<!-- wp:group --><section><!-- wp:html -->\n<div>Body\n'
         '<!-- /wp:html --></section><!-- /wp:group -->'
@@ -471,6 +505,7 @@ def test_nested_containers_do_not_duplicate_the_same_html_diagnostic() -> None:
 
 @pytest.mark.parametrize("block,tag", [("paragraph", "p"), ("heading", "h2")])
 def test_html_in_comments_cannot_fake_a_wordpress_root(block: str, tag: str) -> None:
+    """HTML内のコメントのできないの偽のWordPressのルート要素を確認する。"""
     messages = lint_html_typos(f"<!-- wp:{block} --><!-- <{tag}>Fake</{tag}> --><!-- /wp:{block} -->")
     assert any(
         message.message_key == "html_typo_lint.wordpress_block_html_shape"
@@ -479,6 +514,7 @@ def test_html_in_comments_cannot_fake_a_wordpress_root(block: str, tag: str) -> 
 
 
 def test_heading_consistency_ignores_tags_in_comments() -> None:
+    """見出しの整合性がタグ内のコメントを無視することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:heading {"level":3} --><!-- <h3>fake</h3> -->'
         '<h2>Real</h2><!-- /wp:heading -->'
@@ -490,6 +526,7 @@ def test_heading_consistency_ignores_tags_in_comments() -> None:
 
 
 def test_repeated_nested_code_reports_each_inner_opening() -> None:
+    """繰り返されるの入れ子のコードが各内側の開始を報告することを確認する。"""
     messages = lint_html_typos("<code><code>One</code><code>Two</code></code>")
     # Identical diagnostics on the same line are intentionally displayed once.
     assert any(message.message_key == "html_typo_lint.nested_html_tag" for message in messages)
@@ -498,6 +535,7 @@ def test_repeated_nested_code_reports_each_inner_opening() -> None:
 
 
 def test_wrong_wordpress_closing_comment_does_not_destroy_ignored_body_range() -> None:
+    """誤ったのWordPressの終了のコメントの行わないの破棄の無視された本文の範囲を確認する。"""
     messages = lint_html_typos(
         '<!-- wp:html --><div>&lt;code&gt;/code&gt;</div>\n'
         '<!-- /wp:paragraph -->\n<!-- /wp:html -->'
@@ -508,6 +546,7 @@ def test_wrong_wordpress_closing_comment_does_not_destroy_ignored_body_range() -
 
 @pytest.mark.parametrize("language", ["ja", "en"])
 def test_new_lint_messages_have_formattable_translations(language: str) -> None:
+    """新規の文法チェックのメッセージが整形できるの翻訳を持つことを確認する。"""
     translator = Translator(Path("resources"), language)
     sources = [
         '<p>Body</strong></p>',
@@ -527,6 +566,7 @@ def test_new_lint_messages_have_formattable_translations(language: str) -> None:
 
 
 def test_lint_reports_html_tag_and_attribute_typos() -> None:
+    """文法チェックがHTMLのタグと属性の表記ミスを報告することを確認する。"""
     messages = lint_html_typos('<p clas="lead"><spna herf="https://example.com">本文</spna></p>')
 
     assert any(message.message_key == "html_typo_lint.unknown_html_tag" for message in messages)
@@ -545,6 +585,7 @@ def test_lint_reports_html_tag_and_attribute_typos() -> None:
 
 
 def test_lint_reports_unknown_html_tag_once_per_line() -> None:
+    """文法チェックが未登録のHTMLのタグの1回だけごとの行を報告することを確認する。"""
     messages = lint_html_typos("<p><pr>Body</pr></p>")
 
     unknown_messages = [
@@ -558,6 +599,7 @@ def test_lint_reports_unknown_html_tag_once_per_line() -> None:
 
 
 def test_lint_reports_wordpress_block_typo() -> None:
+    """文法チェックがWordPressのブロックの表記ミスを報告することを確認する。"""
     messages = lint_html_typos("<!-- wp:paragaph -->\n<p>本文</p>\n<!-- /wp:paragaph -->")
 
     assert any(
@@ -569,6 +611,7 @@ def test_lint_reports_wordpress_block_typo() -> None:
 
 
 def test_lint_reports_wordpress_paragraph_missing_p_open() -> None:
+    """文法チェックがWordPressの段落の不足したpの開く操作を報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "段落分割後にp開始タグが抜けています。</p>\n"
@@ -583,6 +626,7 @@ def test_lint_reports_wordpress_paragraph_missing_p_open() -> None:
 
 
 def test_lint_reports_wordpress_paragraph_missing_p_close() -> None:
+    """文法チェックがWordPressの段落の不足したpの閉じる操作を報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>最後のp終了タグが抜けています。\n"
@@ -597,6 +641,7 @@ def test_lint_reports_wordpress_paragraph_missing_p_close() -> None:
 
 
 def test_lint_reports_unexpected_wordpress_paragraph_closing_block() -> None:
+    """文法チェックが想定外のWordPressの段落の終了コメントを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- /wp:paragraph -->\n"
         "<p>終了コメントから始まっています。</p>\n"
@@ -613,6 +658,7 @@ def test_lint_reports_unexpected_wordpress_paragraph_closing_block() -> None:
 
 
 def test_lint_reports_missing_wordpress_html_closing_block() -> None:
+    """文法チェックが不足したWordPressのHTMLの終了コメントを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:html -->\n"
         "<div class=\"notice\">閉じ忘れたHTMLブロックです。\n"
@@ -632,6 +678,7 @@ def test_lint_reports_missing_wordpress_html_closing_block() -> None:
 
 
 def test_lint_reports_wordpress_block_comment_inside_html_block() -> None:
+    """文法チェックがWordPressのブロックのコメント内のHTMLのブロックを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:html -->\n"
         "<div>本文</div>\n"
@@ -650,6 +697,7 @@ def test_lint_reports_wordpress_block_comment_inside_html_block() -> None:
 
 
 def test_lint_reports_div_inside_wordpress_paragraph_block() -> None:
+    """文法チェックがdiv内のWordPressの段落ブロックを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<div>段落ブロック内のdivです。</div>\n"
@@ -665,6 +713,7 @@ def test_lint_reports_div_inside_wordpress_paragraph_block() -> None:
 
 
 def test_lint_reports_simple_count_mismatches() -> None:
+    """文法チェックが単純な件数の不一致を報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p><pre><code>本文</code></pre>\n"
@@ -679,6 +728,7 @@ def test_lint_reports_simple_count_mismatches() -> None:
 
 
 def test_lint_reports_pre_and_code_count_mismatches() -> None:
+    """文法チェックがpreタグとコードの件数の不一致を報告することを確認する。"""
     messages = lint_html_typos("<pre><code>本文</pre>")
 
     message_keys = {message.message_key for message in messages}
@@ -687,6 +737,7 @@ def test_lint_reports_pre_and_code_count_mismatches() -> None:
 
 
 def test_lint_reports_html_tag_closing_order_for_tracked_tags() -> None:
+    """文法チェックがHTMLのタグの終了の順序の用の追跡中のタグを報告することを確認する。"""
     messages = lint_html_typos("<pre><code>sample</pre></code>")
 
     assert any(
@@ -698,6 +749,7 @@ def test_lint_reports_html_tag_closing_order_for_tracked_tags() -> None:
 
 
 def test_lint_reports_unexpected_html_closing_tag_for_tracked_tags() -> None:
+    """文法チェックが想定外のHTMLの終了タグの用の追跡中のタグを報告することを確認する。"""
     messages = lint_html_typos("<p>text</p>\n</pre>")
 
     assert any(
@@ -709,6 +761,7 @@ def test_lint_reports_unexpected_html_closing_tag_for_tracked_tags() -> None:
 
 
 def test_lint_reports_missing_html_closing_tag_for_tracked_tags() -> None:
+    """文法チェックが不足したHTMLの終了タグの用の追跡中のタグを報告することを確認する。"""
     messages = lint_html_typos("<pre><code>sample</code>")
 
     assert any(
@@ -720,6 +773,7 @@ def test_lint_reports_missing_html_closing_tag_for_tracked_tags() -> None:
 
 
 def test_lint_reports_nested_code_and_strong_count_mismatch() -> None:
+    """文法チェックが入れ子のコードとstrongタグの件数の不一致を報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p><code>one <code>two</code></p>\n"
@@ -734,6 +788,7 @@ def test_lint_reports_nested_code_and_strong_count_mismatch() -> None:
 
 
 def test_lint_reports_inline_tag_unclosed_before_paragraph_close() -> None:
+    """段落の閉じる操作前、文法チェックがインラインのタグの閉じられていないを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>本文です。<br><br>\n"
@@ -750,6 +805,7 @@ def test_lint_reports_inline_tag_unclosed_before_paragraph_close() -> None:
 
 
 def test_lint_reports_inline_tag_closing_order() -> None:
+    """文法チェックがインラインのタグの終了の順序を報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         '<p><strong><span style="color: red;">重要です。</strong></span></p>\n'
@@ -765,6 +821,7 @@ def test_lint_reports_inline_tag_closing_order() -> None:
 
 
 def test_lint_reports_inline_tag_unclosed_at_document_end() -> None:
+    """文法チェックがインラインのタグの閉じられていないでの文書末尾を報告することを確認する。"""
     messages = lint_html_typos("<p><strong>重要です。")
 
     assert any(
@@ -776,6 +833,7 @@ def test_lint_reports_inline_tag_unclosed_at_document_end() -> None:
 
 
 def test_lint_accepts_escaped_html_inside_wordpress_code_block() -> None:
+    """文法チェックがエスケープ済みのHTML内のWordPressのコードブロックを受け入れることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:code -->\n"
         "<pre class=\"wp-block-code\"><code>&lt;!-- wp:paragraph --&gt;\n"
@@ -791,6 +849,7 @@ def test_lint_accepts_escaped_html_inside_wordpress_code_block() -> None:
 
 
 def test_lint_reports_orphan_empty_paragraph_and_break() -> None:
+    """文法チェックが孤立した空の段落と区切りを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>本文</p>\n"
@@ -805,6 +864,7 @@ def test_lint_reports_orphan_empty_paragraph_and_break() -> None:
 
 
 def test_lint_reports_separator_code_contamination_and_escaped_code_fragment() -> None:
+    """文法チェックが区切りのコードの混入とエスケープ済みのコードの断片を報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p><code>&lt;!-- wp:paragraph --&gt;/code&gt;</code></p>\n"
@@ -820,6 +880,7 @@ def test_lint_reports_separator_code_contamination_and_escaped_code_fragment() -
 
 
 def test_lint_suppresses_separator_code_cascade_errors() -> None:
+    """文法チェックが区切りのコードの連鎖のエラーを抑えることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:separator -->\n"
         '<hr class="wp-block-separator has-alpha-channel-opacity"><code><code>\n'
@@ -834,6 +895,7 @@ def test_lint_suppresses_separator_code_cascade_errors() -> None:
 
 
 def test_separator_cascade_keeps_independent_errors_on_same_line() -> None:
+    """区切り文字の誤りから派生した指摘をまとめても、同じ行にある独立したエラーは残ることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:separator -->\n"
         '<hr clas="separator"><code badattr="x"><code>\n'
@@ -855,6 +917,7 @@ def test_separator_cascade_keeps_independent_errors_on_same_line() -> None:
 
 
 def test_separator_cascade_keeps_independent_fragile_typo() -> None:
+    """区切りの連鎖が独立した壊れやすいの表記ミスを保持することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:separator -->\n"
         '<hr style="margin:2en"><code><code>\n'
@@ -869,6 +932,7 @@ def test_separator_cascade_keeps_independent_fragile_typo() -> None:
 
 
 def test_list_item_missing_close_points_to_next_item() -> None:
+    """リスト項目の不足した閉じる操作の位置のへの次の項目を確認する。"""
     messages = lint_html_typos(
         "<!-- wp:list -->\n<ul>\n"
         "<!-- wp:list-item --><li>First</li>\n"
@@ -886,6 +950,7 @@ def test_list_item_missing_close_points_to_next_item() -> None:
 
 
 def test_list_mismatched_close_identifies_repair_comments() -> None:
+    """リストの終了部分に不一致があるとき、修正対象のコメントを特定できることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:list -->\n<ul>\n"
         "<!-- wp:list-item --><li>First</li>\n"
@@ -901,6 +966,7 @@ def test_list_mismatched_close_identifies_repair_comments() -> None:
 
 
 def test_lint_reports_duplicate_wordpress_paragraph_opening() -> None:
+    """文法チェックが重複したWordPressの段落の開始を報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>ただし、制限が強いWordPressでは、埋め込みがうまく残らない場合があります。</p>\n"
@@ -919,6 +985,7 @@ def test_lint_reports_duplicate_wordpress_paragraph_opening() -> None:
 
 
 def test_lint_counts_only_html_tag_tokens_for_code() -> None:
+    """文法チェックがだけのHTMLのタグのトークンの用のコードを数えることを確認する。"""
     messages = lint_html_typos(
         "<!--wp:paragraph-->\n"
         "<p>コード表示は <code>code</code> と書きます。</p>\n"
@@ -931,6 +998,7 @@ def test_lint_counts_only_html_tag_tokens_for_code() -> None:
 
 
 def test_lint_counts_ignore_escaped_html_code_examples() -> None:
+    """エスケープ済みのHTMLサンプルは診断件数に含めないことを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>表示例は <code>&lt;code&gt;本文&lt;/code&gt;</code> です。</p>\n"
@@ -944,6 +1012,7 @@ def test_lint_counts_ignore_escaped_html_code_examples() -> None:
 
 
 def test_lint_wordpress_mismatch_does_not_consume_valid_open_block() -> None:
+    """文法チェックのWordPressの不一致の行わないの取り込むの正しいの開く操作のブロックを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>本文</p>\n"
@@ -966,6 +1035,7 @@ def test_lint_wordpress_mismatch_does_not_consume_valid_open_block() -> None:
 
 
 def test_lint_reports_real_sample_problem_categories() -> None:
+    """文法チェックが実際のサンプルの問題の分類を報告することを確認する。"""
     sample_path = Path("sample/test.wp_html")
     if not sample_path.exists():
         return
@@ -988,6 +1058,7 @@ def test_lint_reports_real_sample_problem_categories() -> None:
 
 
 def test_lint_reports_test_sample_without_separator_cascade() -> None:
+    """区切りの連鎖を省いた場合、文法チェックがテストのサンプルを報告することを確認する。"""
     sample_path = Path("sample/test_sample.wp_html")
     if not sample_path.exists():
         return
@@ -1032,6 +1103,7 @@ def test_lint_reports_test_sample_without_separator_cascade() -> None:
 
 
 def test_lint_reports_known_fragile_typos() -> None:
+    """文法チェックが既知の壊れやすいの表記ミスを報告することを確認する。"""
     messages = lint_html_typos('<p style="margin:2en 0 1.5em;">本文<\\p>')
 
     message_keys = {message.message_key for message in messages}
@@ -1040,6 +1112,7 @@ def test_lint_reports_known_fragile_typos() -> None:
 
 
 def test_inline_style_uses_css_dictionary_lint() -> None:
+    """インラインのCSSがCSSの辞書の文法チェックを使うことを確認する。"""
     messages = lint_html_typos(
         '<p style="text-aling:center; display:blick; color:#zzzzzz">本文</p>'
     )
@@ -1061,10 +1134,12 @@ def test_inline_style_uses_css_dictionary_lint() -> None:
     ],
 )
 def test_lint_accepts_cursor_placeholder_in_html_attributes(source: str) -> None:
+    """HTML属性内のカーソル位置用プレースホルダーを文法チェックで許容することを確認する。"""
     assert lint_html_typos(source) == []
 
 
 def test_multiline_inline_style_reports_original_html_line() -> None:
+    """複数行のインラインのCSSが元のHTMLの行を報告することを確認する。"""
     messages = lint_html_typos(
         '<p style="color:#333;\n'
         "display:blick;\n"
@@ -1080,6 +1155,7 @@ def test_multiline_inline_style_reports_original_html_line() -> None:
 
 
 def test_embedded_stylesheet_uses_css_lint_with_original_line() -> None:
+    """組み込みのスタイルシートがCSSの文法チェック（元の行あり）を使うことを確認する。"""
     messages = lint_html_typos(
         "<style>\n"
         ".note {\n"
@@ -1097,6 +1173,7 @@ def test_embedded_stylesheet_uses_css_lint_with_original_line() -> None:
 
 
 def test_valid_inline_style_does_not_add_css_messages() -> None:
+    """正しいのインラインのCSSがCSSのメッセージを追加しないことを確認する。"""
     messages = lint_html_typos(
         '<p style="color:#333; padding:10px; margin:1em auto">本文</p>'
     )
@@ -1105,6 +1182,7 @@ def test_valid_inline_style_does_not_add_css_messages() -> None:
 
 
 def test_lint_reports_html_block_inside_wordpress_paragraph_block() -> None:
+    """文法チェックがHTMLのブロック内のWordPressの段落ブロックを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>前半\n"
@@ -1124,6 +1202,7 @@ def test_lint_reports_html_block_inside_wordpress_paragraph_block() -> None:
 
 
 def test_lint_guides_decorated_preformatted_block_to_custom_html() -> None:
+    """文法チェックが装飾付きの整形済みのブロックのへのカスタムHTMLへ案内することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:preformatted -->\n"
         '<pre class="wp-block-preformatted" '
@@ -1141,6 +1220,7 @@ def test_lint_guides_decorated_preformatted_block_to_custom_html() -> None:
 
 
 def test_lint_does_not_reject_group_style_json_as_custom_html() -> None:
+    """グループブロックのstyle用JSONをカスタムHTMLの誤りとして扱わないことを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:group {"style":{"color":{"background":"#f6f6f6"}}} -->\n'
         '<div class="wp-block-group"><p>Note</p></div>\n'
@@ -1154,6 +1234,7 @@ def test_lint_does_not_reject_group_style_json_as_custom_html() -> None:
 
 
 def test_lint_accepts_plain_preformatted_and_group_blocks() -> None:
+    """文法チェックがプレーンテキストの整形済みのとグループのブロックを受け入れることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:preformatted -->\n"
         '<pre class="wp-block-preformatted">Prompt</pre>\n'
@@ -1171,6 +1252,7 @@ def test_lint_accepts_plain_preformatted_and_group_blocks() -> None:
 
 
 def test_lint_reports_invalid_wordpress_block_attributes() -> None:
+    """文法チェックが不正なWordPressのブロックの属性を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:spacer {"height":"32px",} -->\n'
         '<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>\n'
@@ -1184,6 +1266,7 @@ def test_lint_reports_invalid_wordpress_block_attributes() -> None:
 
 
 def test_lint_rejects_non_object_wordpress_block_attributes() -> None:
+    """文法チェックが非のオブジェクトのWordPressのブロックの属性を拒否することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph [1, 2] -->\n"
         "<p>Body</p>\n"
@@ -1198,6 +1281,7 @@ def test_lint_rejects_non_object_wordpress_block_attributes() -> None:
 
 
 def test_lint_suppresses_attribute_html_mismatch_when_block_json_is_invalid() -> None:
+    """ブロックのJSONが不正なになるの場合、文法チェックが属性のHTMLの不一致を抑えることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:heading {level:3} -->\n"
         '<h3 class="wp-block-heading">Heading</h3>\n'
@@ -1210,6 +1294,7 @@ def test_lint_suppresses_attribute_html_mismatch_when_block_json_is_invalid() ->
 
 
 def test_lint_reports_unknown_wordpress_block_attribute() -> None:
+    """文法チェックが未登録のWordPressのブロックの属性を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:heading {"level":3,"badParam":true} -->\n'
         '<h3 class="wp-block-heading">見出し</h3>\n'
@@ -1225,6 +1310,7 @@ def test_lint_reports_unknown_wordpress_block_attribute() -> None:
 
 
 def test_lint_suggests_unknown_wordpress_block_attribute_typo() -> None:
+    """未知のWordPressブロック属性に対して、入力ミスの修正候補を示すことを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:heading {"lebel":3} -->\n'
         '<h3 class="wp-block-heading">Heading</h3>\n'
@@ -1241,6 +1327,7 @@ def test_lint_suggests_unknown_wordpress_block_attribute_typo() -> None:
 
 
 def test_lint_accepts_known_wordpress_block_attributes() -> None:
+    """文法チェックが既知のWordPressのブロックの属性を受け入れることを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:spacer {"height":"32px","className":"wide"} -->\n'
         '<div style="height:32px" aria-hidden="true" class="wp-block-spacer wide"></div>\n'
@@ -1254,6 +1341,7 @@ def test_lint_accepts_known_wordpress_block_attributes() -> None:
 
 
 def test_lint_accepts_reference_wordpress_block_attributes() -> None:
+    """文法チェックが参照資料のWordPressのブロックの属性を受け入れることを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:post-title {"level":3,"isLink":true,"linkTarget":"_blank"} -->\n'
         '<h3 class="wp-block-post-title"><a href="/sample" target="_blank">Title</a></h3>\n'
@@ -1268,6 +1356,7 @@ def test_lint_accepts_reference_wordpress_block_attributes() -> None:
 
 
 def test_lint_accepts_wordpress_image_generated_html_attributes() -> None:
+    """文法チェックがWordPressの画像の生成されたHTMLの属性を受け入れることを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->\n'
         '<figure class="wp-block-image size-large">'
@@ -1284,6 +1373,7 @@ def test_lint_accepts_wordpress_image_generated_html_attributes() -> None:
 
 
 def test_lint_reports_unknown_reference_wordpress_block_attribute() -> None:
+    """文法チェックが未登録の参照資料のWordPressのブロックの属性を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:post-title {"level":3,"badParam":true} -->\n'
         '<h3 class="wp-block-post-title">Title</h3>\n'
@@ -1298,6 +1388,7 @@ def test_lint_reports_unknown_reference_wordpress_block_attribute() -> None:
 
 
 def test_lint_reports_wordpress_block_attribute_type_mismatch() -> None:
+    """文法チェックがWordPressのブロックの属性の型の不一致を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:heading {"level":"3"} -->\n'
         '<h3 class="wp-block-heading">Heading</h3>\n'
@@ -1328,6 +1419,7 @@ def test_lint_reports_wordpress_block_attribute_type_mismatch() -> None:
 
 
 def test_lint_reports_wordpress_block_attribute_invalid_value() -> None:
+    """文法チェックがWordPressのブロックの属性の不正な値を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:paragraph {"align":"centre"} -->\n'
         "<p>Aligned text.</p>\n"
@@ -1347,6 +1439,7 @@ def test_lint_reports_wordpress_block_attribute_invalid_value() -> None:
 
 
 def test_lint_recovers_wordpress_block_structure_after_invalid_json() -> None:
+    """文法チェックの復旧するのWordPressのブロックの構造後の不正なJSONを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:heading {"level":3}XYZ -->\n'
         '<h3 class="wp-block-heading">Heading</h3>\n'
@@ -1360,6 +1453,7 @@ def test_lint_recovers_wordpress_block_structure_after_invalid_json() -> None:
 
 
 def test_lint_reports_unclosed_div_inside_wordpress_html_block() -> None:
+    """文法チェックが閉じられていないのdiv内のWordPressのHTMLのブロックを報告することを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:html -->\n"
         '<div class="notice">\n'
@@ -1376,6 +1470,7 @@ def test_lint_reports_unclosed_div_inside_wordpress_html_block() -> None:
 
 
 def test_lint_checks_entire_plain_html_file_structure() -> None:
+    """文法チェックが全体のプレーンテキストのHTMLのファイルの構造を検査することを確認する。"""
     messages = lint_html_typos(
         '<main><div class="notice">\n'
         "<p>本文</p>\n"
@@ -1391,6 +1486,7 @@ def test_lint_checks_entire_plain_html_file_structure() -> None:
 
 
 def test_lint_reports_wordpress_heading_level_html_mismatch() -> None:
+    """文法チェックがWordPressの見出しレベルのHTMLの不一致を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:heading {"level":3} -->\n'
         '<h2 class="wp-block-heading">見出し</h2>\n'
@@ -1412,6 +1508,7 @@ def test_lint_reports_wordpress_heading_level_html_mismatch() -> None:
 
 
 def test_lint_reports_wordpress_spacer_height_html_mismatch() -> None:
+    """文法チェックがWordPressのスペーサーの高さのHTMLの不一致を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:spacer {"height":"64px"} -->\n'
         '<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>\n'
@@ -1428,6 +1525,7 @@ def test_lint_reports_wordpress_spacer_height_html_mismatch() -> None:
 
 
 def test_lint_reports_wordpress_image_size_html_mismatch() -> None:
+    """文法チェックがWordPressの画像のサイズのHTMLの不一致を報告することを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->\n'
         '<figure class="wp-block-image size-full"><img src="sample.jpg" alt="説明"/></figure>\n'
@@ -1444,6 +1542,7 @@ def test_lint_reports_wordpress_image_size_html_mismatch() -> None:
 
 
 def test_lint_accepts_matching_wordpress_comment_attributes_and_html() -> None:
+    """文法チェックが一致するのWordPressのコメントの属性とHTMLを受け入れることを確認する。"""
     messages = lint_html_typos(
         '<!-- wp:heading {"level":3} -->\n'
         '<h3 class="wp-block-heading">見出し</h3>\n'
@@ -1464,6 +1563,7 @@ def test_lint_accepts_matching_wordpress_comment_attributes_and_html() -> None:
 
 
 def test_lint_accepts_wordpress_accordion_blocks() -> None:
+    """文法チェックがWordPressのアコーディオンのブロックを受け入れることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:accordion -->\n"
         '<div role="group" class="wp-block-accordion"><!-- wp:accordion-item -->\n'
@@ -1497,6 +1597,7 @@ def test_lint_accepts_wordpress_accordion_blocks() -> None:
 
 
 def test_lint_accepts_valid_wordpress_paragraph_blocks() -> None:
+    """文法チェックが正しいのWordPressの段落のブロックを受け入れることを確認する。"""
     messages = lint_html_typos(
         "<!-- wp:paragraph -->\n"
         "<p>1つ目の段落です。</p>\n"
@@ -1520,12 +1621,14 @@ def test_lint_accepts_valid_wordpress_paragraph_blocks() -> None:
 
 
 def test_lint_accepts_reference_json_attribute_prefixes() -> None:
+    """文法チェックが参照資料のJSONの属性の接頭辞を受け入れることを確認する。"""
     messages = lint_html_typos('<p data-note-id="1" aria-label="説明">本文</p>')
 
     assert not any(message.message_key == "html_typo_lint.unknown_html_attribute" for message in messages)
 
 
 def test_lint_reports_unexpected_html_attribute_for_tag() -> None:
+    """文法チェックが想定外のHTMLの属性の用のタグを報告することを確認する。"""
     messages = lint_html_typos('<p href="https://example.com">Body</p>')
 
     assert any(
@@ -1536,6 +1639,7 @@ def test_lint_reports_unexpected_html_attribute_for_tag() -> None:
 
 
 def test_lint_accepts_global_and_prefixed_attributes_on_tag_specific_checks() -> None:
+    """タグごとの検査でもグローバル属性と接頭辞付き属性を許容することを確認する。"""
     messages = lint_html_typos(
         '<p id="intro" class="lead" data-note-id="1" aria-label="Intro">Body</p>'
     )
@@ -1547,6 +1651,7 @@ def test_lint_accepts_global_and_prefixed_attributes_on_tag_specific_checks() ->
 
 
 def test_lint_reports_tag_specific_html_attribute_typo_suggestion() -> None:
+    """タグ固有のHTML属性の綴り間違いに対して候補を提示することを確認する。"""
     messages = lint_html_typos('<img scrset="sample.jpg 800w" alt="Sample">')
 
     assert any(
@@ -1559,6 +1664,7 @@ def test_lint_reports_tag_specific_html_attribute_typo_suggestion() -> None:
 
 
 def test_lint_uses_startup_reference_cache_without_rereading_json() -> None:
+    """読み直しのJSONを省いた場合、文法チェックが起動時の参照資料のキャッシュを使うことを確認する。"""
     with patch("pathlib.Path.read_text") as read_text:
         messages = lint_html_typos('<p clas="lead">本文</p>')
 
@@ -1572,6 +1678,7 @@ def test_lint_uses_startup_reference_cache_without_rereading_json() -> None:
 
 
 def test_lint_warns_about_restricted_html_tags_and_event_attributes() -> None:
+    """文法チェックが制限されたHTMLのタグとイベントの属性を警告することを確認する。"""
     messages = lint_html_typos(
         '<script>alert("x")</script>\n'
         '<iframe src="https://example.com"></iframe>\n'
@@ -1584,6 +1691,7 @@ def test_lint_warns_about_restricted_html_tags_and_event_attributes() -> None:
 
 
 def test_lint_accepts_verified_wordpress_table_classes_with_character_references() -> None:
+    """文法チェックが確認済みののWordPressの表のクラス（文字の参照資料あり）を受け入れることを確認する。"""
     source = (
         '<figure class="wp-block-table"><table class="&#x9;has-base-color&#x20;'
         'has-text-color&#x20;has-background&#x20;has-link-color&#x20;'
@@ -1599,6 +1707,7 @@ def test_lint_accepts_verified_wordpress_table_classes_with_character_references
 
 
 def test_lint_reports_only_strict_wordpress_class_tag_mismatch() -> None:
+    """文法チェックがだけの厳格なWordPressのクラスのタグの不一致を報告することを確認する。"""
     messages = lint_html_typos(
         '<div class="has-fixed-layout has-background custom-class">内容</div>'
     )
@@ -1617,6 +1726,7 @@ def test_lint_reports_only_strict_wordpress_class_tag_mismatch() -> None:
 
 
 def test_lint_accepts_verified_flex_nowrap_group_block() -> None:
+    """文法チェックが確認済みのFlexboxの折り返さない指定のグループのブロックを受け入れることを確認する。"""
     source = (Path(__file__).parent / "group_block_flex_nowrap_correct.wp_html").read_text(
         encoding="utf-8"
     )
@@ -1625,6 +1735,7 @@ def test_lint_accepts_verified_flex_nowrap_group_block() -> None:
 
 
 def test_lint_accepts_verified_decorated_group_block() -> None:
+    """文法チェックが確認済みの装飾付きのグループのブロックを受け入れることを確認する。"""
     source = (Path(__file__).parent / "group_block_decorated_correct.wp_html").read_text(
         encoding="utf-8"
     )
@@ -1633,6 +1744,7 @@ def test_lint_accepts_verified_decorated_group_block() -> None:
 
 
 def test_lint_accepts_verified_decorated_paragraph_block() -> None:
+    """文法チェックが確認済みの装飾付きの段落ブロックを受け入れることを確認する。"""
     source = (
         Path(__file__).parent / "paragraph_block_decorated_correct.wp_html"
     ).read_text(encoding="utf-8")
@@ -1641,6 +1753,7 @@ def test_lint_accepts_verified_decorated_paragraph_block() -> None:
 
 
 def test_lint_reports_verified_paragraph_fit_text_and_weight_mismatches() -> None:
+    """文法チェックが確認済みの段落の文字幅に合わせる設定と太さの不一致を報告することを確認する。"""
     source = (
         Path(__file__).parent / "paragraph_block_decorated_correct.wp_html"
     ).read_text(encoding="utf-8")
@@ -1662,6 +1775,7 @@ def test_lint_reports_verified_paragraph_fit_text_and_weight_mismatches() -> Non
 
 
 def test_lint_accepts_verified_decorated_button_block() -> None:
+    """文法チェックが確認済みの装飾付きのボタンのブロックを受け入れることを確認する。"""
     source = (Path(__file__).parent / "button_block_decorated_correct.wp_html").read_text(
         encoding="utf-8"
     )
@@ -1677,6 +1791,7 @@ def test_lint_accepts_verified_decorated_button_block() -> None:
     ],
 )
 def test_lint_accepts_verified_decorated_quote_blocks(fixture_name: str) -> None:
+    """文法チェックが確認済みの装飾付きの引用符のブロックを受け入れることを確認する。"""
     source = (Path(__file__).parent / fixture_name).read_text(encoding="utf-8")
 
     assert lint_html_typos(source) == []
@@ -1690,12 +1805,14 @@ def test_lint_accepts_verified_decorated_quote_blocks(fixture_name: str) -> None
     ],
 )
 def test_lint_accepts_verified_decorated_accordion_blocks(fixture_name: str) -> None:
+    """文法チェックが確認済みの装飾付きのアコーディオンのブロックを受け入れることを確認する。"""
     source = (Path(__file__).parent / fixture_name).read_text(encoding="utf-8")
 
     assert lint_html_typos(source) == []
 
 
 def test_lint_accepts_verified_columns_block_with_mixed_content() -> None:
+    """文法チェックが確認済みのの列のブロック（混在するの内容あり）を受け入れることを確認する。"""
     source = (
         Path(__file__).parent / "columns_block_mixed_content_correct.wp_html"
     ).read_text(encoding="utf-8")
@@ -1704,6 +1821,7 @@ def test_lint_accepts_verified_columns_block_with_mixed_content() -> None:
 
 
 def test_lint_reports_verified_columns_root_class_mismatch() -> None:
+    """文法チェックが確認済みの列のルート要素のクラスの不一致を報告することを確認する。"""
     source = (
         Path(__file__).parent / "columns_block_mixed_content_correct.wp_html"
     ).read_text(encoding="utf-8")
@@ -1719,6 +1837,7 @@ def test_lint_reports_verified_columns_root_class_mismatch() -> None:
 
 
 def test_lint_reports_columns_class_on_wrong_html_tag() -> None:
+    """文法チェックが列のクラスでの誤ったのHTMLのタグを報告することを確認する。"""
     messages = lint_html_typos('<section class="wp-block-columns"></section>')
 
     assert any(
@@ -1730,6 +1849,7 @@ def test_lint_reports_columns_class_on_wrong_html_tag() -> None:
 
 
 def test_lint_reports_verified_accordion_heading_class_mismatch() -> None:
+    """文法チェックが確認済みのアコーディオンの見出しのクラスの不一致を報告することを確認する。"""
     source = (
         Path(__file__).parent / "accordion_block_background_font_correct.wp_html"
     ).read_text(encoding="utf-8")
@@ -1746,6 +1866,7 @@ def test_lint_reports_verified_accordion_heading_class_mismatch() -> None:
 
 
 def test_lint_reports_verified_accordion_heading_border_mismatch() -> None:
+    """文法チェックが確認済みのアコーディオンの見出しの境界線の不一致を報告することを確認する。"""
     source = (Path(__file__).parent / "accordion_block_border_correct.wp_html").read_text(
         encoding="utf-8"
     )
@@ -1760,6 +1881,7 @@ def test_lint_reports_verified_accordion_heading_border_mismatch() -> None:
 
 
 def test_lint_reports_verified_quote_class_and_style_mismatches() -> None:
+    """文法チェックが確認済みの引用符のクラスとスタイルの不一致を報告することを確認する。"""
     source = (Path(__file__).parent / "quote_block_decorated_correct.wp_html").read_text(
         encoding="utf-8"
     )
@@ -1781,6 +1903,7 @@ def test_lint_reports_verified_quote_class_and_style_mismatches() -> None:
 
 
 def test_lint_reports_verified_pullquote_class_and_style_mismatches() -> None:
+    """文法チェックが確認済みの抜粋引用のクラスとスタイルの不一致を報告することを確認する。"""
     source = (
         Path(__file__).parent / "pullquote_block_decorated_correct.wp_html"
     ).read_text(encoding="utf-8")
@@ -1802,6 +1925,7 @@ def test_lint_reports_verified_pullquote_class_and_style_mismatches() -> None:
 
 
 def test_lint_reports_verified_button_link_class_and_style_mismatches() -> None:
+    """文法チェックが確認済みのボタンのリンクのクラスとスタイルの不一致を報告することを確認する。"""
     source = (Path(__file__).parent / "button_block_decorated_correct.wp_html").read_text(
         encoding="utf-8"
     )
@@ -1823,6 +1947,7 @@ def test_lint_reports_verified_button_link_class_and_style_mismatches() -> None:
 
 
 def test_lint_reports_verified_group_class_and_style_mismatches() -> None:
+    """文法チェックが確認済みのグループのクラスとスタイルの不一致を報告することを確認する。"""
     source = (Path(__file__).parent / "group_block_decorated_correct.wp_html").read_text(
         encoding="utf-8"
     )
@@ -1844,6 +1969,7 @@ def test_lint_reports_verified_group_class_and_style_mismatches() -> None:
 
 
 def test_lint_reports_empty_root_style_in_verified_flex_nowrap_group_block() -> None:
+    """文法チェックが空のルート要素のスタイル内の確認済みのFlexboxの折り返さない指定のグループのブロックを報告することを確認する。"""
     correct_source = (
         Path(__file__).parent / "group_block_flex_nowrap_correct.wp_html"
     ).read_text(encoding="utf-8")
@@ -1864,6 +1990,7 @@ def test_lint_reports_empty_root_style_in_verified_flex_nowrap_group_block() -> 
 
 
 def test_lint_registers_group_layout_as_an_object_attribute() -> None:
+    """グループブロックのlayout属性がオブジェクト型として登録されていることを確認する。"""
     source = (
         '<!-- wp:group {"layout":"flex"} -->\n'
         '<div class="wp-block-group"></div>\n'

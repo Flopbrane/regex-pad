@@ -1,4 +1,4 @@
-"""Markdown rule patterns for the embedded WordPress conversion core."""
+"""同梱のWordPress変換処理で使うMarkdownのパターンを定義する。"""
 
 from __future__ import annotations
 

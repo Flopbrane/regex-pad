@@ -1,4 +1,4 @@
-"""Prepare and select the WordPress files needed by a portable EXE distribution."""
+"""ポータブルEXEに同梱するWordPressファイルを準備し、対象を選ぶ。"""
 from __future__ import annotations
 
 import argparse
@@ -17,7 +17,7 @@ RUNTIME_FILES = ("ready.json", "package.json", "package-lock.json", "wordpress.z
 
 
 def runtime_datas(runtime_root: Path) -> list[tuple[str, str]]:
-    """Select executable/runtime data and licenses, excluding setup caches and npm."""
+    """準備用キャッシュとnpmを除き、実行ファイル、必要なデータ、ライセンスを選ぶ。"""
     runtime_root = runtime_root.resolve()
     if not runtime_ready(runtime_root):
         raise RuntimeError("WordPress runtime is not ready. Run build.ps1 to prepare it first.")
@@ -39,7 +39,7 @@ def runtime_datas(runtime_root: Path) -> list[tuple[str, str]]:
 
 
 def prepare_bundle(runtime_root: Path) -> None:
-    """Ensure builds carry their own Node even when the build machine has Node."""
+    """ビルド環境にNodeがあっても、配布物に専用のNodeを同梱できるようにする。"""
     cancel = threading.Event()
     prepare_runtime(runtime_root, lambda stage: print(f"Preparing WordPress: {stage}", flush=True), cancel)
     if find_node(runtime_root, include_installed=False) is None:
@@ -50,6 +50,7 @@ def prepare_bundle(runtime_root: Path) -> None:
 
 
 def main() -> None:
+    """配布用WordPress環境の準備または検証をコマンドラインから実行する。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime-root", type=Path, default=app_base_dir() / "runtime/wordpress-preview")
     parser.add_argument("--verify", action="store_true", help="Check prepared data without downloading anything")

@@ -1,3 +1,5 @@
+"""PyInstallerのspecファイルを検証する。"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -10,6 +12,7 @@ from preview import package_runtime, wordpress_runtime
 
 
 def test_pyinstaller_spec_collects_project_json_files() -> None:
+    """PyInstallerのspecファイルのを集めるのプロジェクトのJSONのファイルを確認する。"""
     spec_text = Path("regex-pad.spec").read_text(encoding="utf-8")
 
     assert "def _project_json_datas():" in spec_text
@@ -33,6 +36,7 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    """PyInstallerのspecファイルのJSONの同梱データの含むの現在のプロジェクトのJSONを確認する。"""
     monkeypatch.setenv("REGEXPAD_SKIP_WORDPRESS_RUNTIME", "1")
     spec_path = Path("regex-pad.spec")
     spec_prefix = spec_path.read_text(encoding="utf-8").split("a = Analysis", maxsplit=1)[0]
@@ -95,6 +99,7 @@ def test_pyinstaller_spec_json_datas_include_current_project_json(
 
 
 def test_pyinstaller_spec_builds_gui_app_without_upx() -> None:
+    """UPXを省いた場合、PyInstallerのspecファイルがGUIのアプリを組み立てることを確認する。"""
     spec_text = Path("regex-pad.spec").read_text(encoding="utf-8")
 
     assert "console=False" in spec_text
@@ -102,6 +107,7 @@ def test_pyinstaller_spec_builds_gui_app_without_upx() -> None:
 
 
 def test_build_script_isolates_host_dlls_and_checks_bundled_qt() -> None:
+    """ビルドスクリプトがホスト側のDLLを分離し、同梱するQtを検査することを確認する。"""
     build_script = Path("build.ps1").read_text(encoding="utf-8")
     spec_text = Path("regex-pad.spec").read_text(encoding="utf-8")
 
@@ -119,6 +125,7 @@ def test_build_script_isolates_host_dlls_and_checks_bundled_qt() -> None:
 def test_direct_spec_build_excludes_the_same_host_dll_paths_as_build_script(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """直接のspecファイルのビルドが同じホストのDLLのパスのとしてのビルドスクリプトを除外することを確認する。"""
     monkeypatch.setenv("REGEXPAD_SKIP_WORDPRESS_RUNTIME", "1")
     spec_prefix = Path("regex-pad.spec").read_text(encoding="utf-8").split(
         "a = Analysis", maxsplit=1
@@ -133,6 +140,7 @@ def test_direct_spec_build_excludes_the_same_host_dll_paths_as_build_script(
 
 
 def test_build_script_copies_and_verifies_runtime_json_and_portable_settings() -> None:
+    """ビルドスクリプトがコピーするとともに、実行環境のJSONとポータブルの設定を検証することを確認する。"""
     build_script = Path("build.ps1").read_text(encoding="utf-8")
 
     assert '$DictionarySourcePath = Join-Path $ProjectRoot "dictionaries"' in build_script
@@ -152,6 +160,7 @@ def test_build_script_copies_and_verifies_runtime_json_and_portable_settings() -
 
 
 def _prepared_runtime(root: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """パッケージ検証に使うWordPress実行環境の素材を用意する。"""
     import json
 
     for name in (
@@ -170,6 +179,7 @@ def _prepared_runtime(root: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_spec_bundles_runtime_dependencies_but_not_setup_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """specファイルのを同梱するの実行環境の依存関係の一方のしないの準備のキャッシュを確認する。"""
     root = tmp_path / "runtime/wordpress-preview"
     _prepared_runtime(root, monkeypatch)
     (tmp_path / "config.json").write_text("{}")
@@ -195,6 +205,7 @@ def test_spec_bundles_runtime_dependencies_but_not_setup_cache(tmp_path: Path, m
 
 
 def test_runtime_bundle_fails_when_required_files_are_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """必要なファイルが不足すると、実行環境の同梱処理が失敗することを確認する。"""
     _prepared_runtime(tmp_path, monkeypatch)
     (tmp_path / "wordpress.zip").unlink()
     with pytest.raises(RuntimeError, match="not ready"):
@@ -202,6 +213,7 @@ def test_runtime_bundle_fails_when_required_files_are_missing(tmp_path: Path, mo
 
 
 def test_runtime_bundle_requires_its_own_node(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """配布用の実行環境のを必要とするのその固有のNodeを確認する。"""
     _prepared_runtime(tmp_path, monkeypatch)
     monkeypatch.setattr(package_runtime, "find_node", lambda root, **kwargs: None)
     with pytest.raises(RuntimeError, match="portable Node"):
@@ -209,6 +221,7 @@ def test_runtime_bundle_requires_its_own_node(tmp_path: Path, monkeypatch: pytes
 
 
 def test_bundle_preparation_does_not_rely_on_build_machine_node(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """配布物の準備の行わないの依存するでのビルドのマシンのNodeを確認する。"""
     node = _prepared_runtime(tmp_path, monkeypatch)
     calls = []
     monkeypatch.setattr(package_runtime, "prepare_runtime", lambda *args: calls.append("runtime"))
@@ -219,6 +232,7 @@ def test_bundle_preparation_does_not_rely_on_build_machine_node(tmp_path: Path, 
 
 
 def test_exe_prefers_complete_bundled_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """EXEのを優先するの完全な同梱の実行環境を確認する。"""
     bundled = tmp_path / "_internal"
     root = bundled / "runtime/wordpress-preview"
     _prepared_runtime(root, monkeypatch)

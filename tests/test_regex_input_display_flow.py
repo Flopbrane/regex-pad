@@ -1,3 +1,5 @@
+"""正規表現の入力欄の表示の操作手順を検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -14,6 +16,7 @@ from main import MainWindow
 
 
 def _process_delayed_ui_events(delay_ms: int = 75) -> None:
+    """テスト対象の遅延処理が実行されるまでQtイベントを処理する。"""
     loop = QEventLoop()
     QTimer.singleShot(delay_ms, loop.quit)
     loop.exec()
@@ -21,6 +24,7 @@ def _process_delayed_ui_events(delay_ms: int = 75) -> None:
 
 
 def _highlighted_fragments(edit) -> list[str]:
+    """入力欄で色付けされた断片を取得する。"""
     edit.highlighter.rehighlight()
     QApplication.processEvents()
     block = edit.document().firstBlock()
@@ -35,6 +39,7 @@ def _highlighted_fragments(edit) -> list[str]:
 def test_replace_all_then_second_regex_input_keeps_display_and_regex_colors(
     tmp_path: Path,
 ) -> None:
+    """全置換の続いての2番目の正規表現の入力欄が表示と正規表現の色を保持することを確認する。"""
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)

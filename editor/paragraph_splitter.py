@@ -1,4 +1,6 @@
 # pylint: disable=C0114,C0115,C0116,C0301
+"""WordPress段落を分割し、選択範囲へ装飾やブロックを挿入する。"""
+
 from __future__ import annotations
 
 import re
@@ -25,13 +27,14 @@ CURSOR_PLACEHOLDER = "{cursor}"
 
 
 class ParagraphSplitError(ValueError):
-    """Raised when paragraph insertion cannot be safely applied."""
+    """段落挿入を安全に適用できない場合に発生する。"""
 
     def __init__(
         self,
         message_key: str,
         values: dict[str, str] | None = None,
     ) -> None:
+        """段落挿入の診断キーと表示用の値を保持する。"""
         super().__init__(message_key)
         self.message_key = message_key
         self.values = values or {}
@@ -39,7 +42,7 @@ class ParagraphSplitError(ValueError):
 
 @dataclass(frozen=True)
 class ParagraphBlock:
-    """Represents one simple WordPress paragraph block in the text."""
+    """原稿内にある単純なWordPress段落ブロック1件を表す。"""
 
     block_start: int
     block_end: int
@@ -50,7 +53,7 @@ class ParagraphBlock:
 
 @dataclass(frozen=True)
 class ParagraphReplacement:
-    """Represents the result of a paragraph replacement operation."""
+    """段落の置換処理の結果を表す。"""
 
     text: str
     cursor_position: int
@@ -58,7 +61,7 @@ class ParagraphReplacement:
 
 @dataclass(frozen=True)
 class ParagraphInsertLintResult:
-    """Represents a read-only paragraph insertion check."""
+    """本文を変更せずに行った段落挿入の検査結果を表す。"""
 
     allowed: bool
     message_key: str = ""
@@ -67,12 +70,14 @@ class ParagraphInsertLintResult:
 
 @dataclass(frozen=True)
 class _BuiltBlock:
+    """組み立てたブロックと挿入後のカーソル位置を保持する。"""
     text: str
     cursor_offset: int
 
 
 @dataclass(frozen=True)
 class _PreparedInsertion:
+    """段落を編集する前に解析した範囲と本文を保持する。"""
     block: ParagraphBlock
     selection_start: int
     selection_end: int
@@ -84,7 +89,7 @@ def find_current_paragraph_block(
     cursor_pos: int,
     dictionaries_path: Path | None = None,
 ) -> ParagraphBlock | None:
-    """Return the simple paragraph block containing cursor_pos, if available."""
+    """指定されたカーソル位置を含む単純な段落ブロックを見つけて返す。"""
     rule_book = _load_rule_book(dictionaries_path)
     block, _message_key = _find_paragraph_block(text, cursor_pos, rule_book)
     return block
@@ -97,7 +102,7 @@ def lint_paragraph_insertion(
     operation_key: str,
     dictionaries_path: Path | None = None,
 ) -> ParagraphInsertLintResult:
-    """Check one paragraph insertion without modifying the source text."""
+    """本文を変更せずに段落挿入1件を検査する。"""
     try:
         rule_book = _load_rule_book(dictionaries_path)
         _prepare_insertion(
@@ -116,7 +121,7 @@ def build_paragraph_block(
     content: str,
     dictionaries_path: Path | None = None,
 ) -> str:
-    """Build a paragraph block from the dictionary template."""
+    """辞書テンプレートから段落ブロックを組み立てる。"""
     return _build_paragraph_block(content, _load_rule_book(dictionaries_path))
 
 
@@ -124,7 +129,7 @@ def build_spacer_block(
     height: int = 32,
     dictionaries_path: Path | None = None,
 ) -> str:
-    """Build a spacer block from the insert_spacer dictionary entry."""
+    """辞書のinsert_spacer項目からスペーサーブロックを組み立てる。"""
     rule_book = _load_rule_book(dictionaries_path)
     rule = _operation(rule_book, INSERT_SPACER_KEY)
     return _render_operation(rule, "", {"height": str(height)}).text
@@ -134,7 +139,7 @@ def build_html_code_block(
     content: str = "",
     dictionaries_path: Path | None = None,
 ) -> str:
-    """Build an HTML code block from the insert_html dictionary entry."""
+    """辞書のinsert_html項目からHTMLコードブロックを組み立てる。"""
     rule_book = _load_rule_book(dictionaries_path)
     rule = _operation(rule_book, INSERT_HTML_KEY)
     transformed = _transform_content(content, rule, rule_book)
@@ -145,7 +150,7 @@ def build_decorated_block(
     content: str = "",
     dictionaries_path: Path | None = None,
 ) -> str:
-    """Build a decorated block from the decorated_block dictionary entry."""
+    """辞書のdecorated_block項目から装飾ブロックを組み立てる。"""
     rule_book = _load_rule_book(dictionaries_path)
     rule = _operation(rule_book, DECORATED_BLOCK_KEY)
     transformed = _transform_content(content, rule, rule_book)
@@ -157,6 +162,7 @@ def split_paragraph_insert_spacer(
     cursor_pos: int,
     dictionaries_path: Path | None = None,
 ) -> ParagraphReplacement:
+    """段落を分割してスペーサーを挿入する。"""
     return _apply_paragraph_insert_operation(
         text,
         cursor_pos,
@@ -171,6 +177,7 @@ def split_paragraph_insert_html(
     cursor_pos: int,
     dictionaries_path: Path | None = None,
 ) -> ParagraphReplacement:
+    """段落を分割してHTMLブロックを挿入する。"""
     return _apply_paragraph_insert_operation(
         text,
         cursor_pos,
@@ -186,6 +193,7 @@ def wrap_selection_as_code_block(
     selection_end: int,
     dictionaries_path: Path | None = None,
 ) -> ParagraphReplacement:
+    """選択範囲をコードブロックで囲む。"""
     return _apply_paragraph_insert_operation(
         text,
         selection_start,
@@ -201,6 +209,7 @@ def wrap_selection_as_decorated_block(
     selection_end: int,
     dictionaries_path: Path | None = None,
 ) -> ParagraphReplacement:
+    """選択範囲を装飾ブロックで囲む。"""
     return _apply_paragraph_insert_operation(
         text,
         selection_start,
@@ -217,6 +226,7 @@ def _apply_paragraph_insert_operation(
     operation_key: str,
     dictionaries_path: Path | None,
 ) -> ParagraphReplacement:
+    """指定された挿入規則から段落の置換結果を作る。"""
     rule_book = _load_rule_book(dictionaries_path)
     prepared = _prepare_insertion(
         text,
@@ -243,6 +253,7 @@ def _prepare_insertion(
     operation_key: str,
     rule_book: ParagraphInsertRuleBook,
 ) -> _PreparedInsertion:
+    """段落挿入の対象と前後の本文を調べる。"""
     start = min(selection_start, selection_end)
     end = max(selection_start, selection_end)
     selection_was_empty = start == end
@@ -274,6 +285,7 @@ def _find_paragraph_block(
     cursor_pos: int,
     rule_book: ParagraphInsertRuleBook,
 ) -> tuple[ParagraphBlock | None, str]:
+    """指定位置を含む段落ブロックを探す。"""
     grammar = rule_book.grammar
     for block_match in re.finditer(
         grammar.paragraph_block_search,
@@ -314,6 +326,7 @@ def _paragraph_block_for_range(
     end: int,
     rule_book: ParagraphInsertRuleBook,
 ) -> ParagraphBlock:
+    """指定範囲全体が属する段落ブロックを得る。"""
     block, message_key = _find_paragraph_block(text, start, rule_book)
     if block is None:
         raise ParagraphSplitError(message_key)
@@ -336,6 +349,7 @@ def _line_range_at_cursor(
     block: ParagraphBlock,
     cursor_pos: int,
 ) -> tuple[int, int]:
+    """カーソルがある行の両端を返す。"""
     content = text[block.content_start : block.content_end]
     relative_pos = min(max(cursor_pos - block.content_start, 0), len(content))
     line_start = content.rfind("\n", 0, relative_pos) + 1
@@ -351,6 +365,7 @@ def _expand_selection_to_content_lines(
     selection_end: int,
     block: ParagraphBlock,
 ) -> tuple[int, int]:
+    """選択範囲を対象となる本文行に合わせて広げる。"""
     content = text[block.content_start : block.content_end]
     relative_start = selection_start - block.content_start
     relative_end = selection_end - block.content_start
@@ -368,6 +383,7 @@ def _replace_current_paragraph_selection(
     inserted_block: _BuiltBlock,
     rule_book: ParagraphInsertRuleBook,
 ) -> ParagraphReplacement:
+    """差し替える段落の前後と挿入結果を組み立てる。"""
     block = prepared.block
     before_content = text[block.content_start : prepared.selection_start]
     after_content = text[prepared.selection_end : block.content_end]
@@ -392,6 +408,7 @@ def _join_split_blocks(
     after_block: str,
     separator: str,
 ) -> tuple[str, int]:
+    """分割したブロックをつなぎ、カーソル位置を求める。"""
     pieces: list[tuple[str, int | None]] = []
     if before_block:
         pieces.append((before_block, None))
@@ -414,6 +431,7 @@ def _build_paragraph_block(
     content: str,
     rule_book: ParagraphInsertRuleBook,
 ) -> str:
+    """本文を辞書の段落テンプレートに当てはめる。"""
     clean_content = _clean_paragraph_edge_breaks(content, rule_book)
     if not clean_content:
         return ""
@@ -427,6 +445,7 @@ def _clean_paragraph_edge_breaks(
     content: str,
     rule_book: ParagraphInsertRuleBook,
 ) -> str:
+    """段落の端にある改行表現を整理する。"""
     clean_content = content.strip()
     previous = None
     while clean_content != previous:
@@ -447,6 +466,7 @@ def _transform_content(
     rule: ParagraphInsertRule,
     rule_book: ParagraphInsertRuleBook,
 ) -> str:
+    """指定規則で挿入用の本文を整える。"""
     if rule.content_transform == "none":
         return content
     clean_content = _clean_paragraph_edge_breaks(content, rule_book)
@@ -470,6 +490,7 @@ def _transform_content(
 
 
 def _apply_text_rule(source_text: str, rule: TextReplacementRule) -> str:
+    """本文に1件の文字列置換規則を適用する。"""
     try:
         result = SearchEngine().replace_all(
             source_text,
@@ -495,6 +516,7 @@ def _search_rule_matches_entire_candidate(
     exclude_pattern: str,
     operation_key: str,
 ) -> bool:
+    """候補全体が検索規則に一致するか確かめる。"""
     match_marker = "\uffffPARAGRAPH_INSERT_MATCH\uffff"
     try:
         result = SearchEngine().replace_all(
@@ -520,6 +542,7 @@ def _render_operation(
     selected_text: str,
     parameter_overrides: dict[str, str] | None = None,
 ) -> _BuiltBlock:
+    """操作テンプレートに本文とパラメーターを当てはめる。"""
     parameters = dict(rule.default_parameters)
     if parameter_overrides:
         parameters.update(parameter_overrides)
@@ -543,6 +566,7 @@ def _render_operation(
 def _load_rule_book(
     dictionaries_path: Path | None,
 ) -> ParagraphInsertRuleBook:
+    """段落挿入の規則を辞書から読み込む。"""
     try:
         return load_paragraph_insert_rule_book(dictionaries_path)
     except ParagraphInsertDictionaryError as error:
@@ -556,6 +580,7 @@ def _operation(
     rule_book: ParagraphInsertRuleBook,
     operation_key: str,
 ) -> ParagraphInsertRule:
+    """操作名に対応する段落挿入規則を返す。"""
     try:
         return rule_book.operation(operation_key)
     except ParagraphInsertDictionaryError as error:

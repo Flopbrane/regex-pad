@@ -1,4 +1,4 @@
-"""Independent modeless window for structured pseudo-macro editing."""
+"""構造化した疑似マクロを編集する独立したモードレスウインドウを提供する。"""
 
 from collections.abc import Callable
 from html import escape
@@ -37,6 +37,7 @@ from macro.editor_session import MacroEditorSession
 
 
 class MacroEditorWindow(QMainWindow):
+    """定義と複数の手順を編集する独立ウインドウ。"""
     new_requested = Signal()
     open_requested = Signal()
     save_requested = Signal()
@@ -54,6 +55,7 @@ class MacroEditorWindow(QMainWindow):
     redo_requested = Signal()
 
     def __init__(self, translator: Translator, parent: QWidget | None = None) -> None:
+        """手順ツリー、フォーム、診断表と操作メニューを用意する。"""
         super().__init__(parent, Qt.WindowType.Window)
         self.translator = translator
         self.confirm_close: Callable[[], bool] = lambda: True
@@ -185,6 +187,7 @@ class MacroEditorWindow(QMainWindow):
                     widget.viewport().installEventFilter(self)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """ウインドウ内の入力イベントを振り分ける。"""
         if isinstance(event, QKeyEvent) and event.type() in (
             QEvent.Type.ShortcutOverride,
             QEvent.Type.KeyPress,
@@ -219,6 +222,7 @@ class MacroEditorWindow(QMainWindow):
         return super().eventFilter(watched, event)
 
     def retranslate_ui(self) -> None:
+        """現在の言語で画面の各項目を更新する。"""
         text = self.translator.text
         self.file_menu.setTitle(text("menu.file"))
         self.edit_menu.setTitle(text("menu.edit"))
@@ -250,6 +254,7 @@ class MacroEditorWindow(QMainWindow):
         )
 
     def selected_step(self) -> int:
+        """ツリーで選択中の手順の位置を返す。"""
         item = self.tree.currentItem()
         parent = item.parent() if item is not None else None
         if item is None or parent is None:
@@ -257,6 +262,7 @@ class MacroEditorWindow(QMainWindow):
         return parent.indexOfChild(item)
 
     def render_tree(self, session: MacroEditorSession, selected: int) -> None:
+        """マクロ定義から手順ツリーを描き直す。"""
         self.tree.blockSignals(True)
         self.tree.clear()
         root = QTreeWidgetItem(
@@ -298,6 +304,7 @@ class MacroEditorWindow(QMainWindow):
         self.update_status(session)
 
     def update_status(self, session: MacroEditorSession) -> None:
+        """手順数や診断件数をステータス表示に反映する。"""
         destination = str(session.save_file_path or session.macro_folder)
         self.path_label.setText(destination)
         self.setWindowTitle(
@@ -323,6 +330,7 @@ class MacroEditorWindow(QMainWindow):
         self.editor_actions["run"].setEnabled(session.validation_result.is_valid)
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        """未保存状態を確認し、許可された場合に閉じる。"""
         if self.confirm_close():
             event.accept()
         else:

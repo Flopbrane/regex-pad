@@ -1,3 +1,5 @@
+"""正規表現の説明と作例を表示する画面を提供する。"""
+
 from __future__ import annotations
 
 import json
@@ -42,6 +44,7 @@ COLUMNS = ("section", "topic", "search", "replacement", "input", "match", "resul
 
 
 class RegexHelpDialog(QDialog):
+    """正規表現の構文と作例を表示する画面。"""
     pattern_insert_requested = Signal(str)
 
     def __init__(
@@ -50,6 +53,7 @@ class RegexHelpDialog(QDialog):
         translator: Translator,
         parent: QWidget | None = None,
     ) -> None:
+        """使用言語とヘルプの表示部品を初期化する。"""
         super().__init__(parent)
         self.translator = translator
         self.resize(1100, 620)
@@ -100,17 +104,20 @@ class RegexHelpDialog(QDialog):
         self.apply_language()
 
     def apply_language(self) -> None:
+        """言語を切り替え、説明と見出しを更新する。"""
         self.setWindowTitle(self.translator.text("regex_help.title"))
         self.language_label.setText(self.translator.text("regex_help.language"))
         self.insert_button.setText(self.translator.text("regex_help.insert"))
         self._set_headers()
 
     def _set_headers(self) -> None:
+        """説明表の列見出しを設定する。"""
         language = self.language_combo_box.currentText()
         self.table.setHorizontalHeaderLabels(HEADERS.get(language, HEADERS["EN_Ver."]))
         self.instructions_label.setText(NOTES.get(language, NOTES["EN_Ver."]))
 
     def _load_current_language(self) -> None:
+        """現在の言語の正規表現ヘルプを読み込む。"""
         self._set_headers()
         load_file_path = self.regex_help_paths[self.language_combo_box.currentText()]
         load_data = json.loads(load_file_path.read_text(encoding="utf-8"))
@@ -126,11 +133,13 @@ class RegexHelpDialog(QDialog):
         self.table.resizeRowsToContents()
 
     def _emit_selected_pattern(self) -> None:
+        """現在の行にある挿入用パターンを通知する。"""
         selected_items = self.table.selectedItems()
         if selected_items:
             self._emit_item_pattern(selected_items[0])
 
     def _emit_item_pattern(self, item: QTableWidgetItem) -> None:
+        """指定行のパターンの挿入を通知する。"""
         pattern_item = self.table.item(item.row(), SEARCH_COLUMN)
         if pattern_item is not None:
             self.pattern_insert_requested.emit(pattern_item.text())

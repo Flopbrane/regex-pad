@@ -10,6 +10,7 @@ class MacroEditorInputError(ValueError):
     """エディターの値で、特定のフィールドにマッピングできるもの。"""
 
     def __init__(self, step_index: int, field_name: str, message: str) -> None:
+        """入力エラーの診断キーと関連情報を保持する。"""
         super().__init__(message)
         self.step_index = step_index
         self.field_name = field_name

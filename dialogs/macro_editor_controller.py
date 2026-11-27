@@ -1,4 +1,4 @@
-"""Coordinate macro editing, validation and safe file operations."""
+"""マクロの編集、検証、安全なファイル操作を調整する。"""
 
 from copy import deepcopy
 from pathlib import Path
@@ -26,9 +26,11 @@ from macro.validation_types import (
 
 
 class MacroEditorController(QObject):
+    """マクロ画面と定義、履歴、ファイル操作をつなぐ。"""
     execution_requested = Signal(object)
 
     def __init__(self, window: MacroEditorWindow, logger: AppLogger) -> None:
+        """マクロ定義のセッションとウインドウの操作を初期化する。"""
         super().__init__(window)
         self.window = window
         self.logger = logger
@@ -64,9 +66,11 @@ class MacroEditorController(QObject):
         self._render_document()
 
     def _text(self, name: str, **values: object) -> str:
+        """翻訳キーに対応する表示文字列を返す。"""
         return self.window.translator.text("macro.editor." + name, **values)
 
     def _render_document(self, selected: int = 0) -> None:
+        """現在の定義を入力欄と手順一覧に表示する。"""
         self._loading = True
         document = self.session.document
         self.window.macro_name.setText(document.macro_name)
@@ -80,6 +84,7 @@ class MacroEditorController(QObject):
         self._loading = False
 
     def _selection_changed(self, *_args: object) -> None:
+        """手順の選択変更をフォームに反映する。"""
         self.history.break_merge()
         index = self.window.selected_step()
         valid = 0 <= index < len(self.session.document.steps)
@@ -90,6 +95,7 @@ class MacroEditorController(QObject):
             self.window.step_editor.set_step(self.session.document.steps[index])
 
     def _metadata_changed(self, *_args: object) -> None:
+        """名前や説明の変更を定義に反映する。"""
         if self._loading:
             return
         before = deepcopy(self.session.document)
@@ -105,6 +111,7 @@ class MacroEditorController(QObject):
         self._modified()
 
     def _step_changed(self, step: MacroEditorStepData) -> None:
+        """現在の手順の編集を定義へ反映する。"""
         index = self.window.selected_step()
         if index >= 0 and not self._loading:
             before = deepcopy(self.session.document)
@@ -127,15 +134,18 @@ class MacroEditorController(QObject):
     def _restore_history(
         self, document: MacroEditorDocumentData, selected: int
     ) -> None:
+        """履歴から指定された定義と手順選択を復元する。"""
         self.session.document = document
         self.session.modified = document != self._saved_document
         self._render_document(selected)
 
     def _update_dirty(self, *_args: object) -> None:
+        """保存時点との差を未保存表示に反映する。"""
         self.session.modified = self.session.document != self._saved_document
         self.window.update_status(self.session)
 
     def _reset_history(self) -> None:
+        """現在の定義を基準に履歴を初期化する。"""
         self._saved_document = deepcopy(self.session.document)
         self.history.break_merge()
         self.undo_stack.clear()
@@ -143,6 +153,7 @@ class MacroEditorController(QObject):
         self.session.modified = False
 
     def _modified(self) -> None:
+        """定義の変更を履歴、表示、検証状態に反映する。"""
         self.session.modified = self.session.document != self._saved_document
         self.window.render_tree(self.session, self.window.selected_step())
         # Disable saving until the current input has passed validation.
@@ -152,6 +163,7 @@ class MacroEditorController(QObject):
         self.validate()
 
     def validate(self) -> MacroJsonData | None:
+        """定義を検証し、診断と操作の状態を更新する。"""
         try:
             prepared = self._manager().prepare_macro(
                 MacroEditorBridge.to_json_model(self.session.document)
@@ -196,6 +208,7 @@ class MacroEditorController(QObject):
         return model
 
     def focus_diagnostic(self, index: int, field_name: str) -> None:
+        """診断に対応する手順と入力欄へ移動する。"""
         if index < 0:
             widget = {
                 "macro_name": self.window.macro_name,
@@ -214,6 +227,7 @@ class MacroEditorController(QObject):
             self.window.step_editor.focus_field(field_name)
 
     def add_step(self) -> None:
+        """マクロの手順を追加する。"""
         before = deepcopy(self.session.document)
         selected = self.window.selected_step()
         steps = self.session.document.steps
@@ -225,7 +239,7 @@ class MacroEditorController(QObject):
         self._structural_change(before, selected, position)
 
     def append_captured_step(self, step: MacroEditorStepData) -> None:
-        """Add captured Find/Replace conditions to the open preset definition."""
+        """検索・置換画面から取り込んだ条件を、開いているプリセットの手順に追加する。"""
         before = deepcopy(self.session.document)
         selected = self.window.selected_step()
         steps = self.session.document.steps
@@ -249,6 +263,7 @@ class MacroEditorController(QObject):
         self._structural_change(before, selected, position)
 
     def duplicate_step(self, index: int) -> None:
+        """選択した手順を複製する。"""
         steps = self.session.document.steps
         if not 0 <= index < len(steps):
             return
@@ -262,6 +277,7 @@ class MacroEditorController(QObject):
         self._structural_change(before, selected, index + 1)
 
     def delete_step(self, index: int) -> None:
+        """選択した手順を削除する。"""
         steps = self.session.document.steps
         if not 0 <= index < len(steps):
             return
@@ -282,9 +298,11 @@ class MacroEditorController(QObject):
         self._structural_change(before, selected, min(index, len(steps) - 1))
 
     def move_step(self, index: int, offset: int) -> None:
+        """選択した手順を一覧内で移動する。"""
         self.reorder_step(index, index + offset)
 
     def reorder_step(self, index: int, destination: int) -> None:
+        """ドラッグ先の位置に手順を並べ替える。"""
         steps = self.session.document.steps
         if (
             0 <= index < len(steps)
@@ -299,11 +317,13 @@ class MacroEditorController(QObject):
     def _structural_change(
         self, before: MacroEditorDocumentData, before_selection: int, selected: int
     ) -> None:
+        """手順構成の変更を履歴に記録し、一覧を更新する。"""
         self.history.record(before, self.session.document, before_selection, selected)
         self.session.modified = self.session.document != self._saved_document
         self._render_document(selected)
 
     def confirm_discard(self) -> bool:
+        """未保存変更の保存、破棄、キャンセルを確認する。"""
         if not self.session.modified:
             return True
         answer = QMessageBox.warning(
@@ -320,6 +340,7 @@ class MacroEditorController(QObject):
         return answer == QMessageBox.StandardButton.Discard
 
     def _confirm_close(self) -> bool:
+        """画面を閉じる前に未保存の内容を確認する。"""
         if not self.confirm_discard():
             return False
         if self.session.modified:
@@ -331,13 +352,14 @@ class MacroEditorController(QObject):
         return True
 
     def new_document(self) -> None:
+        """新規のマクロ定義を開始する。"""
         if self.confirm_discard():
             self.start_document(MacroEditorDocumentData())
 
     def start_document(
         self, document: MacroEditorDocumentData, *, needs_save: bool = False
     ) -> None:
-        """Start an unsaved definition without writing a JSON file yet."""
+        """JSONにはまだ書き込まず、未保存の定義を開く。"""
         self.session = MacroEditorSession(
             document=deepcopy(document), macro_folder=self.session.macro_folder
         )
@@ -348,6 +370,7 @@ class MacroEditorController(QObject):
         self._render_document()
 
     def open_document(self, load_file_path: Path | None = None) -> bool:
+        """ファイルからマクロ定義を開く。"""
         if not self.confirm_discard():
             return False
         if load_file_path is None:
@@ -379,6 +402,7 @@ class MacroEditorController(QObject):
     def save(
         self, save_file_path: Path | None = None, *, save_as: bool = False
     ) -> bool:
+        """マクロ定義を検証してJSONに保存する。"""
         model = self.validate()
         if model is None or not self.session.validation_result.is_valid:
             QMessageBox.warning(
@@ -420,6 +444,7 @@ class MacroEditorController(QObject):
         return True
 
     def choose_folder(self) -> None:
+        """プリセットの保存先フォルダーを選ぶ。"""
         name = QFileDialog.getExistingDirectory(
             self.window, self._text("folder"), str(self.session.macro_folder)
         )
@@ -428,14 +453,17 @@ class MacroEditorController(QObject):
             self.window.update_status(self.session)
 
     def _manager(self) -> MacroManager:
+        """現在の保存先を使うマネージャーを作る。"""
         return MacroManager(self.session.macro_folder)
 
     def preview_execution(self) -> None:
+        """編集中の定義の実行プレビューを開く。"""
         model = self.validate()
         if model is not None and self.session.validation_result.is_valid:
             self.execution_requested.emit(model)
 
     def preview(self) -> None:
+        """編集中の定義をJSONとして確認する画面を開く。"""
         import json
 
         from PySide6.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout
@@ -457,6 +485,7 @@ class MacroEditorController(QObject):
         dialog.deleteLater()
 
     def _io_error(self, error: Exception) -> None:
+        """マクロの読み書きエラーを表示する。"""
         self.logger.exception(
             error, "Macro editor file operation failed", action="macro_editor_io"
         )

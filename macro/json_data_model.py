@@ -89,6 +89,7 @@ class MacroJsonStepData:
         replacement_input_text: str | None = None,
         operation: str = "search_replace",
     ) -> None:
+        """JSONのマクロ手順を構成する各値を初期化する。"""
         self.step_name = step_name
         self.enabled = enabled
         self.regular_expression = regular_expression
@@ -107,11 +108,12 @@ class MacroJsonStepData:
 
     @property
     def operation(self) -> str:
-        """Return the operation selected for this step."""
+        """この手順に設定された操作を返す。"""
         return self._operation
 
     @operation.setter
     def operation(self, value: str) -> None:
+        """この手順で使用する操作の種類を設定する。"""
         self._operation = _string_value("operation", value)
 
     @property
@@ -132,6 +134,7 @@ class MacroJsonStepData:
 
     @case_sensitive.setter
     def case_sensitive(self, value: bool) -> None:
+        """大文字と小文字を区別する条件を設定する。"""
         self._case_sensitive = _boolean_value("case_sensitive", value)
 
     @property
@@ -141,6 +144,7 @@ class MacroJsonStepData:
 
     @whole_word.setter
     def whole_word(self, value: bool) -> None:
+        """単語単位で検索する条件を設定する。"""
         self._whole_word = _boolean_value("whole_word", value)
 
     @property
@@ -150,6 +154,7 @@ class MacroJsonStepData:
 
     @selected_only.setter
     def selected_only(self, value: bool) -> None:
+        """選択範囲だけを検索する条件を設定する。"""
         self._selected_only = _boolean_value("selected_only", value)
 
     @property
@@ -159,6 +164,7 @@ class MacroJsonStepData:
 
     @visible_only.setter
     def visible_only(self, value: bool) -> None:
+        """表示範囲だけを検索する条件を設定する。"""
         self._visible_only = _boolean_value("visible_only", value)
 
     @property
@@ -169,6 +175,7 @@ class MacroJsonStepData:
 
     @step_name.setter
     def step_name(self, value: str) -> None:
+        """手順の表示名を設定する。"""
         self._step_name = _string_value("step_name", value)
 
     @property
@@ -178,6 +185,7 @@ class MacroJsonStepData:
 
     @enabled.setter
     def enabled(self, value: bool) -> None:
+        """この手順を実行対象に含めるか設定する。"""
         self._enabled = _boolean_value("enabled", value)
 
     @property
@@ -187,6 +195,7 @@ class MacroJsonStepData:
 
     @regular_expression.setter
     def regular_expression(self, value: bool) -> None:
+        """正規表現を使うか設定する。"""
         self._regular_expression = _boolean_value("regular_expression", value)
 
     @property
@@ -196,6 +205,7 @@ class MacroJsonStepData:
 
     @unicode_normalize.setter
     def unicode_normalize(self, value: bool) -> None:
+        """Unicode正規化を使うか設定する。"""
         self._unicode_normalize = _boolean_value("unicode_normalize", value)
 
     @property
@@ -205,6 +215,7 @@ class MacroJsonStepData:
 
     @unicode_normalize_form.setter
     def unicode_normalize_form(self, value: NormalizationForm | None) -> None:
+        """Unicode正規化の形式を設定する。"""
         self._unicode_normalize_form = _optional_normalization_form_value(value)
 
     @property
@@ -214,6 +225,7 @@ class MacroJsonStepData:
 
     @append_dot_to_circled_number.setter
     def append_dot_to_circled_number(self, value: bool) -> None:
+        """丸数字の正規化後にピリオドを付けるか設定する。"""
         self._append_dot_to_circled_number = _boolean_value(
             "append_dot_to_circled_number",
             value,
@@ -226,6 +238,7 @@ class MacroJsonStepData:
 
     @search_text.setter
     def search_text(self, value: str) -> None:
+        """検索する文字列を設定する。"""
         self._search_text = _string_value("search_text", value)
 
     @property
@@ -235,6 +248,7 @@ class MacroJsonStepData:
 
     @exclusion_text.setter
     def exclusion_text(self, value: str | None) -> None:
+        """検索結果から除外する文字列を設定する。"""
         self._exclusion_text = _optional_string_value("exclusion_text", value)
 
     @property
@@ -244,6 +258,7 @@ class MacroJsonStepData:
 
     @replacement_text.setter
     def replacement_text(self, value: str | None) -> None:
+        """置換に使う文字列を設定する。"""
         self._replacement_text = _optional_string_value("replacement_text", value)
 
 
@@ -263,6 +278,7 @@ class MacroJsonData:
         description: str,
         steps: Sequence[MacroJsonStepData],
     ) -> None:
+        """マクロ定義の形式、名前、説明、手順を初期化する。"""
         self.format_version = format_version
         self.macro_name = macro_name
         self.description = description
@@ -275,6 +291,7 @@ class MacroJsonData:
 
     @format_version.setter
     def format_version(self, value: int) -> None:
+        """マクロJSONの形式バージョンを設定する。"""
         self._format_version = _integer_value("format_version", value)
 
     @property
@@ -284,6 +301,7 @@ class MacroJsonData:
 
     @macro_name.setter
     def macro_name(self, value: str) -> None:
+        """マクロ定義の名前を設定する。"""
         self._macro_name = _string_value("macro_name", value)
 
     @property
@@ -293,6 +311,7 @@ class MacroJsonData:
 
     @description.setter
     def description(self, value: str) -> None:
+        """マクロ定義の説明を設定する。"""
         self._description = _string_value("description", value)
 
     @property
@@ -302,6 +321,7 @@ class MacroJsonData:
 
     @steps.setter
     def steps(self, value: tuple[MacroJsonStepData, ...]) -> None:
+        """マクロ定義の手順一覧を設定する。"""
         if not isinstance(value, tuple):
             raise TypeError("steps must be tuple[MacroJsonStepData, ...]")
         if not all(isinstance(step, MacroJsonStepData) for step in value):

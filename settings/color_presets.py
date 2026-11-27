@@ -1,4 +1,4 @@
-"""Load editable text and background color presets for the portable app."""
+"""ポータブルアプリの編集可能な文字色と背景色の候補を読み込む。"""
 
 from __future__ import annotations
 
@@ -16,12 +16,12 @@ COLOR_PRESETS_FILE_NAME = "color_presets.json"
 
 
 class ColorPresetConfigError(ValueError):
-    """Raised when no valid color preset configuration can be loaded."""
+    """有効な色の候補設定を読み込めない場合に発生する。"""
 
 
 @dataclass(frozen=True)
 class ColorPreset:
-    """One localized CSS color preset."""
+    """日英の表示名を持つCSS色の候補1件を表す。"""
 
     identifier: str
     name_ja: str
@@ -30,12 +30,13 @@ class ColorPreset:
     shortcuts: tuple[str, ...] = ()
 
     def display_name(self, language_code: str) -> str:
+        """指定言語で色候補の表示名を返す。"""
         return self.name_en if language_code == "en" else self.name_ja
 
 
 @dataclass(frozen=True)
 class ColorPresetCatalog:
-    """Text and background color presets loaded from JSON."""
+    """JSONから読み込んだ文字色と背景色の候補をまとめる。"""
 
     text_colors: tuple[ColorPreset, ...]
     background_colors: tuple[ColorPreset, ...]
@@ -46,7 +47,7 @@ def load_color_preset_catalog(
     editable_path: Path | None = None,
     bundled_default_path: Path | None = None,
 ) -> ColorPresetCatalog:
-    """Load the editable catalog, falling back to the bundled default JSON."""
+    """編集可能な色の候補一覧を読み込み、必要なら同梱の既定JSONを使う。"""
     editable_path = editable_path or app_base_dir() / COLOR_PRESETS_FILE_NAME
     bundled_default_path = bundled_default_path or (
         bundled_base_dir() / "resources" / COLOR_PRESETS_FILE_NAME
@@ -71,7 +72,7 @@ def load_color_preset_catalog(
 
 
 def _copy_default_safely(source_path: Path, save_file_path: Path) -> None:
-    """Copy the bundled default without exposing a partially written JSON file."""
+    """書き込み途中のJSONが公開されないように、同梱の既定値をコピーする。"""
     try:
         save_file_path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary_name = tempfile.mkstemp(
@@ -91,6 +92,7 @@ def _copy_default_safely(source_path: Path, save_file_path: Path) -> None:
 
 
 def _load_catalog(load_file_path: Path) -> ColorPresetCatalog:
+    """JSONファイルから色候補一覧を読み込んで検証する。"""
     load_data: Any = json.loads(load_file_path.read_text(encoding="utf-8"))
     if not isinstance(load_data, dict):
         raise ColorPresetConfigError("The color preset root must be an object.")
@@ -105,6 +107,7 @@ def _load_catalog(load_file_path: Path) -> ColorPresetCatalog:
 
 
 def _parse_preset_list(load_data: object, field_name: str) -> tuple[ColorPreset, ...]:
+    """JSON内の色候補の一覧を検証してモデルに変換する。"""
     if not isinstance(load_data, list):
         raise ColorPresetConfigError(f"{field_name} must be an array.")
     presets: list[ColorPreset] = []
@@ -138,6 +141,7 @@ def _parse_preset_list(load_data: object, field_name: str) -> tuple[ColorPreset,
 
 
 def _required_string(load_data: dict[str, object], field_name: str) -> str:
+    """必須項目を空でない文字列として読み取る。"""
     value = load_data.get(field_name)
     if not isinstance(value, str) or not value.strip():
         raise ColorPresetConfigError(f"{field_name} must be a non-empty string.")

@@ -1,4 +1,4 @@
-"""Unicode normalization utilities for matched text."""
+"""検索で一致した文字列にUnicode正規化を適用する機能を提供する。"""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def normalize_matched_text(
     form: NormalizationForm = "NFKC",
     append_dot_to_circled_number: bool = False,
 ) -> str:
-    """Normalize one search match without changing text outside that match."""
+    """一致範囲の外を変更せずに、検索で一致した1箇所を正規化する。"""
     normalized_text: str = unicodedata.normalize(form, matched_text)
     if (
         append_dot_to_circled_number

@@ -1,4 +1,4 @@
-"""Search/Replace preset capture, routing, and scoped execution."""
+"""検索・置換プリセットの取り込み、操作先、対象範囲を検証する。"""
 
 from pathlib import Path
 
@@ -15,6 +15,7 @@ from main import MainWindow
 
 @pytest.fixture
 def window(tmp_path: Path):
+    """テスト用の設定パスを持つメインウインドウを用意する。"""
     app = QApplication.instance() or QApplication([])
     main = MainWindow(
         settings_path=tmp_path / "settings.json", restore_unsaved_backup=False
@@ -30,6 +31,7 @@ def window(tmp_path: Path):
 
 
 def _preset(*steps: MacroJsonStepData) -> MacroJsonData:
+    """保存と呼び出しを確認するためのプリセットを作る。"""
     return MacroJsonData(2, "sample", "", steps)
 
 
@@ -38,6 +40,7 @@ def _step(
     case_sensitive: bool = False, whole_word: bool = False,
     selected_only: bool = False, visible_only: bool = False,
 ) -> MacroJsonStepData:
+    """マクロ手順のテスト用データを組み立てる。"""
     return MacroJsonStepData(
         name, True, False, False, None, False, search, None, replacement,
         case_sensitive=case_sensitive,
@@ -48,6 +51,7 @@ def _step(
 
 
 def test_search_menu_has_four_preset_actions_and_no_macro_menu(window):
+    """検索のメニューが4つのプリセットの操作となしのマクロのメニューを持つことを確認する。"""
     assert [action.text() for action in window.preset_menu.actions()] == [
         "新規プリセット作成",
         "プリセットの呼び出し・実行",
@@ -63,6 +67,7 @@ def test_search_menu_has_four_preset_actions_and_no_macro_menu(window):
 def test_find_dialog_captures_all_active_conditions_into_new_json(
     window, tmp_path: Path
 ):
+    """検索のダイアログがすべての有効な条件への新規のJSONを取り込むことを確認する。"""
     window.show_find_replace_dialog()
     dialog = window.find_replace_dialog
     assert dialog is not None
@@ -111,6 +116,7 @@ def test_find_dialog_captures_all_active_conditions_into_new_json(
 
 
 def test_repeated_capture_appends_to_open_saved_preset(window, tmp_path: Path):
+    """繰り返されるの取り込みのを追記するのへの開く操作の保存済みのプリセットを確認する。"""
     save_file_path = MacroJsonSaver(tmp_path).save(
         _preset(_step("first", "a", "b")), tmp_path / "saved.json"
     )
@@ -144,6 +150,7 @@ def test_repeated_capture_appends_to_open_saved_preset(window, tmp_path: Path):
 
 
 def test_capture_fills_pristine_new_editor_then_appends(window):
+    """取り込みのに値を入れるの未編集の新規のエディターの続いてのを追記することを確認する。"""
     window.new_search_preset()
     window.show_find_replace_dialog()
     dialog = window.find_replace_dialog
@@ -166,6 +173,7 @@ def test_capture_fills_pristine_new_editor_then_appends(window):
 def test_open_and_run_menu_loads_editor_before_execution(
     window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """実行前、開く操作と実行のメニューがエディターを読み込むことを確認する。"""
     save_file_path = MacroJsonSaver(tmp_path).save(
         _preset(_step("first", "a", "b")), tmp_path / "saved.json"
     )
@@ -184,6 +192,7 @@ def test_open_and_run_menu_loads_editor_before_execution(
 def test_delete_moves_a_valid_preset_to_recoverable_folder(
     window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """削除が正しいのプリセットのへの復旧可能なフォルダーを移動することを確認する。"""
     save_file_path = MacroJsonSaver(tmp_path).save(
         _preset(_step("first", "a", "b")), tmp_path / "saved.json"
     )
@@ -201,6 +210,7 @@ def test_delete_moves_a_valid_preset_to_recoverable_folder(
 
 
 def test_multistep_execution_uses_selected_visible_intersection_and_case_rules():
+    """複数手順の実行が選択中の表示中の共通部分と場合の規則を使うことを確認する。"""
     scoped = _preset(
         _step("first", "a", "b", selected_only=True, visible_only=True),
         _step("second", "b", "c", selected_only=True),
@@ -222,6 +232,7 @@ def test_multistep_execution_uses_selected_visible_intersection_and_case_rules()
 
 
 def test_scope_follows_an_earlier_unscoped_replacement():
+    """対象範囲が先行するの範囲指定のない置換に従うことを確認する。"""
     definition = _preset(
         _step("expand", "a", "zz"),
         _step("selected", "foo", "bar", selected_only=True),
@@ -236,6 +247,7 @@ def test_scope_follows_an_earlier_unscoped_replacement():
 def test_loaded_preset_executes_only_after_editor_preview_approval(
     window, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
+    """エディターのプレビューの承認後、読み込み済みのプリセットがだけを実行することを確認する。"""
     save_file_path = MacroJsonSaver(tmp_path).save(
         _preset(_step("selected", "a", "b", selected_only=True)),
         tmp_path / "selected.json",
@@ -252,6 +264,7 @@ def test_loaded_preset_executes_only_after_editor_preview_approval(
     assert window.editor.toPlainText() == "a a"
 
     def approve(dialog: MacroRunPreviewDialog):
+        """プレビュー画面で適用の承認を再現する。"""
         assert dialog.after.toPlainText() == "a b"
         return dialog.DialogCode.Accepted
 

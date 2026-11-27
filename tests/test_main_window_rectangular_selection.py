@@ -1,3 +1,5 @@
+"""メインウインドウの矩形選択を検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -15,6 +17,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -26,6 +29,7 @@ def test_main_window_copies_selected_text_as_rectangle(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウから選択範囲を矩形としてコピーできることを確認する。"""
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
         unsaved_backup_path=tmp_path / "autosave" / "unsaved_backup.json",

@@ -1,5 +1,5 @@
 # pylint: disable=C0301,no-name-in-module
-"""Find and Replace Dialog"""
+"""検索・置換ダイアログを提供する。"""
 from __future__ import annotations
 
 from typing import cast
@@ -31,7 +31,7 @@ from unicode_normalize import NORMALIZATION_FORMS, NormalizationForm
 
 
 class FindReplaceDialog(QDialog):
-    """Dialog for finding and replacing text with regex support."""
+    """テキスト検索と置換を行い、正規表現にも対応するダイアログ。"""
     find_requested = Signal(str, SearchOptions)
     find_previous_requested = Signal(str, SearchOptions)
     replace_requested = Signal(str, str, SearchOptions)
@@ -48,6 +48,7 @@ class FindReplaceDialog(QDialog):
     REGEX_INPUT_TEXT_COLOR: QColor = REGEX_TOKEN_COLOR
 
     def __init__(self, translator: Translator, parent: QWidget | None = None) -> None:
+        """検索・置換の入力欄、検索条件、操作ボタンを初期化する。"""
         super().__init__(parent)
         self.translator: Translator = translator
         self.setModal(False)
@@ -132,12 +133,12 @@ class FindReplaceDialog(QDialog):
         self._update_unicode_normalize_controls()
 
     def set_find_text(self, text: str) -> None:
-        """Set the text in the find input field and select all of it."""
+        """検索欄に文字列を設定し、その全文を選択する。"""
         self.find_text_edit.setText(text)
         self.find_text_edit.selectAll()
 
     def set_target_file_name(self, name: str) -> None:
-        """Show the file captured when this dialog was opened."""
+        """ダイアログを開いた時点の対象ファイルを表示する。"""
         self.target_file_name = name
         title = self.translator.text("find.title")
         self.setWindowTitle(f"{title} — {name}" if name else title)
@@ -147,15 +148,15 @@ class FindReplaceDialog(QDialog):
         self.target_file_label.setVisible(bool(name))
 
     def set_error(self, message: str) -> None:
-        """Set the error message in the error label."""
+        """エラー欄に指定のメッセージを表示する。"""
         self.error_label.setText(message)
 
     def clear_error(self) -> None:
-        """Clear the error message in the error label."""
+        """エラー欄のメッセージを消す。"""
         self.error_label.clear()
 
     def insert_find_text(self, text: str, cursor_offset: int | None = None) -> None:
-        """Insert text into the find input field at the current cursor position or selection."""
+        """検索欄のカーソル位置に挿入し、選択中なら選択文字列を置き換える。"""
         insert_position: int = (
             self.find_text_edit.selectionStart()
             if self.find_text_edit.hasSelectedText()
@@ -168,21 +169,21 @@ class FindReplaceDialog(QDialog):
         self.find_text_edit.setFocus()
 
     def current_search_options(self) -> SearchOptions:
-        """Get the current search options based on the state of the checkboxes."""
+        """チェックボックスの状態から現在の検索条件を取得する。"""
         return self._search_options()
 
     def set_regex_lint_enabled(self, enabled: bool) -> None:
-        """Enable or disable regex linting and update the linting state."""
+        """正規表現の検査を切り替え、診断表示を更新する。"""
         self.regex_lint_enabled: bool = enabled
         self._update_regex_lint()
 
     def set_reduced_error_check_enabled(self, enabled: bool) -> None:
-        """Enable or disable reduced error checking and update the linting state."""
+        """低負荷モードを切り替え、検査の状態を更新する。"""
         self.reduced_error_check_enabled: bool = enabled
         self._update_regex_lint()
 
     def set_search_recipe(self, search_text: str, replace_text: str) -> None:
-        """Set the find and replace text fields to the specified recipe values."""
+        """指定されたレシピの検索文字列と置換文字列を入力欄に設定する。"""
         self.unicode_normalize_check_box.setChecked(False)
         self.find_text_edit.setText(search_text)
         self.replace_text_edit.setText(replace_text)
@@ -195,7 +196,7 @@ class FindReplaceDialog(QDialog):
         rows: list[tuple[int, str, str]],
         summary: str,
     ) -> None:
-        """Set the preview table rows and summary label with the provided data."""
+        """受け取ったデータをプレビューの行と要約欄に表示する。"""
         self.preview_summary_label.setText(summary)
         self.preview_table.setRowCount(len(rows))
         for row_index, (line_number, before_text, after_text) in enumerate(rows):
@@ -209,13 +210,13 @@ class FindReplaceDialog(QDialog):
         self.preview_table.resizeColumnsToContents()
 
     def clear_preview_rows(self) -> None:
-        """Clear the preview table rows and summary label."""
+        """プレビューの行と要約欄を消す。"""
         self.preview_summary_label.clear()
         self.preview_table.setRowCount(0)
         self.preview_cleared.emit()
 
     def clear_text_fields(self) -> None:
-        """Clear the find, exclusion and replacement text fields."""
+        """検索、除外、置換の入力欄を空にする。"""
         self.find_text_edit.clear()
         self.exclusion_text_edit.clear()
         self.replace_text_edit.clear()
@@ -224,7 +225,7 @@ class FindReplaceDialog(QDialog):
         self.find_text_edit.setFocus()
 
     def apply_language(self) -> None:
-        """Apply the current language translations to all UI elements."""
+        """現在の言語の翻訳を画面全体に適用する。"""
         self.set_target_file_name(self.target_file_name)
         self.find_text_label.setText(self.translator.text("find.find_text"))
         self.replace_text_label.setText(self.translator.text("find.replace_text"))
@@ -282,7 +283,7 @@ class FindReplaceDialog(QDialog):
         self._update_regex_lint()
 
     def _create_layout(self) -> None:
-        """Create the layout for the dialog, arranging all widgets in a grid and vertical layout."""
+        """グリッドと縦方向のレイアウトを使い、ダイアログの部品を配置する。"""
         form_layout = QGridLayout()
         find_input_layout = QGridLayout()
         find_input_layout.setContentsMargins(0, 0, 0, 0)
@@ -343,7 +344,7 @@ class FindReplaceDialog(QDialog):
         self.setLayout(root_layout)
 
     def _create_regex_insert_menu(self) -> None:
-        """Create the regex insert menu with categorized regex snippets."""
+        """正規表現の定型パターンを分類した挿入メニューを作る。"""
         regex_menu = QMenu(self)
         snippet_groups = [
             (
@@ -403,7 +404,7 @@ class FindReplaceDialog(QDialog):
         pattern: str,
         cursor_offset: int | None,
     ) -> None:
-        """Add an action to the regex snippet menu that inserts a regex pattern into the find input field."""
+        """検索欄へ正規表現パターンを挿入する項目をメニューに追加する。"""
         label = self.translator.text(label_key)
         action = QAction(f"{label}    {pattern}", self)
         action.triggered.connect(
@@ -414,7 +415,7 @@ class FindReplaceDialog(QDialog):
         menu.addAction(action)
 
     def _create_recipe_menu(self) -> None:
-        """Create the recipe menu with predefined regex find and replace patterns."""
+        """定義済みの正規表現検索・置換パターンのメニューを作る。"""
         recipe_menu = QMenu(self)
         recipes: list[tuple[str, str, str]] = [
             ("regex.recipe.collapse_blank_lines", r"\n{3,}", "\n\n"),
@@ -445,7 +446,7 @@ class FindReplaceDialog(QDialog):
         self.recipe_button.setMenu(recipe_menu)
 
     def _create_shortcuts(self) -> None:
-        """Create keyboard shortcuts for inserting line breaks into the find or replace input fields."""
+        """検索欄や置換欄に改行を挿入するショートカットを作る。"""
         self.insert_br_action = QAction(self)
         self.insert_br_action.setShortcut("F8")
         self.insert_br_action.triggered.connect(
@@ -461,7 +462,7 @@ class FindReplaceDialog(QDialog):
         self.addAction(self.insert_br_br_action)
 
     def _insert_text_into_focused_input(self, text: str) -> None:
-        """Insert the specified text into the currently focused input field (find or replace)."""
+        """指定文字列をフォーカス中の検索欄または置換欄に挿入する。"""
         focused_widget = self.focusWidget()
         if focused_widget is self.replace_text_edit:
             self.replace_text_edit.insert(text)
@@ -475,7 +476,7 @@ class FindReplaceDialog(QDialog):
         self.find_text_edit.setFocus()
 
     def _connect_signals(self) -> None:
-        """Connect signals from buttons and input fields to their respective slots."""
+        """ボタンや入力欄のシグナルを対応する処理に接続する。"""
         self.find_button.clicked.connect(self._emit_find_requested)
         self.clear_text_button.clicked.connect(self.clear_text_fields)
         self.find_previous_button.clicked.connect(self._emit_find_previous_requested)
@@ -528,13 +529,13 @@ class FindReplaceDialog(QDialog):
         )
 
     def _emit_preview_line_requested(self, row: int, _column: int) -> None:
-        """Request navigation to the line shown in the clicked preview row."""
+        """クリックしたプレビュー行の元の行へ移動するよう通知する。"""
         line_item = self.preview_table.item(row, 0)
         if line_item is not None:
             self.preview_line_requested.emit(int(line_item.text()))
 
     def _search_options(self) -> SearchOptions:
-        """Get the current search options based on the state of the checkboxes."""
+        """チェックボックスの状態から検索条件を取得する。"""
         return SearchOptions(
             case_sensitive=self.case_sensitive_check_box.isChecked(),
             regular_expression=self.regular_expression_check_box.isChecked(),
@@ -553,7 +554,7 @@ class FindReplaceDialog(QDialog):
         )
 
     def _update_regex_lint(self) -> None:
-        """Update the regex linting state and display any errors or warnings."""
+        """正規表現の検査状態を更新し、エラーや警告を表示する。"""
         if (
             not self.regex_lint_enabled
             or self.reduced_error_check_enabled
@@ -591,29 +592,29 @@ class FindReplaceDialog(QDialog):
             self.warning_label.clear()
 
     def _update_regex_input_colors(self) -> None:
-        """Update the regex highlighting state of the find and replace input fields based on the regex checkbox."""
+        """正規表現の設定に応じて、検索欄と置換欄の色付けを更新する。"""
         regex_enabled = self.regular_expression_check_box.isChecked()
         self.find_text_edit.set_regex_highlighting_enabled(regex_enabled)
         self.replace_text_edit.set_regex_highlighting_enabled(regex_enabled)
         self.exclusion_text_edit.set_regex_highlighting_enabled(regex_enabled)
 
     def _lint_message_text(self, message: RegexLintMessage) -> str:
-        """Get the translated text for a regex lint message."""
+        """正規表現の診断メッセージを現在の言語で取得する。"""
         return self.translator.text(message.message_key, **(message.values or {}))
 
     def _emit_find_requested(self) -> None:
-        """Emit the find_requested signal with the current find text and search options."""
+        """現在の検索文字列と検索条件で次の一致を探すよう通知する。"""
         self.find_requested.emit(self.find_text_edit.text(), self._search_options())
 
     def _emit_find_previous_requested(self) -> None:
-        """Emit the find_previous_requested signal with the current find text and search options."""
+        """現在の検索文字列と検索条件で前の一致を探すよう通知する。"""
         self.find_previous_requested.emit(
             self.find_text_edit.text(),
             self._search_options(),
         )
 
     def _emit_replace_requested(self) -> None:
-        """Emit the replace_requested signal with the current find text, replace text, and search options."""
+        """現在の検索・置換文字列と検索条件で1件の置換を要求する。"""
         self.replace_requested.emit(
             self.find_text_edit.text(),
             self.replace_text_edit.text(),
@@ -621,7 +622,7 @@ class FindReplaceDialog(QDialog):
         )
 
     def _emit_replace_all_requested(self) -> None:
-        """Emit the replace_all_requested signal with the current find text, replace text, and search options."""
+        """現在の検索・置換文字列と検索条件で全件置換を要求する。"""
         self.replace_all_requested.emit(
             self.find_text_edit.text(),
             self.replace_text_edit.text(),
@@ -629,7 +630,7 @@ class FindReplaceDialog(QDialog):
         )
 
     def _emit_replace_marked_requested(self) -> None:
-        """Emit the replace_marked_requested signal with the current find text, replace text, and search options."""
+        """現在の検索・置換文字列と検索条件でマーカーのある箇所の置換を要求する。"""
         self.replace_marked_requested.emit(
             self.find_text_edit.text(),
             self.replace_text_edit.text(),
@@ -637,7 +638,7 @@ class FindReplaceDialog(QDialog):
         )
 
     def _emit_preview_requested(self) -> None:
-        """Emit the preview_requested signal with the current find text, replace text, and search options."""
+        """現在の検索・置換文字列と検索条件でプレビューを要求する。"""
         self.preview_requested.emit(
             self.find_text_edit.text(),
             self.replace_text_edit.text(),
@@ -645,7 +646,7 @@ class FindReplaceDialog(QDialog):
         )
 
     def _choose_normalise_operation(self) -> None:
-        """Show a dialog to choose a normalise operation and emit the normalise_requested signal."""
+        """正規化操作を選ぶ画面を表示し、選んだ操作を通知する。"""
         operations: tuple[NormaliseOperation, ...] = normalise_operations()
         labels = [self.translator.text(operation.label_key) for operation in operations]
         selected_label, accepted = QInputDialog.getItem(
@@ -665,19 +666,19 @@ class FindReplaceDialog(QDialog):
         self.normalise_requested.emit(operations[selected_index].operation_id)
 
     def _handle_search_option_changed(self, *_args: object) -> None:
-        """Handle changes to the search options, updating regex input colors and linting."""
+        """検索条件の変更に合わせて、入力欄の色付けと診断を更新する。"""
         self._update_regex_input_colors()
         self._update_regex_lint()
         self._emit_search_parameters_changed()
 
     def _handle_unicode_normalize_changed(self, *_args: object) -> None:
-        """Update controls when the dedicated Unicode replacement route changes."""
+        """Unicode正規化置換の切り替えに合わせて、各入力欄の状態を更新する。"""
         self._update_unicode_normalize_controls()
         self._update_regex_lint()
         self._emit_search_parameters_changed()
 
     def _update_unicode_normalize_controls(self) -> None:
-        """Enable only controls that participate in the active replacement route."""
+        """現在選ばれている置換方式で使う入力欄だけを有効にする。"""
         enabled = self.unicode_normalize_check_box.isChecked()
         self.unicode_normalize_form_label.setEnabled(enabled)
         self.unicode_normalize_form_combo_box.setEnabled(enabled)
@@ -694,7 +695,7 @@ class FindReplaceDialog(QDialog):
         )
 
     def _emit_search_parameters_changed(self, *_args: object) -> None:
-        """Emit the search_parameters_changed signal with the current find text and search options."""
+        """現在の検索文字列と検索条件が変わったことを通知する。"""
         self.clear_preview_rows()
         if self.reduced_error_check_enabled:
             return

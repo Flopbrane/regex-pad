@@ -213,6 +213,7 @@ def _lint_inline_style_with_reference(
     start_line_number: int,
     reference: dict[str, Any],
 ) -> list[CssLintIssue]:
+    """指定された参照辞書と照合し、インラインCSSの各宣言を検査する。"""
     messages: list[CssLintIssue] = _lint_full_width_symbols(style_text, start_line_number, reference)
     declarations, structure_messages = _split_declarations(style_text, start_line_number)
     messages.extend(structure_messages)

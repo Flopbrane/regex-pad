@@ -44,6 +44,7 @@ class MacroRunResult:
 class MacroRunner:
     """SearchEngineを使用して、切り離されたテキストスナップショット上で、不変のマクロステップを実行。"""
     def __init__(self, search_engine: SearchEngine | None = None) -> None:
+        """マクロの各手順で使う検索エンジンを設定する。"""
         self.search_engine: SearchEngine = search_engine or SearchEngine()
 
     def run(
@@ -183,6 +184,7 @@ class MacroRunner:
         opcodes = SequenceMatcher(None, before, after).get_opcodes()
 
         def map_offset(offset: int, *, end: bool) -> int:
+            """置換による長さの変化を反映し、範囲端点を新しい位置へ移す。"""
             for tag, old_start, old_end, new_start, new_end in opcodes:
                 if offset < old_start:
                     return new_start - (old_start - offset)

@@ -1,7 +1,6 @@
-"""Opt-in integration check: python -m preview.verify_wordpress_preview.
+"""`python -m preview.verify_wordpress_preview` で実行する任意の統合検証。
 
-Uses real WordPress/PHP.wasm and HTTP, without opening a browser or a public site.
-This is deliberately outside normal pytest: it may prepare/download the runtime.
+ブラウザーや公開サイトを開かず、実際のWordPress、PHP.wasm、HTTPを使う。実行環境の準備やダウンロードがあり得るため、通常のpytestからは切り離す。
 """
 from __future__ import annotations
 
@@ -25,15 +24,17 @@ from search.html_typo_lint import lint_html_typos
 
 
 class PreviewAssets(HTMLParser):
-    """Collect CSS served by the real WordPress front end."""
+    """実際のWordPressのフロントエンドから配信されたCSSを集める。"""
 
     def __init__(self) -> None:
+        """WordPressのHTMLからCSSを追跡する解析状態を初期化する。"""
         super().__init__()
         self.stylesheets: list[str] = []
         self.inline_styles: list[str] = []
         self.in_style = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """CSSに関連する開始タグを処理する。"""
         attributes = dict(attrs)
         if tag == "style":
             self.in_style = True
@@ -41,15 +42,18 @@ class PreviewAssets(HTMLParser):
             self.stylesheets.append(attributes.get("href") or "")
 
     def handle_endtag(self, tag: str) -> None:
+        """CSSに関連する終了タグを処理する。"""
         if tag == "style":
             self.in_style = False
 
     def handle_data(self, data: str) -> None:
+        """タグ内に埋め込まれたCSSを集める。"""
         if self.in_style:
             self.inline_styles.append(data)
 
 
 def verify(runtime_root: Path, theme: str = "regexpad-preview") -> dict[str, object]:
+    """実際のWordPressプレビューの起動、描画、停止を検証する。"""
     if theme not in {"regexpad-preview", "twentytwentyfive"}:
         raise ValueError(f"Unsupported preview theme: {theme}")
     runtime_root = runtime_root.resolve()
@@ -73,6 +77,7 @@ def verify(runtime_root: Path, theme: str = "regexpad-preview") -> dict[str, obj
         assert process.stdin is not None and process.stdout is not None
 
         def read_messages() -> None:
+            """ブリッジの出力メッセージを読み取る。"""
             assert process.stdout is not None
             for line in process.stdout:
                 if line.startswith("REGEXPAD_PREVIEW "):
@@ -83,6 +88,7 @@ def verify(runtime_root: Path, theme: str = "regexpad-preview") -> dict[str, obj
         reader.start()
 
         def wait_for(event: str) -> dict[str, object]:
+            """ブリッジから必要な通知を受け取るまで待つ。"""
             while True:
                 message = messages.get(timeout=90)
                 if message.get("event") in {"error", "stopped"}:
@@ -91,6 +97,7 @@ def verify(runtime_root: Path, theme: str = "regexpad-preview") -> dict[str, obj
                     return message
 
         def render(request_id: int, content: str) -> tuple[dict[str, object], str, str]:
+            """原稿をブリッジで描画して出力を検査する。"""
             assert process.stdin is not None
             process.stdin.write(json.dumps({
                 "command": "render", "id": request_id, "title": "RegexPad normal preview",

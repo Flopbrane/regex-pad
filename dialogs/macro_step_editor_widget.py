@@ -1,4 +1,4 @@
-"""Form for one macro step; no file I/O or validation side effects."""
+"""マクロの1手順を編集する入力欄を提供する。ファイル操作や検証は呼び出し側で行う。"""
 
 from dataclasses import replace
 from typing import cast
@@ -21,9 +21,11 @@ from unicode_normalize import NORMALIZATION_FORMS
 
 
 class MacroStepEditorWidget(QWidget):
+    """プリセット内の1手順を編集するフォーム。"""
     step_changed = Signal(object)
 
     def __init__(self, translator: Translator, parent: QWidget | None = None) -> None:
+        """手順名、検索・置換条件、チェック項目を作る。"""
         super().__init__(parent)
         self.translator = translator
         self._loading = False
@@ -78,6 +80,7 @@ class MacroStepEditorWidget(QWidget):
         self.set_step(self._step)
 
     def set_step(self, step: MacroEditorStepData) -> None:
+        """指定手順の値をフォームに表示する。"""
         self._loading = True
         self._step = replace(step)
         for name, widget in self.fields.items():
@@ -96,12 +99,15 @@ class MacroStepEditorWidget(QWidget):
         self._loading = False
 
     def _check(self, name: str) -> QCheckBox:
+        """項目用のチェックボックスを作る。"""
         return cast(QCheckBox, self.fields[name])
 
     def _normalization_form(self) -> QComboBox:
+        """入力欄からUnicode正規化方式を取得する。"""
         return cast(QComboBox, self.fields["unicode_normalize_form"])
 
     def retranslate_ui(self) -> None:
+        """現在の言語をラベルと選択肢に反映する。"""
         for name, widget in self.fields.items():
             label = self.form.labelForField(widget)
             if isinstance(label, QLabel):
@@ -112,6 +118,7 @@ class MacroStepEditorWidget(QWidget):
                 widget.setItemText(0, self.translator.text("macro.editor.unspecified"))
 
     def _sync_enabled(self) -> None:
+        """設定に応じて入力欄の有効状態を更新する。"""
         special = self._check("operation").isChecked()
         normalize = self._check("unicode_normalize").isChecked()
         self.fields["unicode_normalize_form"].setEnabled(normalize and not special)
@@ -129,6 +136,7 @@ class MacroStepEditorWidget(QWidget):
             cast(RegexInputEdit, self.fields[name]).highlighter.set_enabled(regex)
 
     def step_data(self) -> MacroEditorStepData:
+        """フォームの値から手順データを作る。"""
         values = {}
         for name, widget in self.fields.items():
             if isinstance(widget, QCheckBox):
@@ -144,6 +152,7 @@ class MacroStepEditorWidget(QWidget):
         return MacroEditorStepData(**values)
 
     def _changed(self, *_args: object) -> None:
+        """手順の値が変わったことを通知する。"""
         if self._loading:
             return
         # Keep dormant text in widgets, but explicitly select the valid route.
@@ -163,6 +172,7 @@ class MacroStepEditorWidget(QWidget):
         self.step_changed.emit(self._step)
 
     def focus_field(self, name: str, message: str = "") -> None:
+        """診断に対応する入力欄へフォーカスを移す。"""
         widget = self.fields.get(name)
         if widget is None:
             return

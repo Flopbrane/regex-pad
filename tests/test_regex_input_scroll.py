@@ -1,4 +1,4 @@
-"""Regression checks for dragging a compact input beyond its viewport."""
+"""表示領域外までドラッグしたときのコンパクトな入力欄の挙動を検証する。"""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from dialogs.regex_input_edit import RegexInputEdit
 
 @pytest.fixture(scope="module")
 def app() -> QtWidgets.QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QtWidgets.QApplication.instance()
     if application is None:
         application = QtWidgets.QApplication([])
@@ -22,13 +23,14 @@ def app() -> QtWidgets.QApplication:
 
 
 def settle(app: QtWidgets.QApplication) -> None:
-    """Allow the queued layout and height updates to finish."""
+    """予約されたレイアウトと高さの更新が終わるまでイベントを処理する。"""
     for _ in range(5):
         app.processEvents()
 
 
 @pytest.mark.parametrize("regex_enabled", [False, True])
 def test_single_line_has_no_scroll_step_past_its_only_block(app, regex_enabled) -> None:
+    """1行のがなしのスクロールの手順のを過ぎたのそだけのブロックを持つことを確認する。"""
     edit = RegexInputEdit()
     try:
         edit.resize(300, edit.height())
@@ -43,6 +45,7 @@ def test_single_line_has_no_scroll_step_past_its_only_block(app, regex_enabled) 
 
 
 def test_drag_outside_keeps_input_visible_and_editable(app) -> None:
+    """ドラッグの外のが入力欄の表示中のと編集可能なを保持することを確認する。"""
     edit = RegexInputEdit()
     text = r"line-(\d+)"
     original_mouse_position = QtGui.QCursor.pos()
@@ -89,6 +92,7 @@ def test_drag_outside_keeps_input_visible_and_editable(app) -> None:
 
 
 def test_legacy_tight_height_cannot_leave_an_invalid_first_block(app) -> None:
+    """旧形式の狭いの高さのできないの残すの不正な最初のブロックを確認する。"""
     edit = RegexInputEdit()
     try:
         edit.setText("sample")
@@ -106,6 +110,7 @@ def test_legacy_tight_height_cannot_leave_an_invalid_first_block(app) -> None:
 
 
 def test_multiline_input_still_scrolls_to_later_blocks(app) -> None:
+    """複数行の入力欄の引き続きのをスクロールするのへの後続のが拒否することを確認する。"""
     edit = RegexInputEdit()
     text = "\n".join(f"line {number}" for number in range(20))
     try:

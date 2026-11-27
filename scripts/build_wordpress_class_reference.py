@@ -1,9 +1,6 @@
-"""Build the WordPress class-to-HTML-tag Linter reference.
+"""WordPressのクラスとHTMLタグの対応を記録したLinter用参照を生成する。
 
-The checked-in JSON is generated from the bundled WordPress core CSS and from
-CSS/HTML files saved with a real business-site page.  CSS selectors provide
-advisory tag evidence.  Only separately audited WordPress core save output is
-strict enough for the Linter to reject a class/tag combination.
+同梱のWordPressコアCSSと、実際の業務サイトで保存されたCSS・HTMLからJSONを生成する。CSSセレクターは参考情報として扱う。クラスとタグの組み合わせを拒否する厳格な根拠には、別途確認したWordPressコアの保存出力を使う。
 """
 
 from __future__ import annotations
@@ -153,7 +150,7 @@ CORE_SEMANTIC_TAG_RELATIONSHIPS: dict[str, tuple[set[str], list[str]]] = {
 
 @dataclass
 class ClassEvidence:
-    """Accumulate selector and HTML evidence for one class name."""
+    """クラス名ごとに、根拠となるセレクターとHTMLを集める。"""
 
     explicit_tags: set[str] = field(default_factory=set)
     observed_html_tags: set[str] = field(default_factory=set)
@@ -166,19 +163,24 @@ class ClassEvidence:
 
 
 class _ClassHtmlParser(HTMLParser):
+    """HTMLのタグとクラスの組み合わせを集めるためのパーサー。"""
     def __init__(self, source: str, source_group: str, classes: dict[str, ClassEvidence]) -> None:
+        """クラスに対するHTMLの根拠を記録する。"""
         super().__init__(convert_charrefs=True)
         self.source = source
         self.source_group = source_group
         self.classes = classes
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """開始タグで使われたクラスを集める。"""
         self._record(tag, attrs)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """自己終了タグで使われたクラスを集める。"""
         self._record(tag, attrs)
 
     def _record(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """HTMLで観測したタグとクラスの組み合わせを記録する。"""
         class_value = next((value for name, value in attrs if name.lower() == "class"), None)
         if not class_value:
             return
@@ -193,7 +195,7 @@ class _ClassHtmlParser(HTMLParser):
 
 
 def _iter_css_rule_preludes(css_text: str) -> Iterable[str]:
-    """Yield rule preludes without interpreting declaration values as selectors."""
+    """宣言値をセレクターと解釈せず、CSSルールの開始部分を順に返す。"""
     buffer: list[str] = []
     index = 0
     quote: str | None = None
@@ -242,6 +244,7 @@ def _iter_css_rule_preludes(css_text: str) -> Iterable[str]:
 
 
 def _split_selectors(prelude: str) -> list[str]:
+    """CSSのセレクター一覧を個別のセレクターに分ける。"""
     selectors: list[str] = []
     current: list[str] = []
     round_depth = 0
@@ -269,6 +272,7 @@ def _split_selectors(prelude: str) -> list[str]:
 
 
 def _compound_for_class(selector: str, class_start: int) -> str:
+    """指定クラスを含むセレクター部分を取り出す。"""
     start = class_start
     while start > 0 and not selector[start - 1].isspace() and selector[start - 1] not in ">+~":
         start -= 1
@@ -279,6 +283,7 @@ def _compound_for_class(selector: str, class_start: int) -> str:
 
 
 def _explicit_tag_for_class(selector: str, class_match: re.Match[str]) -> str | None:
+    """指定クラスに対する明示的なHTMLタグを取得する。"""
     compound = _compound_for_class(selector, class_match.start())
     tag_match = TAG_NAME_PATTERN.match(compound)
     if tag_match is None:
@@ -292,6 +297,7 @@ def _record_css(
     source_group: str,
     classes: dict[str, ClassEvidence],
 ) -> None:
+    """CSSセレクターからクラスとタグの対応を記録する。"""
     for prelude in _iter_css_rule_preludes(css_text):
         for selector in _split_selectors(prelude):
             for class_match in CLASS_NAME_PATTERN.finditer(selector):
@@ -307,6 +313,7 @@ def _record_css(
 
 
 def _decode_source(load_data: bytes) -> str:
+    """入力ファイルのバイト列をテキストへ変換する。"""
     for encoding in ("utf-8-sig", "cp932"):
         try:
             return load_data.decode(encoding)
@@ -316,6 +323,7 @@ def _decode_source(load_data: bytes) -> str:
 
 
 def _wordpress_css_members(load_file: ZipFile) -> list[str]:
+    """WordPressのアーカイブから参照するCSSファイルを選ぶ。"""
     members: list[str] = []
     for name in load_file.namelist():
         if not name.endswith(".css") or name.endswith(("-rtl.css", ".min.css")):
@@ -336,6 +344,7 @@ def _read_wordpress_core(
     wordpress_zip: Path,
     classes: dict[str, ClassEvidence],
 ) -> list[str]:
+    """WordPressコアのCSSからクラスの参考情報を集める。"""
     with ZipFile(wordpress_zip) as load_file:
         members = _wordpress_css_members(load_file)
         for member in members:
@@ -349,6 +358,7 @@ def _read_wordpress_core(
 
 
 def _read_sample(sample_dir: Path, classes: dict[str, ClassEvidence]) -> tuple[list[str], list[str]]:
+    """サイトの保存例からクラスの情報を集める。"""
     css_files: list[str] = []
     html_files: list[str] = []
     for load_file_path in sorted(path for path in sample_dir.rglob("*") if path.is_file()):
@@ -375,6 +385,7 @@ def _read_extra_html(
     classes: dict[str, ClassEvidence],
     source_root: Path | None,
 ) -> list[str]:
+    """追加のHTML例からタグとクラスの組み合わせを集める。"""
     sources: list[str] = []
     for load_file_path in html_paths:
         source = _path_label(load_file_path, source_root)
@@ -386,6 +397,7 @@ def _read_extra_html(
 
 
 def _path_label(load_file_path: Path, source_root: Path | None) -> str:
+    """根拠ファイルの位置を表示用に整える。"""
     candidate_roots = [source_root, Path.cwd()] if source_root is not None else [Path.cwd()]
     for candidate_root in candidate_roots:
         try:
@@ -396,6 +408,7 @@ def _path_label(load_file_path: Path, source_root: Path | None) -> str:
 
 
 def _class_entry(evidence: ClassEvidence) -> dict[str, object]:
+    """集めた根拠からクラス参照の項目を作る。"""
     strict = bool(evidence.semantic_tags)
     strict_tags = evidence.semantic_tags or evidence.explicit_tags
     selectors = sorted(
@@ -428,6 +441,7 @@ def build_reference(
     extra_html: list[Path],
     source_root: Path | None = None,
 ) -> dict[str, object]:
+    """収集した根拠をまとめてLinterの参照データを構築する。"""
     classes: dict[str, ClassEvidence] = defaultdict(ClassEvidence)
     wordpress_members = _read_wordpress_core(wordpress_zip, classes)
     sample_css, sample_html = _read_sample(sample_dir, classes)
@@ -472,6 +486,7 @@ def build_reference(
 
 
 def _parse_args() -> argparse.Namespace:
+    """参照生成コマンドの引数を解析する。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wordpress-zip", type=Path, required=True)
     parser.add_argument("--sample-dir", type=Path, required=True)
@@ -482,6 +497,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """コマンドラインの指定に従って参照データを出力する。"""
     args = _parse_args()
     reference = build_reference(
         args.wordpress_zip,

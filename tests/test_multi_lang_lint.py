@@ -1,3 +1,5 @@
+"""複数の言語の文法チェックを検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -17,6 +19,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_json_lint_accepts_object_or_array(tmp_path: Path) -> None:
+    """JSONの文法チェックがオブジェクトまたは配列を受け入れることを確認する。"""
     object_path = tmp_path / "object.json"
     array_path = tmp_path / "array.json"
     object_path.write_text('{"name": "sample"}', encoding="utf-8")
@@ -27,6 +30,7 @@ def test_json_lint_accepts_object_or_array(tmp_path: Path) -> None:
 
 
 def test_json_lint_rejects_invalid_json(tmp_path: Path) -> None:
+    """JSONの文法チェックが不正なJSONを拒否することを確認する。"""
     load_file_path = tmp_path / "broken.json"
     load_file_path.write_text('{"name": ', encoding="utf-8")
 
@@ -39,6 +43,7 @@ def test_json_lint_rejects_invalid_json(tmp_path: Path) -> None:
 
 
 def test_json_lint_rejects_scalar_root(tmp_path: Path) -> None:
+    """JSONの文法チェックがスカラーのルート要素を拒否することを確認する。"""
     load_file_path = tmp_path / "scalar.json"
     load_file_path.write_text('"sample"', encoding="utf-8")
 
@@ -49,6 +54,7 @@ def test_json_lint_rejects_scalar_root(tmp_path: Path) -> None:
 
 
 def test_json_lint_fragment_preserves_source_position() -> None:
+    """JSONの文法チェックの断片が原文の位置を維持することを確認する。"""
     issues = lint_json_fragment(
         '{"level":\n}',
         start_line_number=12,
@@ -62,6 +68,7 @@ def test_json_lint_fragment_preserves_source_position() -> None:
 
 
 def test_json_lint_fragment_can_require_container_root() -> None:
+    """JSONの文法チェックの断片が必須とするのコンテナのルート要素が可能であることを確認する。"""
     issues = lint_json_fragment(
         '"sample"',
         start_line_number=5,
@@ -75,6 +82,7 @@ def test_json_lint_fragment_can_require_container_root() -> None:
 
 
 def test_multi_lang_standard_files_are_present_and_valid() -> None:
+    """複数の言語の標準のファイルが存在すると正しいであることを確認する。"""
     standards_path = PROJECT_ROOT / "dictionaries" / "standards"
 
     assert standard_file_names() == (
@@ -89,12 +97,14 @@ def test_multi_lang_standard_files_are_present_and_valid() -> None:
 
 
 def _load_project_json(load_file_path: Path) -> dict[str, Any]:
+    """リポジトリ内の参照JSONをテスト用に読み込む。"""
     load_data: Any = json.loads(load_file_path.read_text(encoding="utf-8"))
     assert isinstance(load_data, dict)
     return load_data
 
 
 def test_css_standard_contains_properties_types_and_typo_repairs() -> None:
+    """CSSの標準のがプロパティの型と表記ミスの修復を含むことを確認する。"""
     load_data = _load_project_json(
         PROJECT_ROOT / "dictionaries" / "standards" / "standard_css.json"
     )
@@ -134,6 +144,7 @@ def test_css_standard_contains_properties_types_and_typo_repairs() -> None:
 
 
 def test_json_standard_contains_syntax_hints_and_common_repairs() -> None:
+    """JSONの標準のが構文のヒントと共通の修復を含むことを確認する。"""
     load_data = _load_project_json(
         PROJECT_ROOT / "dictionaries" / "standards" / "standard_json.json"
     )
@@ -148,6 +159,7 @@ def test_json_standard_contains_syntax_hints_and_common_repairs() -> None:
 
 
 def test_html_tag_schema_matches_existing_reference_names() -> None:
+    """HTMLタグのスキーマと既存の参照名が一致することを確認する。"""
     standards_path = PROJECT_ROOT / "dictionaries" / "standards"
     schema = _load_project_json(standards_path / "html_tag_schema.json")
     lint_reference = _load_project_json(
@@ -188,6 +200,7 @@ def test_html_tag_schema_matches_existing_reference_names() -> None:
 
 
 def test_wordpress_block_schema_matches_existing_reference_names() -> None:
+    """WordPressのブロックのスキーマが既存の参照名に一致することを確認する。"""
     standards_path = PROJECT_ROOT / "dictionaries" / "standards"
     schema = _load_project_json(standards_path / "wordpress_block_schema.json")
     lint_reference = _load_project_json(
@@ -231,6 +244,7 @@ def test_wordpress_block_schema_matches_existing_reference_names() -> None:
 
 
 def test_multi_lang_lint_checks_plugin_and_standards(tmp_path: Path) -> None:
+    """複数の言語の文法チェックがプラグインと標準参照を検査することを確認する。"""
     load_file_path = tmp_path / "javascript.json"
     load_file_path.write_text('{"language_id": "javascript"}', encoding="utf-8")
 

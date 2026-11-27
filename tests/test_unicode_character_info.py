@@ -18,12 +18,14 @@ from main import MainWindow
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance() or QApplication(sys.argv)
     assert isinstance(application, QApplication)
     return application
 
 
 def test_unicode_character_attributes() -> None:
+    """Unicodeの文字の属性を確認する。"""
     circled = inspect_character("①")
     assert (circled.code_point, circled.name, circled.category, circled.nfkc) == (
         "U+2460", "CIRCLED DIGIT ONE", "No", "1"
@@ -48,6 +50,7 @@ def test_unicode_character_attributes() -> None:
 def test_code_point_at_utf16_position(
     app: QApplication, source: str, position: int, expected: str,
 ) -> None:
+    """コードポイントでのUTF-16の位置を確認する。"""
     document = QTextDocument()
     document.setPlainText(source)
     cursor = QTextCursor(document)
@@ -58,6 +61,7 @@ def test_code_point_at_utf16_position(
 def test_dialog_uses_selection_then_cursor_without_editing(
     app: QApplication, tmp_path: Path
 ) -> None:
+    """編集中のを省いた場合、ダイアログが選択範囲の続いてのカーソルを使うことを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -100,6 +104,7 @@ def test_dialog_uses_selection_then_cursor_without_editing(
 
 
 def test_empty_document_has_no_character(app: QApplication, tmp_path: Path) -> None:
+    """文書が空の場合に表示対象の文字がないことを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",

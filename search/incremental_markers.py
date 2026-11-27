@@ -1,4 +1,4 @@
-"""Keep Python text offsets aligned with Qt edits without rereading the document."""
+"""文書を読み直さず、Qtの編集位置とPythonの文字位置を対応させる。"""
 
 from __future__ import annotations
 
@@ -7,18 +7,20 @@ from dataclasses import dataclass, field
 
 
 def _utf16_length(text: str) -> int:
+    """文字列のQt UTF-16単位での長さを返す。"""
     return len(text.encode("utf-16-le")) // 2
 
 
 @dataclass
 class IndexedSource:
-    """Cache line starts for translating an edited Qt range to Python offsets."""
+    """編集されたQtの範囲をPythonの文字位置へ変換するため、行の開始位置を保持する。"""
 
     text: str
     python_line_starts: list[int] = field(init=False)
     qt_line_starts: list[int] = field(init=False)
 
     def __post_init__(self) -> None:
+        """検索位置の変換に使う行境界の索引を初期化する。"""
         self.python_line_starts = [0]
         self.qt_line_starts = [0]
         qt_position = 0
@@ -29,7 +31,7 @@ class IndexedSource:
                 self.qt_line_starts.append(qt_position)
 
     def python_position(self, qt_position: int) -> int:
-        """Scan only the indexed line that contains a Qt UTF-16 position."""
+        """QtのUTF-16位置がある行だけを調べてPythonの位置を求める。"""
         line_index = bisect_right(self.qt_line_starts, qt_position) - 1
         line_index = max(line_index, 0)
         python_start = self.python_line_starts[line_index]
@@ -44,7 +46,7 @@ class IndexedSource:
         return position
 
     def qt_position(self, python_position: int) -> int:
-        """Convert one Python offset by scanning only its indexed line."""
+        """指定されたPythonの位置を、その行だけを調べてQtの位置に変換する。"""
         bounded_position = min(max(python_position, 0), len(self.text))
         line_index = bisect_right(self.python_line_starts, bounded_position) - 1
         line_start = self.python_line_starts[line_index]
@@ -53,7 +55,7 @@ class IndexedSource:
         )
 
     def replace(self, qt_position: int, removed_units: int, added_text: str) -> tuple[int, int, int]:
-        """Apply one Qt change and return old start/end plus Python length delta."""
+        """Qtから通知された編集1件を反映し、編集前の両端とPython文字数の増減を返す。"""
         start = self.python_position(qt_position)
         old_end = self.python_position(qt_position + removed_units)
         old_start_line = bisect_right(self.python_line_starts, start) - 1

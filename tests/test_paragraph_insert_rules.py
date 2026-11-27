@@ -1,3 +1,5 @@
+"""段落挿入の規則を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -13,6 +15,7 @@ from localization.translator import Translator
 
 
 def test_default_dictionary_registers_context_menu_operation_keys() -> None:
+    """既定の辞書がコンテキストメニューの操作のキーを登録することを確認する。"""
     load_file_path = Path("dictionaries/paragraph_insert_dict.json")
     load_data = json.loads(load_file_path.read_text(encoding="utf-8"))
 
@@ -26,6 +29,7 @@ def test_default_dictionary_registers_context_menu_operation_keys() -> None:
 
 
 def test_default_dictionary_is_valid_and_keeps_output_text_out_of_python() -> None:
+    """既定の辞書が正しいになるとともに、出力の文字列の外のPythonを保持することを確認する。"""
     rule_book = load_paragraph_insert_rule_book()
 
     assert rule_book.operation("insert_spacer").replacement.startswith("<!-- wp:spacer")
@@ -51,12 +55,14 @@ def test_default_dictionary_is_valid_and_keeps_output_text_out_of_python() -> No
 def test_user_dictionary_folder_without_paragraph_dictionary_uses_bundled_fallback(
     tmp_path: Path,
 ) -> None:
+    """ユーザー辞書のフォルダー（段落の辞書なし）が同梱の代替のを使うことを確認する。"""
     rule_book = load_paragraph_insert_rule_book(tmp_path)
 
     assert rule_book.load_file_path == Path("dictionaries/paragraph_insert_dict.json").resolve()
 
 
 def test_old_user_dictionary_and_narrow_shortcut_override(tmp_path: Path) -> None:
+    """古いのユーザー辞書と幅の狭いのショートカットの上書き設定を確認する。"""
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
     )
@@ -73,6 +79,7 @@ def test_old_user_dictionary_and_narrow_shortcut_override(tmp_path: Path) -> Non
 
 
 def test_shortcut_template_must_keep_selection_and_cursor(tmp_path: Path) -> None:
+    """ショートカットのテンプレートの必須の保持するの選択範囲とカーソルを確認する。"""
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
     )
@@ -85,6 +92,7 @@ def test_shortcut_template_must_keep_selection_and_cursor(tmp_path: Path) -> Non
 
 
 def test_invalid_replacement_without_cursor_is_rejected(tmp_path: Path) -> None:
+    """不正なの置換（カーソルなし）が拒否されたになることを確認する。"""
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
     )
@@ -99,6 +107,7 @@ def test_invalid_replacement_without_cursor_is_rejected(tmp_path: Path) -> None:
 
 
 def test_invalid_dictionary_with_unknown_placeholder_is_rejected(tmp_path: Path) -> None:
+    """不正なの辞書（未登録のプレースホルダーあり）が拒否されたになることを確認する。"""
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
     )
@@ -114,6 +123,7 @@ def test_invalid_dictionary_with_unknown_placeholder_is_rejected(tmp_path: Path)
 
 @pytest.mark.parametrize("language", ["ja", "en"])
 def test_paragraph_insertion_linter_messages_are_available(language: str) -> None:
+    """段落の挿入の文法チェッカーのメッセージが利用できることを確認する。"""
     translator = Translator(Path("resources"), language)
     keys = {
         "paragraph_split.dictionary_error": {"error": "sample"},
@@ -134,6 +144,7 @@ def test_paragraph_insertion_linter_messages_are_available(language: str) -> Non
 def test_pyinstaller_spec_collects_paragraph_insert_dictionary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """PyInstallerのspecファイルのを集めるの段落挿入の辞書を確認する。"""
     monkeypatch.setenv("REGEXPAD_SKIP_WORDPRESS_RUNTIME", "1")
     spec_path = Path("regex-pad.spec")
     spec_prefix = spec_path.read_text(encoding="utf-8").split("a = Analysis", maxsplit=1)[0]

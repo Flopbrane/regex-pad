@@ -1,4 +1,4 @@
-"""Shared data types for the recording-only application logger."""
+"""ログ記録専用ロガーで共有するデータ型を定義する。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any, NotRequired, TypedDict
 
 
 class LogOutput(str, Enum):
-    """Destination used for one log record."""
+    """ログレコード1件の出力先を表す。"""
 
     CONSOLE = "console"
     FILE = "file"
@@ -15,7 +15,7 @@ class LogOutput(str, Enum):
 
 
 class LogLevel(str, Enum):
-    """Supported application log levels."""
+    """アプリで使えるログレベルを定義する。"""
 
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -25,7 +25,7 @@ class LogLevel(str, Enum):
 
 
 class LogWhere(TypedDict, total=False):
-    """Source location that produced a log record."""
+    """ログを発生させたソースコード上の位置を表す。"""
 
     file: str
     line: int
@@ -34,7 +34,7 @@ class LogWhere(TypedDict, total=False):
 
 
 class LogWhat(TypedDict):
-    """Human-readable description of a log record."""
+    """人が読めるログレコードの説明を表す。"""
 
     message: str
     action: NotRequired[str]
@@ -43,7 +43,7 @@ class LogWhat(TypedDict):
 
 
 class LogRecord(TypedDict):
-    """Stable JSONL representation written by the logger."""
+    """ロガーが出力するJSONLレコードの形式を表す。"""
 
     level: str
     time: str

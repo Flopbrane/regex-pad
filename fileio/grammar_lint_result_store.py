@@ -1,3 +1,5 @@
+"""文法チェックの結果を文書ごとのファイルに保管する。"""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +13,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class GrammarLintResult:
+    """文法診断の要約、一覧と強調行を表す。"""
     summary: str
     rows: list[tuple[int, str]]
     issue_lines: list[int]
@@ -21,13 +24,17 @@ class GrammarLintResult:
 
 
 class GrammarLintResultStore:
+    """文法診断の一時結果の保存と削除を管理する。"""
     def __init__(self, result_folder: Path) -> None:
+        """文法チェック結果の保存フォルダーを設定する。"""
         self.result_folder = result_folder
 
     def create_result_path(self, window_id: str, result_id: str) -> Path:
+        """画面と文書を識別する結果ファイルのパスを作る。"""
         return self.result_folder / f"{window_id}-{result_id}.json"
 
     def save(self, result_path: Path, result: GrammarLintResult) -> None:
+        """文法チェックの結果を保存する。"""
         result_path.parent.mkdir(parents=True, exist_ok=True)
         save_data = {
             "summary": result.summary,
@@ -58,6 +65,7 @@ class GrammarLintResultStore:
         temporary_file_path.replace(result_path)
 
     def load(self, result_path: Path) -> GrammarLintResult | None:
+        """保存された文法チェックの結果を読み込む。"""
         if not result_path.exists():
             return None
 
@@ -118,9 +126,11 @@ class GrammarLintResultStore:
         )
 
     def delete(self, result_path: Path) -> None:
+        """指定された文法診断の結果を削除する。"""
         result_path.unlink(missing_ok=True)
 
     def clear_result_folder(self) -> None:
+        """文法診断の一時結果をまとめて片付ける。"""
         if not self.result_folder.exists():
             return
         if (

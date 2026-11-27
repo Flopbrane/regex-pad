@@ -1,2 +1,2 @@
-"""Conversion rule dictionaries for the embedded WordPress conversion core."""
+"""同梱のWordPress変換処理で使う規則をまとめる。"""
 

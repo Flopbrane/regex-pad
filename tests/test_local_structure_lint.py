@@ -1,4 +1,4 @@
-"""Exercise local WordPress pair checks without a full lint on typing."""
+"""入力中に全文検査をせず、WordPressのブロック対応を局所的に検査できることを確認する。"""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from main import MainWindow
 
 
 def _replace_range(window: MainWindow, start: int, end: int, replacement: str) -> None:
+    """指定されたQtの範囲をテスト用の文字列で置き換える。"""
     cursor = QTextCursor(window.editor.document())
     cursor.setPosition(start)
     cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
@@ -24,6 +25,7 @@ def _replace_range(window: MainWindow, start: int, end: int, replacement: str) -
 def test_broken_first_pair_does_not_adopt_later_sibling(
     tmp_path: Path, monkeypatch,
 ) -> None:
+    """壊れたの最初の対が後続の兄弟要素を誤って採用しないことを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -57,6 +59,7 @@ def test_broken_first_pair_does_not_adopt_later_sibling(
 
 
 def test_typing_inside_paragraph_keeps_pair_valid(tmp_path: Path) -> None:
+    """入力中内の段落が対の正しいを保持することを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -71,6 +74,7 @@ def test_typing_inside_paragraph_keeps_pair_valid(tmp_path: Path) -> None:
 
 
 def test_moving_heading_tail_into_paragraph_removes_stale_red_band(tmp_path: Path, monkeypatch) -> None:
+    """移動の見出しの後半への段落が古くなったの赤帯を取り除くことを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -108,6 +112,7 @@ def test_moving_heading_tail_into_paragraph_removes_stale_red_band(tmp_path: Pat
 
 
 def test_typing_deleted_closing_comment_recovers_pair(tmp_path: Path) -> None:
+    """入力中の削除された終了のコメントの復旧するの対を確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -128,6 +133,7 @@ def test_typing_deleted_closing_comment_recovers_pair(tmp_path: Path) -> None:
 
 
 def test_html_lint_checks_only_changed_core_block(tmp_path: Path, monkeypatch) -> None:
+    """HTMLの文法チェックがだけの変更されたコアブロックを検査することを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -142,6 +148,7 @@ def test_html_lint_checks_only_changed_core_block(tmp_path: Path, monkeypatch) -
     original_lint = main_module.lint_html_typos
 
     def record_lint(text: str):
+        """文法チェックされた断片の長さを記録し、検査を続ける。"""
         scanned_lengths.append(len(text))
         return original_lint(text)
 
@@ -153,6 +160,7 @@ def test_html_lint_checks_only_changed_core_block(tmp_path: Path, monkeypatch) -
 
 
 def test_pasted_unclosed_block_is_marked_immediately(tmp_path: Path) -> None:
+    """貼り付けられたの閉じられていないのブロックがマーカー付きのすぐにになることを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -165,6 +173,7 @@ def test_pasted_unclosed_block_is_marked_immediately(tmp_path: Path) -> None:
 
 
 def test_backup_timer_stops_when_window_closes(tmp_path: Path) -> None:
+    """ウインドウが閉じるの場合、バックアップのタイマーが停止することを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -178,6 +187,7 @@ def test_backup_timer_stops_when_window_closes(tmp_path: Path) -> None:
 
 
 def test_self_closing_wordpress_block_keeps_its_shape(tmp_path: Path) -> None:
+    """自己終了のWordPressのブロックがその形を保持することを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -192,6 +202,7 @@ def test_self_closing_wordpress_block_keeps_its_shape(tmp_path: Path) -> None:
 
 
 def test_empty_color_value_waits_for_explicit_full_check(tmp_path: Path) -> None:
+    """空の色指定は、明示的に全文を検査したときに診断されることを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(

@@ -1,4 +1,4 @@
-"""Review the exact macro output and per-step counts before applying it."""
+"""適用前にマクロの出力と手順別の件数を確認する画面を提供する。"""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -20,6 +20,7 @@ from macro.macro_preview import MacroPreview
 
 
 class MacroRunPreviewDialog(QDialog):
+    """マクロ適用前に手順別の結果と原稿を確認する画面。"""
     def __init__(
         self,
         preview: MacroPreview,
@@ -27,6 +28,7 @@ class MacroRunPreviewDialog(QDialog):
         target_label: str,
         parent: QWidget | None = None,
     ) -> None:
+        """処理件数と変更前後の原稿を表示する。"""
         super().__init__(parent)
         self.setWindowTitle(translator.text("macro.run.title"))
         self.resize(1100, 800)

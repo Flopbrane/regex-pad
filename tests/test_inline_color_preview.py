@@ -23,6 +23,7 @@ from settings.settings_manager import SettingsManager
 
 
 def test_css_and_html_color_contexts() -> None:
+    """CSSとHTMLの色の文脈を確認する。"""
     css = '#aabbcc { border:1px solid #A1b2C3; background:url(#123456); color:#12345678; }'
     found, _, _ = find_colors(css, ColorContext.HTML, 0, stylesheet=True)
     assert found == [(css.index("#A1b2C3"), "#A1b2C3")]
@@ -40,6 +41,7 @@ def test_css_and_html_color_contexts() -> None:
 
 
 def test_multiline_tag_and_gradient_show_color_stops_without_matching_urls() -> None:
+    """複数行のタグにあるグラデーションの色を検出し、URL内のコードを除外することを確認する。"""
     lines = [
         "<!-- wp:html -->",
         "<div",
@@ -63,6 +65,7 @@ def test_multiline_tag_and_gradient_show_color_stops_without_matching_urls() -> 
 
 
 def test_swatch_spacing_is_display_only_and_updates_after_edit() -> None:
+    """色見本の余白が表示上だけに加わり、編集後に更新されることを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     editor = TextEditor()
@@ -90,6 +93,7 @@ def test_swatch_spacing_is_display_only_and_updates_after_edit() -> None:
 
 
 def test_scrolling_and_wrapping_keep_swatches_on_their_visual_line() -> None:
+    """スクロールと折り返しの保持するの色見本でのその画面上の行を確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     editor = TextEditor()
@@ -111,6 +115,7 @@ def test_scrolling_and_wrapping_keep_swatches_on_their_visual_line() -> None:
 
 
 def test_edit_and_scroll_do_not_redetect_colors_across_the_document(monkeypatch: MonkeyPatch) -> None:
+    """本文の編集とスクロールで文書全体の色を検出し直さないことを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     editor = TextEditor()
@@ -121,6 +126,7 @@ def test_edit_and_scroll_do_not_redetect_colors_across_the_document(monkeypatch:
     calls: list[str] = []
 
     def find_colors_in_changed_block(text: str, context: ColorContext, depth: int, *, stylesheet: bool):
+        """色コードの再検出対象を記録し、行内の検出を実行する。"""
         calls.append(text)
         return find_colors(text, context, depth, stylesheet=stylesheet)
 
@@ -132,6 +138,7 @@ def test_edit_and_scroll_do_not_redetect_colors_across_the_document(monkeypatch:
 
 
 def test_click_apply_cancel_and_stale_target(tmp_path: Path) -> None:
+    """クリックの適用のキャンセルと古くなったの対象を確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(
@@ -141,6 +148,7 @@ def test_click_apply_cancel_and_stale_target(tmp_path: Path) -> None:
     )
     assert not window.inline_color_preview_enabled
     def enable_swatches() -> None:
+        """設定画面で色見本を有効にする。"""
         options = window.options_dialog
         assert options is not None
         options.inline_color_preview_checkbox.setChecked(True)
@@ -157,6 +165,7 @@ def test_click_apply_cancel_and_stale_target(tmp_path: Path) -> None:
     app.processEvents()
 
     def open_picker() -> InlineColorDialog:
+        """色見本をクリックし、初期値を確認して色選択画面を返す。"""
         rect, _, _ = list(editor._visible_inline_colors(editor.viewport().rect()))[1]
         QTest.mouseClick(editor.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
         dialog = next(item for item in window.findChildren(InlineColorDialog) if item.isVisible())

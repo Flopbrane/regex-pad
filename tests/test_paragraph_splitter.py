@@ -1,3 +1,5 @@
+"""段落分割処理を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -20,12 +22,13 @@ from editor.paragraph_splitter import (
 
 
 def _code_block_style() -> str:
-    """Read the editable code-block style instead of fixing its colors in tests."""
+    """テストで色を固定せず、編集可能なコードブロック用のstyleを読み込む。"""
     template = load_paragraph_insert_rule_book().operation("insert_html").replacement
     return template.split('style="', 1)[1].split('"', 1)[0]
 
 
 def test_find_current_paragraph_block_detects_content_range() -> None:
+    """検索の現在の段落ブロックが内容の範囲を検出することを確認する。"""
     text = "<!-- wp:paragraph -->\n<p>行A</p>\n<!-- /wp:paragraph -->"
 
     block = find_current_paragraph_block(text, text.index("行A"))
@@ -35,6 +38,7 @@ def test_find_current_paragraph_block_detects_content_range() -> None:
 
 
 def test_build_paragraph_block_trims_edge_breaks() -> None:
+    """段落ブロックを生成するとき、両端にある余分な改行を除くことを確認する。"""
     assert build_paragraph_block("行A<br><br>\n") == (
         "<!-- wp:paragraph -->\n"
         "<p>行A</p>\n"
@@ -43,6 +47,7 @@ def test_build_paragraph_block_trims_edge_breaks() -> None:
 
 
 def test_split_paragraph_insert_spacer() -> None:
+    """分割の段落挿入のスペーサーを確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -69,6 +74,7 @@ def test_split_paragraph_insert_spacer() -> None:
 
 
 def test_split_paragraph_insert_spacer_rejects_nonblank_line() -> None:
+    """分割の段落挿入のスペーサーが空白以外の行を拒否することを確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -83,6 +89,7 @@ def test_split_paragraph_insert_spacer_rejects_nonblank_line() -> None:
 
 
 def test_split_paragraph_insert_html_code_block_rejects_nonblank_line() -> None:
+    """分割の段落挿入のHTMLのコードブロックが空白以外の行を拒否することを確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -97,6 +104,7 @@ def test_split_paragraph_insert_html_code_block_rejects_nonblank_line() -> None:
 
 
 def test_split_paragraph_insert_html_code_block_at_blank_line() -> None:
+    """分割の段落挿入のHTMLのコードブロックでの空の行を確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -127,6 +135,7 @@ def test_split_paragraph_insert_html_code_block_at_blank_line() -> None:
 
 
 def test_wrap_selection_as_code_block_expands_partial_selection_to_lines() -> None:
+    """折り返しの選択範囲のとしてのコードブロックが一部の選択範囲のへの行を広げることを確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -147,6 +156,7 @@ def test_wrap_selection_as_code_block_expands_partial_selection_to_lines() -> No
 
 
 def test_wrap_selection_as_code_block_converts_br_to_newlines() -> None:
+    """折り返しの選択範囲のとしてのコードブロックがbrのへの改行に変換することを確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -181,6 +191,7 @@ def test_wrap_selection_as_code_block_converts_br_to_newlines() -> None:
 
 
 def test_wrap_selection_as_decorated_block_uses_div_frame() -> None:
+    """選択範囲を装飾ブロックで包むとき、divの枠を使うことを確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -211,6 +222,7 @@ def test_wrap_selection_as_decorated_block_uses_div_frame() -> None:
 def test_wrap_selection_as_decorated_block_reads_paragraph_insert_dictionary(
     tmp_path: Path,
 ) -> None:
+    """折り返しの選択範囲のとしての装飾付きのブロックが段落挿入の辞書を読み取ることを確認する。"""
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
     )
@@ -237,6 +249,7 @@ def test_wrap_selection_as_decorated_block_reads_paragraph_insert_dictionary(
 
 
 def test_wrap_selection_as_decorated_block_expands_partial_selection_to_lines() -> None:
+    """折り返しの選択範囲のとしての装飾付きのブロックが一部の選択範囲のへの行を広げることを確認する。"""
     text = (
         "<!-- wp:paragraph -->\n"
         "<p>行A<br><br>\n"
@@ -257,6 +270,7 @@ def test_wrap_selection_as_decorated_block_expands_partial_selection_to_lines() 
 
 
 def test_split_rejects_position_outside_paragraph_block() -> None:
+    """分割が位置の外の段落ブロックを拒否することを確認する。"""
     with pytest.raises(ParagraphSplitError) as error:
         split_paragraph_insert_spacer("plain text", 0)
     assert error.value.message_key == "paragraph_split.not_available"
@@ -278,6 +292,7 @@ def test_paragraph_insert_fixtures_drive_read_only_insertion_linter(
     allowed: bool,
     message_key: str,
 ) -> None:
+    """段落挿入の検証用の例のドライブの読み取り専用の挿入の文法チェッカーを確認する。"""
     load_file_path = Path("tests") / f"paragraph_insert_{fixture_name}"
     source = load_file_path.read_text(encoding="utf-8")
     cursor_marker = "{cursor}"
@@ -316,6 +331,7 @@ def test_paragraph_insert_linter_rejects_unsafe_paragraph_grammar(
     text: str,
     message_key: str,
 ) -> None:
+    """段落挿入の文法チェッカーが安全でないの段落の文法を拒否することを確認する。"""
     cursor_pos = text.index("本文")
 
     result = lint_paragraph_insertion(
@@ -332,6 +348,7 @@ def test_paragraph_insert_linter_rejects_unsafe_paragraph_grammar(
 def test_paragraph_insert_replacement_is_loaded_from_dedicated_dictionary(
     tmp_path: Path,
 ) -> None:
+    """段落挿入の置換が専用の辞書の状態でから読み込まれることを確認する。"""
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
     )
@@ -357,6 +374,7 @@ def test_paragraph_insert_replacement_is_loaded_from_dedicated_dictionary(
 def test_paragraph_insert_exclusion_is_applied_by_search_engine(
     tmp_path: Path,
 ) -> None:
+    """段落挿入の除外がによるの検索のエンジンが適用されることを確認する。"""
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
     )
@@ -375,6 +393,7 @@ def test_paragraph_insert_exclusion_is_applied_by_search_engine(
 
 
 def test_paragraph_splitter_contains_no_block_output_literals() -> None:
+    """段落分割処理がなしのブロックの出力のリテラルを含むことを確認する。"""
     source = Path("editor/paragraph_splitter.py").read_text(encoding="utf-8")
     assert "<!-- wp:" not in source
     assert "<pre" not in source

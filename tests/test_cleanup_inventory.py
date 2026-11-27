@@ -1,3 +1,5 @@
+"""整理用一覧を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -16,12 +18,14 @@ from preview import wordpress_preview
 
 
 def write(path: Path, text: str) -> Path:
+    """指定パスにテスト用の内容を書き込む。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path
 
 
 def template(app_root: Path) -> Path:
+    """整理用一覧のテストで使うテンプレートを用意する。"""
     root = app_root / "_internal"
     write(root / inventory.LIST_NAME, Path(inventory.LIST_NAME).read_text(encoding="utf-8"))
     return root
@@ -30,6 +34,7 @@ def template(app_root: Path) -> Path:
 def test_first_frozen_start_records_actual_paths_and_groups_shared_references(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """最初の固定された先頭が実際のパスとグループの共有の参照資料を記録することを確認する。"""
     root = tmp_path / "app"
     bundled = template(root)
     shared_cache = tmp_path / "shared-cache"
@@ -54,6 +59,7 @@ def test_first_frozen_start_records_actual_paths_and_groups_shared_references(
 
 
 def test_python_npm_plugins_and_ini_paths_are_recorded_without_file_contents(tmp_path: Path) -> None:
+    """ファイルの内容を省いた場合、PythonのnpmのプラグインとINIのパスが記録済みのであることを確認する。"""
     root = tmp_path / "app"
     template(root)
     write(root / "modules/site-packages/example-1.2.dist-info/METADATA", "Metadata-Version: 2.1\nName: example\nVersion: 1.2\n")
@@ -71,6 +77,7 @@ def test_python_npm_plugins_and_ini_paths_are_recorded_without_file_contents(tmp
 
 
 def test_refresh_keeps_manual_notes_and_history_after_a_resource_disappears(tmp_path: Path) -> None:
+    """リソースが見つからなくなった場合も、再取得時に手動の補足と履歴を保持することを確認する。"""
     root = tmp_path / "app"
     template(root)
     external = tmp_path / "external-runtime"
@@ -91,6 +98,7 @@ def test_refresh_keeps_manual_notes_and_history_after_a_resource_disappears(tmp_
 def test_download_completion_and_failure_refresh_inventory_with_external_paths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """ダウンロードの完了のとの失敗の再表示の一覧（外部のパスあり）を確認する。"""
     application = QApplication.instance() or QApplication([])
     root = tmp_path / "app"
     bundled = template(root)
@@ -101,6 +109,7 @@ def test_download_completion_and_failure_refresh_inventory_with_external_paths(
     monkeypatch.setattr(wordpress_preview, "bundled_base_dir", lambda: bundled)
 
     def prepare(*args):
+        """実行環境の準備が成功した場合の処理を代用する。"""
         write(runtime / "wordpress.zip.partial", "fixture")
         return node
 
@@ -112,6 +121,7 @@ def test_download_completion_and_failure_refresh_inventory_with_external_paths(
     assert str(runtime) not in ordinary and str(runtime) in shared and str(node) in shared
 
     def fail(*args):
+        """処理が失敗する場合をテスト用に発生させる。"""
         raise RuntimeError("fixture download interrupted")
 
     failures = []
@@ -123,12 +133,14 @@ def test_download_completion_and_failure_refresh_inventory_with_external_paths(
 
 
 def test_inventory_handles_bad_metadata_and_keeps_a_writable_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """一覧のメタデータが不正でも、書き込み可能なコピーを保持できることを確認する。"""
     root = tmp_path / "app"
     bundled = template(root)
     write(root / "install_records/deletion_inventory.json", json.dumps({"app_root": str(root), "entries": None, "environment": []}))
     original = inventory._write
 
     def write_with_locked_internal(path, text, app_root):
+        """内部フォルダーに書き込めない状況を再現する。"""
         if path.parent == bundled:
             raise PermissionError("fixture locked internal")
         original(path, text, app_root)
@@ -140,10 +152,12 @@ def test_inventory_handles_bad_metadata_and_keeps_a_writable_copy(tmp_path: Path
 
 
 def test_module_install_failure_still_updates_manual_cleanup_list(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """モジュールの導入の失敗の引き続きが手動の整理のリストを更新することを確認する。"""
     template(tmp_path)
     monkeypatch.setattr(module_installer, "create_venv_if_needed", lambda path: None)
 
     def interrupted(*args, **kwargs):
+        """インストールが中断する状況を再現する。"""
         write(tmp_path / "modules/site-packages/partial/file.py", "fixture")
         raise OSError("fixture pip failure")
 
@@ -154,6 +168,7 @@ def test_module_install_failure_still_updates_manual_cleanup_list(tmp_path: Path
 
 
 def test_packaging_includes_template_but_excludes_machine_specific_inventory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """配布物にテンプレートを含め、利用環境固有の一覧を除外することを確認する。"""
     write(tmp_path / inventory.LIST_NAME, "template")
     write(tmp_path / "resources/sample.json", "{}")
     for folder in ("install_records", "cache", "data", "modules", "logs", "Temp"):
@@ -168,6 +183,7 @@ def test_packaging_includes_template_but_excludes_machine_specific_inventory(tmp
 
 
 def test_packaged_editor_close_records_its_newly_saved_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """パッケージ化したエディターの閉じる操作がその新たにの保存済みの設定を記録することを確認する。"""
     import main as main_module
 
     application = QApplication.instance() or QApplication([])
@@ -185,11 +201,13 @@ def test_packaged_editor_close_records_its_newly_saved_settings(tmp_path: Path, 
 
 
 def test_directory_access_errors_are_reported_for_manual_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ディレクトリのアクセスのエラーが報告された用の手動の整理であることを確認する。"""
     template(tmp_path)
     (tmp_path / "modules").mkdir()
     original_walk = inventory.os.walk
 
     def blocked_walk(root, **kwargs):
+        """フォルダーの列挙がアクセスエラーになる状況を再現する。"""
         if root == tmp_path / "modules":
             kwargs["onerror"](PermissionError(f"access denied: {root}"))
             return iter(())

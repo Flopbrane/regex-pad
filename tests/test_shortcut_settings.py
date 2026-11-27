@@ -1,4 +1,4 @@
-"""Portable shortcut editing, locked standard keys, and text insertion."""
+"""ポータブルなショートカット編集、標準キーの固定、定型文の挿入を検証する。"""
 
 from __future__ import annotations
 
@@ -30,11 +30,13 @@ from settings.shortcut_settings import (
 
 @pytest.fixture
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     existing = QApplication.instance()
     return existing if isinstance(existing, QApplication) else QApplication([])
 
 
 def test_shortcut_file_roundtrip_and_invalid_file_is_preserved(tmp_path: Path) -> None:
+    """ショートカットのファイルの往復変換と不正なファイルが保持されることを確認する。"""
     save_file_path = tmp_path / "shortcutkey_ref.json"
     settings = ShortcutSettings(
         {"inline_underline": "Ctrl+Alt+U"},
@@ -51,6 +53,7 @@ def test_shortcut_file_roundtrip_and_invalid_file_is_preserved(tmp_path: Path) -
 def test_failed_shortcut_replace_keeps_previous_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """失敗したショートカットの置換が既存ファイルを保持することを確認する。"""
     save_file_path = tmp_path / "shortcutkey_ref.json"
     original = ShortcutSettings({}, [TextShortcut("one", "挨拶", "Ctrl+Alt+K", "こんにちは")])
     save_shortcut_settings(save_file_path, original)
@@ -58,6 +61,7 @@ def test_failed_shortcut_replace_keeps_previous_file(
     original_replace = Path.replace
 
     def fail_replace(source: Path, target: Path) -> Path:
+        """ショートカット設定のファイル置換失敗を再現する。"""
         if target == save_file_path:
             raise OSError("blocked")
         return original_replace(source, target)
@@ -72,6 +76,7 @@ def test_failed_shortcut_replace_keeps_previous_file(
 def test_standard_keys_are_read_only_and_collisions_are_rejected(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """標準のキーが読み取り専用のと競合の拒否されたであることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "config.json", restore_unsaved_backup=False)
     dialog = ShortcutSettingsDialog(
@@ -136,6 +141,7 @@ def test_standard_keys_are_read_only_and_collisions_are_rejected(
 def test_old_override_for_newly_fixed_key_keeps_other_custom_keys(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """変更不可になったキーの古い設定があっても、他のキーのカスタム設定が残ることを確認する。"""
     _ = app
     save_file_path = tmp_path / "shortcutkey_ref.json"
     save_shortcut_settings(
@@ -153,6 +159,7 @@ def test_old_override_for_newly_fixed_key_keeps_other_custom_keys(
 def test_add_and_edit_text_shortcut_in_dialog(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """追加と編集の文字列のショートカット内のダイアログを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "config.json", restore_unsaved_backup=False)
     dialog = ShortcutSettingsDialog(
@@ -160,6 +167,7 @@ def test_add_and_edit_text_shortcut_in_dialog(
     )
 
     def fill_new(editor: ShortcutEditorDialog) -> QDialog.DialogCode:
+        """新しい定型文ショートカットの入力を再現する。"""
         editor.name_edit.setText("あいさつ")
         editor.key_edit.setKeySequence(QKeySequence("Ctrl+Alt+K"))
         assert editor.text_edit is not None
@@ -180,6 +188,7 @@ def test_add_and_edit_text_shortcut_in_dialog(
     assert dialog.delete_button.isEnabled()
 
     def fill_edit(editor: ShortcutEditorDialog) -> QDialog.DialogCode:
+        """既存定型文ショートカットの編集を再現する。"""
         editor.key_edit.setKeySequence(QKeySequence("Ctrl+Alt+J"))
         assert editor.text_edit is not None
         editor.text_edit.setPlainText("こんばんは")
@@ -198,6 +207,7 @@ def test_add_and_edit_text_shortcut_in_dialog(
     dialog.table.selectRow(app_row)
 
     def edit_app(editor: ShortcutEditorDialog) -> QDialog.DialogCode:
+        """組み込み操作のショートカットを変更する。"""
         editor.key_edit.setKeySequence(QKeySequence("Ctrl+Alt+U"))
         return QDialog.DialogCode.Accepted
 
@@ -209,11 +219,13 @@ def test_add_and_edit_text_shortcut_in_dialog(
 def test_main_window_saves_and_restores_shortcut_actions_and_text(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """メインウインドウが保存するとともに、ショートカットの操作と文字列を復元することを確認する。"""
     _ = app
     config_path = tmp_path / "config.json"
     window = MainWindow(settings_path=config_path, restore_unsaved_backup=False)
 
     def accept_changes(dialog: ShortcutSettingsDialog) -> QDialog.DialogCode:
+        """ショートカット画面で変更を確定する。"""
         dialog.settings.overrides["inline_underline"] = "Ctrl+Alt+U"
         dialog.settings.snippets.append(
             TextShortcut("greeting", "あいさつ", "Ctrl+Alt+K", "こんにちは")
@@ -247,6 +259,7 @@ def test_main_window_saves_and_restores_shortcut_actions_and_text(
 def test_manual_collision_file_is_not_applied_or_overwritten(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """手動の競合のファイルがしないの適用されたまたは上書きされたになることを確認する。"""
     _ = app
     save_file_path = tmp_path / "shortcutkey_ref.json"
     save_shortcut_settings(

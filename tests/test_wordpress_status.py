@@ -1,3 +1,5 @@
+"""WordPressの状態を検証する。"""
+
 from __future__ import annotations
 
 import io
@@ -19,6 +21,7 @@ from preview.wordpress_preview import RuntimePreparation, WordPressPreview
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance() or QApplication([])
     assert isinstance(application, QApplication)
     return application
@@ -27,6 +30,7 @@ def app() -> QApplication:
 def test_prestart_status_is_not_ready_until_wordpress_acknowledges(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """事前起動の状態が準備未完了になる（WordPressのを確認するまで）を確認する。"""
     preview = WordPressPreview(tmp_path, tmp_path / "bridge.mjs", mode="simple")
     monkeypatch.setattr("preview.wordpress_preview.runtime_ready", lambda root: True)
     monkeypatch.setattr(RuntimePreparation, "start", lambda self: None)
@@ -53,6 +57,7 @@ def test_prestart_status_is_not_ready_until_wordpress_acknowledges(
 def test_download_error_and_cancellation_report_truthful_status(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """ダウンロードのエラーと中止の報告の正確な状態を確認する。"""
     preview = WordPressPreview(tmp_path, tmp_path / "bridge.mjs", mode="simple")
     monkeypatch.setattr("preview.wordpress_preview.runtime_ready", lambda root: False)
     preview.warm_up()
@@ -73,6 +78,7 @@ def test_download_error_and_cancellation_report_truthful_status(
 def test_right_status_persists_during_editing_and_language_changes(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """右の状態のを永続化するの中の編集中のと言語の変更を確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     try:
         window._update_wordpress_status_label()
@@ -104,6 +110,7 @@ def test_right_status_persists_during_editing_and_language_changes(
 def test_simple_stop_does_not_hide_live_status_or_background_failure(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """単純な停止の行わないの非表示の実際の状態または背景の失敗を確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     monkeypatch.setattr(WordPressPreview, "show_preview", lambda *args: None)
     try:
@@ -131,6 +138,7 @@ def test_simple_stop_does_not_hide_live_status_or_background_failure(
 def test_core_download_state_is_emitted_only_when_an_archive_is_downloaded(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """アーカイブが取得済みのになるの場合、コアのダウンロードの状態が通知されただけになることを確認する。"""
     sqlite_bytes = io.BytesIO()
     with zipfile.ZipFile(sqlite_bytes, "w") as archive:
         archive.writestr("sqlite.php", "fixture")
@@ -144,6 +152,7 @@ def test_core_download_state_is_emitted_only_when_an_archive_is_downloaded(
     stages = []
 
     def download(url, save_file_path, cancel):
+        """実際に通信せずアーカイブ取得を再現する。"""
         assert stages[-1] == "download"
         with zipfile.ZipFile(save_file_path, "w") as archive:
             archive.writestr("wordpress/wp-includes/version.php", "<?php $wp_version = 'fixture';")

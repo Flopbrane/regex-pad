@@ -26,6 +26,7 @@ class UnicodeCharacterInfoDialog(QDialog):
         translator: Translator,
         parent: QWidget | None = None,
     ) -> None:
+        """調査対象と翻訳を受け取り、文字情報の表示を組み立てる。"""
         super().__init__(parent)
         self.info = info
         self.from_selection = from_selection

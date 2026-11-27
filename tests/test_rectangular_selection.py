@@ -1,3 +1,5 @@
+"""矩形選択を検証する。"""
+
 from editor.rectangular_selection import (
     RectangularSelection,
     rectangular_selection_from_text_positions,
@@ -6,6 +8,7 @@ from editor.rectangular_selection import (
 
 
 def test_rectangular_selection_from_text_positions() -> None:
+    """矩形選択のからの文字列の位置を確認する。"""
     source_text = "abcd\nwxyz\n1234"
 
     selection = rectangular_selection_from_text_positions(source_text, 1, 8)
@@ -19,6 +22,7 @@ def test_rectangular_selection_from_text_positions() -> None:
 
 
 def test_rectangular_text_copies_same_columns_from_each_line() -> None:
+    """矩形の文字列が同じ列のからの各行をコピーすることを確認する。"""
     source_text = "abcd\nwxyz\n1234"
     selection = RectangularSelection(
         start_line=0,
@@ -31,6 +35,7 @@ def test_rectangular_text_copies_same_columns_from_each_line() -> None:
 
 
 def test_rectangular_text_keeps_short_lines_as_empty_cells() -> None:
+    """矩形の文字列が短いの行のとしての空のセルを保持することを確認する。"""
     source_text = "abcd\nx\n1234"
     selection = RectangularSelection(
         start_line=0,

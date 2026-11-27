@@ -1,3 +1,5 @@
+"""挿入辞書からタグ定型文を読み込み、分類、検証、展開する。"""
+
 from __future__ import annotations
 
 import json
@@ -51,6 +53,7 @@ WORDPRESS_DICTIONARY_FILE_NAME = "wordpress_html_dict.json"
 
 @dataclass(frozen=True)
 class TagSnippetParameter:
+    """タグ挿入時に使う定型文パラメーターを表す。"""
     name: str
     required: bool = False
     kind: str = "text"
@@ -59,6 +62,7 @@ class TagSnippetParameter:
 
 @dataclass(frozen=True)
 class TagSnippet:
+    """挿入のテンプレートと表示用の翻訳キーを保持する。"""
     label_key: str
     hint_key: str
     template: str
@@ -66,6 +70,7 @@ class TagSnippet:
     default_selection: str = ""
 
     def render(self, selected_text: str) -> tuple[str, int]:
+        """テンプレートに選択文字列を入れ、挿入後のカーソル位置を返す。"""
         replacement_text = selected_text if selected_text else self.default_selection
         rendered_text = self.template.replace(SELECTION_PLACEHOLDER, replacement_text)
         cursor_position = rendered_text.find(CURSOR_PLACEHOLDER)
@@ -76,6 +81,7 @@ class TagSnippet:
 
 @dataclass(frozen=True)
 class TagSnippetGroup:
+    """同種のタグ定型文をまとめる。"""
     label_key: str
     snippets: tuple[TagSnippet, ...]
 
@@ -84,6 +90,7 @@ def tag_snippet_groups(
     dictionaries_path: Path | None = None,
     resources_path: Path | None = None,
 ) -> tuple[TagSnippetGroup, ...]:
+    """有効な挿入辞書から定型文グループを読み込む。"""
     dictionaries_path = (
         dictionaries_path or Path(__file__).resolve().parent.parent / "dictionaries"
     )
@@ -110,6 +117,7 @@ def ordered_tag_snippet_groups(
     save_file_path: Path | None,
     dictionaries_path: Path | None = None,
 ) -> tuple[TagSnippetGroup, ...]:
+    """ファイル形式に適したグループを優先して返す。"""
     groups = tag_snippet_groups(dictionaries_path)
     preferred_label_key = _preferred_group_label_key(save_file_path)
     if preferred_label_key is None:
@@ -126,7 +134,7 @@ def wordpress_tag_snippet(
     label_key: str,
     dictionaries_path: Path | None = None,
 ) -> TagSnippet:
-    """Load one WordPress snippet by label key from the active dictionary."""
+    """使用中の辞書からラベルキーでWordPressの定型項目を読み込む。"""
     dictionaries_path = (
         dictionaries_path or Path(__file__).resolve().parent.parent / "dictionaries"
     )
@@ -140,6 +148,7 @@ def wordpress_tag_snippet(
 
 
 def tag_snippet_category_key(group_label_key: str, snippet: TagSnippet) -> str:
+    """グループと定型文からサブメニューの分類キーを求める。"""
     label_key = snippet.label_key
     if group_label_key == "tag.group.html":
         return _html_category_key(label_key)
@@ -151,6 +160,7 @@ def tag_snippet_category_key(group_label_key: str, snippet: TagSnippet) -> str:
 
 
 def wordpress_mode_label_keys() -> tuple[str, ...]:
+    """利用可能なWordPress編集モードのラベルキーを返す。"""
     return WORDPRESS_MODE_LABEL_KEYS
 
 
@@ -158,12 +168,14 @@ def wordpress_snippets_for_mode(
     snippets: tuple[TagSnippet, ...],
     mode_label_key: str,
 ) -> tuple[TagSnippet, ...]:
+    """指定モードで利用できるWordPress定型文を返す。"""
     return tuple(
         snippet for snippet in snippets if mode_label_key in wordpress_mode_keys(snippet)
     )
 
 
 def wordpress_mode_keys(snippet: TagSnippet) -> tuple[str, ...]:
+    """定型文が表示対象になるWordPressモードを返す。"""
     mode_keys = [WORDPRESS_MODE_NORMAL_KEY]
     if snippet.label_key not in WORDPRESS_BUSINESS_EXCLUDED_LABEL_KEYS:
         mode_keys.append(WORDPRESS_MODE_BUSINESS_KEY)
@@ -173,6 +185,7 @@ def wordpress_mode_keys(snippet: TagSnippet) -> tuple[str, ...]:
 
 
 def _preferred_group_label_key(save_file_path: Path | None) -> str | None:
+    """保存先の拡張子から優先表示する辞書グループを決める。"""
     if save_file_path is None:
         return None
 
@@ -188,6 +201,7 @@ def _preferred_group_label_key(save_file_path: Path | None) -> str | None:
 
 
 def _html_category_key(label_key: str) -> str:
+    """HTML定型文の分類キーを決める。"""
     if label_key in {
         "tag.html.paragraph",
         "tag.html.heading1",
@@ -243,6 +257,7 @@ def _html_category_key(label_key: str) -> str:
 
 
 def _markdown_category_key(label_key: str) -> str:
+    """Markdown定型文の分類キーを決める。"""
     if label_key in {
         "tag.markdown.heading1",
         "tag.markdown.heading2",
@@ -288,6 +303,7 @@ def _markdown_category_key(label_key: str) -> str:
 
 
 def _wordpress_category_key(label_key: str) -> str:
+    """WordPress定型文の分類キーを決める。"""
     if label_key in {
         "tag.wordpress.paragraph_block",
         "tag.wordpress.heading2_block",
@@ -339,6 +355,7 @@ def _wordpress_category_key(label_key: str) -> str:
 
 
 def _load_snippets_from_json(load_file_path: Path) -> tuple[TagSnippet, ...]:
+    """JSONから定型文を読み込み、項目を検証する。"""
     load_data = json.loads(load_file_path.read_text(encoding="utf-8"))
     if not isinstance(load_data, list):
         raise TypeError(f"Dictionary must contain a list: {load_file_path}")
@@ -369,6 +386,7 @@ def _snippet_from_dict(
     load_file_path: Path,
     index: int,
 ) -> TagSnippet:
+    """辞書項目の値を検証して定型文に変換する。"""
     context = _dictionary_item_context(load_file_path, index)
     missing_keys = [
         key for key in ("label_key", "hint_key", "template") if key not in item
@@ -410,6 +428,7 @@ def _parameters_from_dict(
     item: dict[str, Any],
     context: str,
 ) -> tuple[TagSnippetParameter, ...]:
+    """辞書項目のテンプレートパラメーターを読み取る。"""
     raw_parameters = item.get("parameters", [])
     if not isinstance(raw_parameters, list):
         raise TypeError(f"Dictionary item parameters must be a list: {context}")
@@ -467,6 +486,7 @@ def _parameters_from_dict(
 
 
 def _validate_template_placeholders(template: str, context: str) -> None:
+    """テンプレート内のプレースホルダーが有効かを確認する。"""
     cursor_count = template.count(CURSOR_PLACEHOLDER)
     if cursor_count > 1:
         raise ValueError(f"Dictionary item has duplicated cursor placeholder: {context}")
@@ -507,6 +527,7 @@ def _validate_translation_keys(
     groups: tuple[TagSnippetGroup, ...],
     resources_path: Path,
 ) -> None:
+    """説明と表示名の翻訳キーを検証する。"""
     required_keys = {
         group.label_key
         for group in groups
@@ -536,4 +557,5 @@ def _validate_translation_keys(
 
 
 def _dictionary_item_context(load_file_path: Path, index: int) -> str:
+    """エラー表示に使う辞書名と項目位置を組み立てる。"""
     return f"{load_file_path} item #{index}"

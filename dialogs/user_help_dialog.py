@@ -1,3 +1,5 @@
+"""アプリの使い方を参照できる画面を提供する。"""
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
@@ -961,7 +963,9 @@ WordPress のブロックコメントには、JSON形式のパラメータを書
 
 
 class UserHelpDialog(QDialog):
+    """操作ガイドを項目別に閲覧できる画面。"""
     def __init__(self, translator: Translator, parent: QWidget | None = None) -> None:
+        """目次と本文の表示欄を組み立てる。"""
         super().__init__(parent)
         self.translator = translator
         self.resize(820, 560)
@@ -990,6 +994,7 @@ class UserHelpDialog(QDialog):
         self.apply_language()
 
     def apply_language(self) -> None:
+        """現在の言語で目次、本文、ボタン名を更新する。"""
         self.setWindowTitle(self.translator.text("help.title"))
         self.button_box.button(QDialogButtonBox.StandardButton.Close).setText(
             self.translator.text("help.close")
@@ -999,6 +1004,7 @@ class UserHelpDialog(QDialog):
         self.topic_list.setCurrentRow(min(current_row, self.topic_list.count() - 1))
 
     def _load_topics(self) -> None:
+        """使用中の言語のヘルプ項目を読み込む。"""
         self.topic_list.clear()
         language_code = "en" if self.translator.language_code == "en" else "ja"
         for title, _body in HELP_TOPICS[language_code]:
@@ -1007,6 +1013,7 @@ class UserHelpDialog(QDialog):
             self.topic_list.setCurrentRow(0)
 
     def _show_topic(self, row: int) -> None:
+        """選択されたヘルプ項目の本文を表示する。"""
         if row < 0:
             self.help_browser.clear()
             return

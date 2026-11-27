@@ -10,6 +10,7 @@ class InlineColorDialog(QColorDialog):
     """元の色を表示し、適用を押したときだけ選択を確定する。"""
 
     def __init__(self, code: str, translator: Translator, parent: QWidget) -> None:
+        """変更前の色と、選んだ色を適用するための操作を表示する。"""
         super().__init__(parent)
         self.setOption(QColorDialog.ColorDialogOption.DontUseNativeDialog)
         self.setCurrentColor(QColor(code))

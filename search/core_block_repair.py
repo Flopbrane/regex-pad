@@ -31,6 +31,7 @@ REPAIR_BLOCKS = ROOT_CLASSES.keys() | WORDPRESS_SERIALIZATION_RULES.keys()
 
 @dataclass(frozen=True)
 class RepairCandidate:
+    """修復候補の位置、変更前後の文字列と根拠を表す。"""
     block: str
     line: int
     start: int
@@ -43,11 +44,13 @@ class RepairCandidate:
 
     @property
     def end(self) -> int:
+        """候補が変更する範囲の終了位置を返す。"""
         return self.start + len(self.before)
 
 
 @dataclass
 class _Block:
+    """修復候補を調べるためのブロック境界とHTML要素を保持する。"""
     name: str
     start: int
     opening: re.Match[str]
@@ -66,6 +69,7 @@ class _BlockScanner(HTMLParser):
     )
 
     def __init__(self, source: str, lines: list[int]) -> None:
+        """原文と行の開始位置、ブロックの解析状態を初期化する。"""
         super().__init__()
         self.source = source
         self.lines = lines
@@ -73,10 +77,12 @@ class _BlockScanner(HTMLParser):
         self.completed: list[tuple[_Block, int]] = []
 
     def _position(self) -> int:
+        """パーサーの現在位置を原文のオフセットに戻す。"""
         line, column = self.getpos()
         return self.lines[line - 1] + column
 
     def handle_comment(self, data: str) -> None:
+        """WordPressの開始・終了コメントを対応付ける。"""
         match = BLOCK_COMMENT_PATTERN.fullmatch(f"<!--{data}-->")
         if match is None:
             return
@@ -99,6 +105,7 @@ class _BlockScanner(HTMLParser):
             self.stack.append(_Block(name, position, match))
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """修復候補の対象となるHTML開始タグと入れ子の状態を記録する。"""
         if not self.stack:
             return
         block = self.stack[-1]
@@ -122,10 +129,12 @@ class _BlockScanner(HTMLParser):
             block.tags.append(tag)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """自己終了タグを調べ、通常のタグが途中で閉じていれば対象外とする。"""
         if self.stack and (not self.stack[-1].tags or tag not in VOID_TAGS):
             self.stack[-1].valid = False
 
     def handle_endtag(self, tag: str) -> None:
+        """終了タグを開始タグと照合して要素の境界を追跡する。"""
         if self.stack and self.stack[-1].root is not None:
             block = self.stack[-1]
             if not block.tags or block.tags[-1] != tag:
@@ -134,11 +143,13 @@ class _BlockScanner(HTMLParser):
                 block.tags.pop()
 
     def handle_data(self, data: str) -> None:
+        """外側にテキストがあるブロックを修復候補から外す。"""
         if self.stack and not self.stack[-1].tags and data.strip():
             self.stack[-1].valid = False
 
 
 def _unique_json(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """同じ名前のキーが複数ないことを確かめて辞書を作る。"""
     attributes = dict(pairs)
     if len(attributes) != len(pairs):
         raise ValueError("duplicate attribute")
@@ -146,10 +157,12 @@ def _unique_json(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _invalid_constant(value: str) -> None:
+    """標準JSONにない数値定数を拒否する。"""
     raise ValueError(f"invalid JSON constant: {value}")
 
 
 def _attributes(block: _Block) -> dict[str, Any] | None:
+    """開始コメントのJSONからブロック属性を読み取る。"""
     try:
         data = json.loads(
             block.opening[3] or "{}", object_pairs_hook=_unique_json, parse_constant=_invalid_constant,
@@ -160,6 +173,7 @@ def _attributes(block: _Block) -> dict[str, Any] | None:
 
 
 def _nested(data: dict[str, Any], path: str) -> Any:
+    """ドット区切りの属性パスを使って値を取得する。"""
     current: Any = data
     for key in path.split("."):
         if not isinstance(current, dict):
@@ -171,6 +185,7 @@ def _nested(data: dict[str, Any], path: str) -> Any:
 def _root_additions(
     name: str, tag: str, attrs: dict[str, str], data: dict[str, Any],
 ) -> tuple[list[str], dict[str, str]]:
+    """既存の指定を保持しながら追加できるクラスとCSS宣言を求める。"""
     rule = WORDPRESS_SERIALIZATION_RULES.get(name, {})
     fallback_tags, fallback_class = ROOT_CLASSES.get(name, (set(), ""))
     if tag not in rule.get("root_tags", fallback_tags):

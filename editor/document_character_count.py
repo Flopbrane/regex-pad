@@ -1,12 +1,13 @@
-"""Count Python characters from changed QTextBlocks without rereading a document."""
+"""文書全体を読み直さず、変更されたQTextBlockからPythonの文字数を数える。"""
 
 from PySide6.QtGui import QTextDocument
 
 
 class DocumentCharacterCount:
-    """Track text length across Qt UTF-16 edits, including astral characters."""
+    """補助平面の文字も含め、QtのUTF-16位置で行う編集に合わせて文字数を追跡する。"""
 
     def __init__(self, document: QTextDocument) -> None:
+        """初期文書から行ごとの文字数と合計を記録する。"""
         self.document = document
         self.text_lengths: list[int] = []
         self.text_total = 0
@@ -19,11 +20,11 @@ class DocumentCharacterCount:
 
     @property
     def count(self) -> int:
-        """Return the length of QTextDocument.toPlainText() in Python characters."""
+        """QTextDocument.toPlainText()のPython文字数を返す。"""
         return self.text_total + max(len(self.text_lengths) - 1, 0)
 
     def apply_change(self, position: int, removed: int, added: int) -> None:
-        """Recount only the blocks touched by one contentsChange signal."""
+        """contentsChange通知で影響を受けたブロックだけを数え直す。"""
         first_block = self.document.findBlock(position)
         last_block = self.document.findBlock(position + added)
         if not last_block.isValid():

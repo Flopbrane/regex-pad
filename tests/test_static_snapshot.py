@@ -1,3 +1,5 @@
+"""静的なスナップショットを検証する。"""
+
 from __future__ import annotations
 
 import base64
@@ -12,10 +14,13 @@ from preview.static_snapshot import SnapshotAssets, SnapshotCancelled, write_sna
 
 @pytest.fixture
 def assets_server():
+    """静的プレビュー用資材を返すローカルのテストサーバーを用意する。"""
     requests: list[str] = []
 
     class Handler(BaseHTTPRequestHandler):
+        """静的プレビュー用の資材要求を扱うテスト用HTTPハンドラー。"""
         def do_GET(self):
+            """GET要求に対しテスト用のデータを返す。"""
             requests.append(self.path)
             if self.path == "/redirect":
                 self.send_response(302)
@@ -34,7 +39,7 @@ def assets_server():
             self.wfile.write(data)
 
         def log_message(self, format: str, *args: object) -> None:
-            pass
+            """テストサーバーの要求ログを抑制する。"""
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -48,6 +53,7 @@ def assets_server():
 def test_snapshot_embeds_local_css_dependencies_and_keeps_native_details(
     tmp_path: Path, assets_server,
 ) -> None:
+    """スナップショットのを埋め込むのローカルのCSSの依存関係とが標準の詳細を保持することを確認する。"""
     origin, requests = assets_server
     path = tmp_path / "snapshot.html"
     html = '''<!doctype html><html><head><link rel="stylesheet" href="/css/main.css">
@@ -76,6 +82,7 @@ def test_snapshot_embeds_local_css_dependencies_and_keeps_native_details(
 
 
 def test_snapshot_never_follows_foreign_redirect(assets_server) -> None:
+    """スナップショットの決してが別の転送に従うことを確認する。"""
     origin, requests = assets_server
     assets = SnapshotAssets(origin, threading.Event())
     with pytest.raises(ValueError, match="redirect"):
@@ -84,6 +91,7 @@ def test_snapshot_never_follows_foreign_redirect(assets_server) -> None:
 
 
 def test_cancelled_snapshot_preserves_existing_file(tmp_path: Path) -> None:
+    """取り消したスナップショットが既存のファイルを維持することを確認する。"""
     path = tmp_path / "snapshot.html"
     path.write_text("original", encoding="utf-8")
     cancel = threading.Event()

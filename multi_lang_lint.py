@@ -1,3 +1,5 @@
+"""言語別の辞書と標準参照ファイルを検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -42,10 +44,12 @@ REFERENCE_FILE_CONTRACTS = {
 
 
 def standard_file_names() -> tuple[str, ...]:
+    """対応する標準ファイルの名前を返す。"""
     return STANDARD_FILE_NAMES
 
 
 def lint_standard_files(standards_path: Path) -> tuple[JsonLintIssue, ...]:
+    """標準参照ファイルの内容を検証する。"""
     issues: list[JsonLintIssue] = []
     for file_name in STANDARD_FILE_NAMES:
         load_file_path = standards_path / file_name
@@ -65,7 +69,7 @@ def lint_standard_files(standards_path: Path) -> tuple[JsonLintIssue, ...]:
 
 
 def _lint_reference_contract(load_file_path: Path) -> tuple[JsonLintIssue, ...]:
-    """Check the identifier and required collections for a bundled reference file."""
+    """同梱の参照ファイルに識別子と必須のデータ集合があるかを確認する。"""
     contract = REFERENCE_FILE_CONTRACTS.get(load_file_path.name)
     if contract is None:
         return ()
@@ -98,6 +102,7 @@ def lint_dictionary_plugin(
     load_file_path: Path,
     standards_path: Path | None = None,
 ) -> tuple[JsonLintIssue, ...]:
+    """挿入辞書と関連する標準ファイルを検証する。"""
     issues = list(lint_json_file(load_file_path))
     if standards_path is not None:
         issues.extend(lint_standard_files(standards_path))

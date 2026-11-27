@@ -1,4 +1,4 @@
-"""Track known WordPress block pairs across small edits without reparsing later blocks."""
+"""小さな編集を反映し、後続ブロックを解析し直さずにWordPressの対応関係を追跡する。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from search.html_typo_lint import BLOCK_COMMENT_PATTERN
 
 @dataclass
 class CoreBlockPair:
-    """One opening comment and its original closing partner."""
+    """開始コメントと、そのコメントに元から対応していた終了コメントを表す。"""
 
     name: str
     open_start: int
@@ -20,17 +20,20 @@ class CoreBlockPair:
     broken: bool = False
 
     def contains(self, position: int) -> bool:
+        """指定位置が既知のブロックの範囲内にあるか確認する。"""
         return self.open_start <= position <= (self.close_end or self.open_end)
 
 
 class CoreBlockIndex:
-    """Retain known pairs so a damaged delimiter cannot adopt a later sibling."""
+    """境界が壊れても、後続の兄弟ブロックの終了コメントを誤って拾わないよう対応を保持する。"""
 
     def __init__(self, source_text: str) -> None:
+        """元のWordPressコメントの位置と対応を記録する。"""
         self.pairs: list[CoreBlockPair] = []
         self._read_fragment(source_text, 0)
 
     def _read_fragment(self, fragment: str, offset: int) -> None:
+        """断片のコメントを解析し、既知の対応を壊さず索引へ追加する。"""
         stack: list[CoreBlockPair] = []
         for token in BLOCK_COMMENT_PATTERN.finditer(fragment):
             start, end = offset + token.start(), offset + token.end()
@@ -78,6 +81,7 @@ class CoreBlockIndex:
             pair.broken = True
 
     def enclosing(self, position: int) -> CoreBlockPair | None:
+        """指定位置を含む最も内側のブロックを返す。"""
         candidates = (pair for pair in self.pairs if pair.contains(position))
         return max(candidates, key=lambda pair: pair.open_start, default=None)
 
@@ -85,7 +89,7 @@ class CoreBlockIndex:
         self, old_start: int, old_end: int, delta: int, added_text: str,
         source_text: str, *, fragment: str = "", fragment_start: int = 0,
     ) -> list[CoreBlockPair]:
-        """Shift known pairs, then recheck only touched delimiters and new fragment."""
+        """既知の位置をずらし、編集された境界と新規の断片だけを確認し直す。"""
         touched: list[CoreBlockPair] = []
         surviving: list[CoreBlockPair] = []
         replaced_closers: list[CoreBlockPair] = []
@@ -203,6 +207,7 @@ class CoreBlockIndex:
 
     @staticmethod
     def _intersects(start: int, end: int, token_start: int, token_end: int) -> bool:
+        """編集範囲がコメントの内部に触れているか確認する。"""
         if start == end:
             return token_start < start < token_end or (
                 token_start == token_end == start
@@ -211,6 +216,7 @@ class CoreBlockIndex:
 
     @staticmethod
     def _shift_start(point: int, start: int, end: int, delta: int) -> int:
+        """編集量に合わせて追跡中の開始位置をずらす。"""
         if point >= end and (start != end or point > start):
             return point + delta
         if point > start:
@@ -219,6 +225,7 @@ class CoreBlockIndex:
 
     @staticmethod
     def _shift_end(point: int, start: int, end: int, delta: int) -> int:
+        """編集量に合わせて追跡中の終了位置をずらす。"""
         if point >= end:
             return point + delta
         if point > start:
@@ -227,6 +234,7 @@ class CoreBlockIndex:
 
     @staticmethod
     def _pair_is_valid(pair: CoreBlockPair, source_text: str) -> bool:
+        """記録された開始・終了コメントが現在の原文と一致するか確認する。"""
         if pair.close_start is None or pair.close_end is None:
             return False
         opening = BLOCK_COMMENT_PATTERN.fullmatch(

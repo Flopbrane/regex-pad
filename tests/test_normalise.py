@@ -1,3 +1,5 @@
+"""正規化を検証する。"""
+
 from __future__ import annotations
 
 import pytest
@@ -46,6 +48,7 @@ def test_apply_normalise_operation(
     expected_text: str,
     expected_count: int,
 ) -> None:
+    """適用の正規化の操作を確認する。"""
     result = apply_normalise_operation(source_text, operation_id)
 
     assert result.text == expected_text

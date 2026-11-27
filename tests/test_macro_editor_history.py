@@ -1,4 +1,4 @@
-"""Concentrated macro-definition history and native drag/drop regressions."""
+"""マクロ定義全体の履歴とQtのドラッグ操作について回帰を確認する。"""
 
 from copy import deepcopy
 from pathlib import Path
@@ -31,6 +31,7 @@ from macro.json_saver import MacroJsonSaver
 
 @pytest.fixture
 def editor(tmp_path, monkeypatch):
+    """テストで操作するエディターを用意する。"""
     app = QApplication.instance() or QApplication([])
     model = MacroEditorDocumentData(
         macro_name="history",
@@ -69,6 +70,7 @@ def editor(tmp_path, monkeypatch):
     "operation", ["add", "duplicate", "delete", "up", "down", "drag"]
 )
 def test_each_structural_operation_undoes_and_redoes_exact_document(editor, operation):
+    """各構造編集のUndoとRedoでプリセット定義が正確に再現されることを確認する。"""
     window, controller = editor
     controller.focus_diagnostic(1, "step_name")
     before = deepcopy(controller.session.document)
@@ -107,6 +109,7 @@ def test_each_structural_operation_undoes_and_redoes_exact_document(editor, oper
 def test_step_field_history_retains_exact_text_and_nullable_controls(
     editor, field, value
 ):
+    """手順の項目の履歴が完全に同じ文字列とnullを指定できるの入力部品を保持することを確認する。"""
     window, controller = editor
     before = deepcopy(controller.session.document)
     widget = window.step_editor.fields[field]
@@ -127,6 +130,7 @@ def test_step_field_history_retains_exact_text_and_nullable_controls(
 
 @pytest.mark.parametrize("metadata", ["macro_name", "description"])
 def test_metadata_keyboard_undo_and_redo_use_document_history(editor, metadata):
+    """メタデータのキーボードのUndoとRedoの使用の文書の履歴を確認する。"""
     window, controller = editor
     widget = getattr(window, metadata)
     old = widget.text()
@@ -141,6 +145,7 @@ def test_metadata_keyboard_undo_and_redo_use_document_history(editor, metadata):
 
 
 def test_regex_widget_shortcuts_do_not_use_a_separate_local_undo(editor):
+    """正規表現のウィジェットのショートカットの行わないの使用の別々のローカルのUndoを確認する。"""
     window, controller = editor
     widget = cast(RegexInputEdit, window.step_editor.fields["search_text"])
     widget.setFocus()
@@ -160,6 +165,7 @@ def test_regex_widget_shortcuts_do_not_use_a_separate_local_undo(editor):
 def test_savepoint_undo_redo_and_failed_save_preserve_dirty_state(
     editor, tmp_path, monkeypatch
 ):
+    """保存時点のUndo／Redoと失敗した保存の保持の未保存状態の状態を確認する。"""
     window, controller = editor
     window.macro_name.setText("saved name")
     assert controller.save()
@@ -188,6 +194,7 @@ def test_savepoint_undo_redo_and_failed_save_preserve_dirty_state(
 def test_new_and_successful_load_reset_history_but_failed_load_does_not(
     editor, tmp_path, monkeypatch
 ):
+    """新規のと成功した読み込みのリセットの履歴の一方の失敗した読み込みの行わないことを確認する。"""
     window, controller = editor
     window.macro_name.setText("edited")
     count = controller.undo_stack.count()
@@ -205,6 +212,7 @@ def test_new_and_successful_load_reset_history_but_failed_load_does_not(
 
 
 def test_undo_new_edit_discards_redo_and_revalidation_follows_restored_input(editor):
+    """Undoの後で編集するとRedo履歴が消え、復元した入力を改めて検証することを確認する。"""
     window, controller = editor
     field = cast(RegexInputEdit, window.step_editor.fields["search_text"])
     cast(QCheckBox, window.step_editor.fields["regular_expression"]).setChecked(True)
@@ -220,7 +228,9 @@ def test_undo_new_edit_discards_redo_and_revalidation_follows_restored_input(edi
 
 
 class InternalDrop(QDropEvent):
+    """同じツリー内からのドラッグを表すテスト用ドロップイベント。"""
     def __init__(self, tree, position):
+        """ドラッグ元のツリーを記録する。"""
         super().__init__(
             QPointF(position),
             Qt.DropAction.MoveAction,
@@ -231,11 +241,13 @@ class InternalDrop(QDropEvent):
         self.tree = tree
 
     def source(self):
+        """ドロップ操作のドラッグ元を返す。"""
         return self.tree
 
 
 @pytest.mark.parametrize("destination", ["above", "below", "root", "outside"])
 def test_native_drop_event_moves_flat_step_and_is_undoable(editor, destination):
+    """ドロップで同階層の手順を移動し、その操作をUndoで取り消せることを確認する。"""
     window, controller = editor
     tree = window.tree
     controller.focus_diagnostic(1, "step_name")
@@ -262,6 +274,7 @@ def test_native_drop_event_moves_flat_step_and_is_undoable(editor, destination):
 
 
 def test_external_drop_and_invalid_or_same_position_do_not_change_document(editor):
+    """外部のドロップと不正なまたは同じ位置が文書を変更しないことを確認する。"""
     window, controller = editor
     before = deepcopy(controller.session.document)
     tree = window.tree
@@ -282,6 +295,7 @@ def test_external_drop_and_invalid_or_same_position_do_not_change_document(edito
 
 
 def test_drag_history_saved_reload_and_actual_runner_sequence(editor):
+    """ドラッグの履歴の保存済みの再読込と実際の実行処理の順序を確認する。"""
     window, controller = editor
     assert window.tree.request_reorder(1, 0)
     assert controller.save()
@@ -295,6 +309,7 @@ def test_drag_history_saved_reload_and_actual_runner_sequence(editor):
 
 
 def test_definition_history_does_not_undo_article_transform(tmp_path, monkeypatch):
+    """定義の履歴の行わないのUndoの原稿の変換を確認する。"""
     from main import MainWindow
 
     app = QApplication.instance() or QApplication([])
@@ -333,6 +348,7 @@ def test_definition_history_does_not_undo_article_transform(tmp_path, monkeypatc
 
 @pytest.mark.parametrize("field", ["macro_name", "search_text"])
 def test_native_context_menu_routes_to_shared_undo_redo(editor, monkeypatch, field):
+    """標準のコンテキストメニューが共有のUndo／Redoに振り分けることを確認する。"""
     window, controller = editor
     controller.add_step()
     count = len(controller.session.document.steps)
@@ -344,6 +360,7 @@ def test_native_context_menu_routes_to_shared_undo_redo(editor, monkeypatch, fie
     observed = []
 
     def choose_undo():
+        """コンテキストメニューからUndoを実行する。"""
         menu = QApplication.activePopupWidget()
         if isinstance(menu, QMenu):
             try:
@@ -367,6 +384,7 @@ def test_native_context_menu_routes_to_shared_undo_redo(editor, monkeypatch, fie
 
 
 def test_delete_all_steps_undo_restores_selection_and_validation(editor):
+    """削除のすべての手順のUndoが選択範囲と検証を復元することを確認する。"""
     window, controller = editor
     for index in (2, 1, 0):
         controller.delete_step(index)
@@ -382,6 +400,7 @@ def test_delete_all_steps_undo_restores_selection_and_validation(editor):
 
 
 def test_cancelled_new_and_language_change_keep_history(editor, monkeypatch):
+    """取り消した新規のと言語の変更の保持するの履歴を確認する。"""
     window, controller = editor
     window.macro_name.setText("keep")
     before = deepcopy(controller.session.document)
@@ -401,6 +420,7 @@ def test_cancelled_new_and_language_change_keep_history(editor, monkeypatch):
 
 
 def test_normalization_form_and_its_dependent_controls_restore_together(editor):
+    """正規化のフォームとその依存するの入力部品の復元のまとめてを確認する。"""
     window, controller = editor
     normalize = cast(QCheckBox, window.step_editor.fields["unicode_normalize"])
     form = cast(QComboBox, window.step_editor.fields["unicode_normalize_form"])
@@ -415,6 +435,7 @@ def test_normalization_form_and_its_dependent_controls_restore_together(editor):
 
 
 def test_close_discard_then_reopen_does_not_revive_unsaved_history(editor):
+    """変更を破棄して閉じた場合、開き直しても未保存の編集履歴が復元されないことを確認する。"""
     window, controller = editor
     before = deepcopy(controller.session.document)
     controller.add_step()

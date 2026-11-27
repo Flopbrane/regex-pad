@@ -1,4 +1,4 @@
-"""Review and edit application shortcuts while keeping standard keys fixed."""
+"""変更不可の標準キーを保ちながら、アプリのショートカットを確認・編集する。"""
 
 from __future__ import annotations
 
@@ -49,14 +49,14 @@ LOCKED_BACKGROUND_COLOR = QColor("#DEDEDE")
 
 
 def canonical_shortcut(value: str) -> str:
-    """Normalize a single Qt shortcut so collisions use one spelling."""
+    """Qtのショートカット表記を正規化し、同じキーの割り当てを検出できるようにする。"""
     sequence = QKeySequence(value)
     return sequence.toString(QKeySequence.SequenceFormat.PortableText) or ""
 
 
 @dataclass(frozen=True, slots=True)
 class ShortcutActionInfo:
-    """One existing app action and its original key assignments."""
+    """既存のアプリアクション1件と元のキー割り当てを表す。"""
 
     action: QAction
     defaults: tuple[str, ...]
@@ -67,7 +67,7 @@ def shortcut_problem(
     key: str, current: tuple[str, str] | None,
     actions: dict[str, ShortcutActionInfo], settings: ShortcutSettings,
 ) -> str | None:
-    """Return the message key for an invalid or already assigned shortcut."""
+    """無効なキーや割り当て済みのキーを通知するメッセージのキーを返す。"""
     sequence = QKeySequence(key)
     if not key or sequence.count() != 1:
         return "shortcut.invalid_key"
@@ -89,7 +89,7 @@ def shortcut_problem(
 def validate_shortcut_settings(
     settings: ShortcutSettings, actions: dict[str, ShortcutActionInfo]
 ) -> str | None:
-    """Reject invalid manual JSON edits before any shortcut is activated."""
+    """ショートカットを有効にする前に、手動編集されたJSONの不正な割り当てを拒否する。"""
     for identifier, key in settings.overrides.items():
         if identifier not in actions or actions[identifier].locked:
             return "shortcut.invalid_config"
@@ -104,12 +104,13 @@ def validate_shortcut_settings(
 
 
 class ShortcutEditorDialog(QDialog):
-    """Edit one key and, for custom entries, its name and inserted text."""
+    """キー1件を編集し、定型文の項目では名前と挿入文字列も編集する。"""
 
     def __init__(
         self, translator: Translator, name: str, shortcut: str,
         text: str | None, parent: QWidget,
     ) -> None:
+        """ショートカットの編集欄を初期化する。"""
         super().__init__(parent)
         self.translator = translator
         self.setWindowTitle(translator.text("shortcut.edit_title"))
@@ -133,16 +134,18 @@ class ShortcutEditorDialog(QDialog):
         layout.addWidget(buttons)
 
     def shortcut(self) -> str:
+        """入力欄のショートカットを取得する。"""
         return self.key_edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText) or ""
 
 
 class ShortcutSettingsDialog(QDialog):
-    """Draft shortcut changes and validate all conflicts before accepting."""
+    """変更案を保持し、すべてのキーの競合を確認してから確定する。"""
 
     def __init__(
         self, translator: Translator, actions: dict[str, ShortcutActionInfo],
         settings: ShortcutSettings, parent: QWidget | None = None,
     ) -> None:
+        """アクションと定型文のショートカット編集画面を作る。"""
         super().__init__(parent)
         self.translator = translator
         self.action_info = actions
@@ -185,6 +188,7 @@ class ShortcutSettingsDialog(QDialog):
         self._render()
 
     def _render(self) -> None:
+        """現在の設定案を一覧に表示する。"""
         self.table.setRowCount(0)
         for identifier, info in self.action_info.items():
             keys = (self.settings.overrides.get(identifier, info.defaults[0]), *info.defaults[1:])
@@ -202,6 +206,7 @@ class ShortcutSettingsDialog(QDialog):
     def _add_row(
         self, kind: str, identifier: str, name: str, shortcut: str, locked: bool
     ) -> None:
+        """ショートカット一覧に1行加える。"""
         row = self.table.rowCount()
         self.table.insertRow(row)
         category = "fixed_app" if locked and kind == "app" else (
@@ -222,10 +227,12 @@ class ShortcutSettingsDialog(QDialog):
             self.table.setItem(row, column, item)
 
     def _selected(self) -> tuple[str, str] | None:
+        """選択中の項目を取得する。"""
         item = self.table.item(self.table.currentRow(), 0)
         return item.data(Qt.ItemDataRole.UserRole) if item is not None else None
 
     def _update_buttons(self) -> None:
+        """選択項目に応じて操作ボタンを切り替える。"""
         selected = self._selected()
         editable = selected is not None and (
             selected[0] == "snippet" or
@@ -235,6 +242,7 @@ class ShortcutSettingsDialog(QDialog):
         self.delete_button.setEnabled(selected is not None and selected[0] == "snippet")
 
     def add_snippet(self) -> None:
+        """新しい定型文のショートカットを設定案に加える。"""
         editor = ShortcutEditorDialog(self.translator, "", "", "", self)
         if editor.exec() != QDialog.DialogCode.Accepted:
             return
@@ -253,6 +261,7 @@ class ShortcutSettingsDialog(QDialog):
         self._render()
 
     def edit_selected(self) -> None:
+        """選択した変更可能な項目を編集する。"""
         selected = self._selected()
         if selected is None:
             return
@@ -293,6 +302,7 @@ class ShortcutSettingsDialog(QDialog):
         self._render()
 
     def delete_selected(self) -> None:
+        """選択した定型文を設定案から削除する。"""
         selected = self._selected()
         if selected is None or selected[0] != "snippet":
             return
@@ -302,16 +312,18 @@ class ShortcutSettingsDialog(QDialog):
         self._render()
 
     def _check_key(self, key: str, current: tuple[str, str] | None = None) -> bool:
+        """ショートカットの形式と重複を検査する。"""
         if problem := shortcut_problem(key, current, self.action_info, self.settings):
             self._warning(problem)
             return False
         return True
 
     def _warning(self, key: str) -> None:
+        """ショートカット設定の警告を表示する。"""
         QMessageBox.warning(self, self.translator.text("shortcut.title"), self.translator.text(key))
 
     def accept(self) -> None:
-        """Commit the draft only when every editable key remains unique."""
+        """変更可能なキーに重複がなければ変更案を確定する。"""
         for identifier, key in self.settings.overrides.items():
             if identifier in self.action_info and not self._check_key(key, ("app", identifier)):
                 return

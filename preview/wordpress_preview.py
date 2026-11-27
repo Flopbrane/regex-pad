@@ -1,4 +1,4 @@
-"""Asynchronous, on-demand WordPress preview displayed by the default browser."""
+"""必要に応じてWordPressのプレビューを非同期で生成し、既定ブラウザーに表示する。"""
 from __future__ import annotations
 
 import base64
@@ -26,6 +26,7 @@ PROTOCOL_PREFIX = b"REGEXPAD_PREVIEW "
 
 
 def _update_cleanup_inventory(runtime_root: Path | None = None, selected_node: Path | None = None) -> None:
+    """準備したプレビュー環境を手動整理用の一覧に反映する。"""
     if getattr(sys, "frozen", False):
         from cleanup_inventory import record_inventory_safely
 
@@ -33,17 +34,20 @@ def _update_cleanup_inventory(runtime_root: Path | None = None, selected_node: P
 
 
 class RuntimePreparation(QThread):
+    """WordPress実行環境を準備するワーカー。"""
     progress = Signal(str)
     prepared = Signal(str)
     failed = Signal(str)
 
     def __init__(self, runtime_root: Path, parent: QObject, *, cached_only: bool = False) -> None:
+        """実行環境の準備先と中止条件を設定する。"""
         super().__init__(parent)
         self.runtime_root = runtime_root
         self.cancel = threading.Event()
         self.cached_only = cached_only
 
     def run(self) -> None:
+        """必要な実行環境を準備し、結果を通知する。"""
         node = None
         try:
             if self.cached_only:
@@ -69,7 +73,9 @@ class RuntimePreparation(QThread):
 
 
 class SnapshotExport(QThread):
+    """WordPressの静的プレビューを書き出すワーカー。"""
     def __init__(self, html: str, url: str, save_file_path: Path, metadata: dict[str, object], parent: QObject) -> None:
+        """書き出しの入力、出力先と中止条件を設定する。"""
         super().__init__(parent)
         self.html = html
         self.url = url
@@ -79,6 +85,7 @@ class SnapshotExport(QThread):
         self.error = ""
 
     def run(self) -> None:
+        """静的プレビューを書き出し、結果を通知する。"""
         try:
             write_snapshot(self.html, self.url, self.save_file_path, self.metadata, self.cancel)
         except SnapshotCancelled:
@@ -96,6 +103,7 @@ class SnapshotExport(QThread):
 
 
 class WordPressPreview(QObject):
+    """WordPressプレビューの起動、描画と停止を管理する。"""
     progress = Signal(str)
     rendered = Signal(str, str)
     failed = Signal(str)
@@ -108,6 +116,7 @@ class WordPressPreview(QObject):
         self, runtime_root: Path, bridge_path: Path, parent: QObject | None = None,
         *, mode: Literal["simple", "theme"] = "theme", output_root: Path | None = None,
     ) -> None:
+        """プレビューの状態と関連するプロセスの参照を初期化する。"""
         super().__init__(parent)
         self.mode = mode
         self.output_root = (output_root or app_base_dir() / "Temp/WordPressPreview").resolve()
@@ -138,6 +147,7 @@ class WordPressPreview(QObject):
 
     def show_preview(self, title: str, source_text: str) -> None:
         # Every request sends the current source to WordPress. No article HTML cache.
+        """指定の原稿をプレビューする。"""
         self.closing = False
         self.warming_up = False
         self.reported_failure = False
@@ -150,7 +160,7 @@ class WordPressPreview(QObject):
         self._ensure_started()
 
     def warm_up(self) -> None:
-        """Start cached WordPress without submitting any article or downloading."""
+        """原稿送信やダウンロードをせず、準備済みのWordPressを起動する。"""
         if self.running:
             return
         if not runtime_ready(self.runtime_root):
@@ -165,16 +175,19 @@ class WordPressPreview(QObject):
         self._ensure_started()
 
     def _report_progress(self, stage: str) -> None:
+        """プレビューの進捗を利用者側へ通知する。"""
         self._set_state(stage if stage in {"prepare", "node", "packages", "wordpress", "download", "boot", "render", "export"} else "prepare")
         if not self.warming_up:
             self.progress.emit(stage)
 
     def _set_state(self, state: str) -> None:
+        """プレビューの状態を更新し、変更を通知する。"""
         if self.state != state:
             self.state = state
             self.state_changed.emit(state)
 
     def _ensure_started(self) -> None:
+        """プレビュー処理が起動している状態にする。"""
         if self.ready:
             self._send_pending()
         elif self.preparation is not None and self.preparation.isRunning() or self.process.state() != QProcess.ProcessState.NotRunning:
@@ -192,6 +205,7 @@ class WordPressPreview(QObject):
     def _preparation_finished(self) -> None:
         # Cached-only preparation may find no compatible Node. Keep it quiet and
         # let a later explicit request perform normal preparation if necessary.
+        """実行環境の準備結果を受け取り、ブリッジを起動する。"""
         if self.process.state() != QProcess.ProcessState.NotRunning or self.closing:
             return
         if self.pending is not None:
@@ -203,6 +217,7 @@ class WordPressPreview(QObject):
             self._set_state("not_prepared")
 
     def _start_bridge(self, node_path: str) -> None:
+        """WordPressと通信するブリッジを起動する。"""
         if self.closing:
             return
         self.buffer = b""
@@ -213,6 +228,7 @@ class WordPressPreview(QObject):
         self.process.start(node_path, [str(self.bridge_path), str(self.runtime_root), theme, str(self.output_root / "boot")])
 
     def _send_pending(self) -> None:
+        """保留していた原稿をブリッジに送る。"""
         if not self.ready or self.pending is None or self.exporter is not None:
             return
         request_id, title, content = self.pending
@@ -224,6 +240,7 @@ class WordPressPreview(QObject):
         self.process.write((json.dumps(command, ensure_ascii=False) + "\n").encode("utf-8"))
 
     def _read_output(self) -> None:
+        """ブリッジの標準出力を読み取って通知を処理する。"""
         self.buffer += bytes(self.process.readAllStandardOutput().data())
         while b"\n" in self.buffer:
             line, self.buffer = self.buffer.split(b"\n", 1)
@@ -241,6 +258,7 @@ class WordPressPreview(QObject):
                     self._fail(f"Invalid preview response: {error}")
 
     def _handle_message(self, message: dict[str, object]) -> None:
+        """ブリッジから届いた状態や描画結果を処理する。"""
         if self.closing:
             return
         event = message.get("event")
@@ -299,6 +317,7 @@ class WordPressPreview(QObject):
             self._report_progress(str(message.get("stage", "boot")))
 
     def _snapshot_finished(self) -> None:
+        """静的プレビューの書き出し結果を処理する。"""
         exporter = self.exporter
         self.exporter = None
         if exporter is not None:
@@ -324,15 +343,18 @@ class WordPressPreview(QObject):
             self.rendered.emit(version, url.toString())
 
     def _read_errors(self) -> None:
+        """ブリッジの標準エラー出力を読み取る。"""
         self.error_tail = (self.error_tail + bytes(self.process.readAllStandardError().data()).decode(
             "utf-8", errors="replace",
         ))[-3000:]
 
     def _process_error(self, error: QProcess.ProcessError) -> None:
+        """ブリッジのプロセスエラーを処理する。"""
         if not self.closing and error == QProcess.ProcessError.FailedToStart:
             self._fail(self.process.errorString())
 
     def _process_finished(self, exit_code: int, _status: QProcess.ExitStatus) -> None:
+        """プレビュープロセスの終了を処理する。"""
         self.ready = False
         self.running = False
         self.running_changed.emit(False)
@@ -340,6 +362,7 @@ class WordPressPreview(QObject):
             self._fail(self.error_tail or f"WordPress preview stopped ({exit_code}).")
 
     def _fail(self, message: str) -> None:
+        """プレビューを失敗状態にし、理由を通知する。"""
         if self.closing or self.reported_failure:
             return
         self.reported_failure = True
@@ -353,7 +376,7 @@ class WordPressPreview(QObject):
             self.failed.emit(message)
 
     def stop(self) -> None:
-        """Stop only this editor's preview; leave any unrelated server untouched."""
+        """このエディターのプレビューだけを停止し、無関係なサーバーは維持する。"""
         self.closing = True
         self.warming_up = False
         self.ready = False

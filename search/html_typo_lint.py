@@ -580,6 +580,7 @@ def _lint_token_inventories(
     html_tokens: list[_LintToken],
     wordpress_tokens: list[_LintToken],
 ) -> list[HtmlTypoLintMessage]:
+    """HTMLタグとWordPressコメントの対応や出現数を検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     messages.extend(
         _lint_wordpress_block_comment_count(
@@ -628,6 +629,7 @@ def _lint_wordpress_block_comment_count(
     name: str,
     message_key: str,
 ) -> list[HtmlTypoLintMessage]:
+    """WordPressブロックの開始・終了コメント数を比較する。"""
     return _lint_token_count(
         name,
         [token for token in tokens if token.name == name],
@@ -640,6 +642,7 @@ def _lint_html_tag_count(
     name: str,
     message_key: str,
 ) -> list[HtmlTypoLintMessage]:
+    """HTMLタグの開始・終了の個数を比較する。"""
     return _lint_token_count(
         name,
         [token for token in tokens if token.name == name],
@@ -652,6 +655,7 @@ def _lint_token_count(
     tokens: list[_LintToken],
     message_key: str,
 ) -> list[HtmlTypoLintMessage]:
+    """指定種類のトークンの開始と終了の個数を照合する。"""
     tokens = [token for token in tokens if token.token_type != "self_close"]
     open_count = sum(1 for token in tokens if token.token_type == "open")
     close_count = sum(1 for token in tokens if token.token_type == "close")
@@ -678,6 +682,7 @@ def _first_count_problem_token(
     open_count: int,
     close_count: int,
 ) -> _LintToken | None:
+    """トークンの個数の不一致を報告すべき位置を求める。"""
     balance = 0
     last_open_token: _LintToken | None = None
     last_close_token: _LintToken | None = None
@@ -701,6 +706,7 @@ def _lint_non_nestable_html_tag(
     tokens: list[_LintToken],
     name: str,
 ) -> list[HtmlTypoLintMessage]:
+    """同じ種類を入れ子にできないHTMLタグの構造を検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     open_tokens: list[_LintToken] = []
     for token in sorted(tokens, key=lambda item: item.position):
@@ -729,6 +735,7 @@ def _lint_html_tag_structure(
     tokens: list[_LintToken],
     tag_names: set[str],
 ) -> list[HtmlTypoLintMessage]:
+    """HTMLタグの前後関係と開始・終了の対応を検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     open_tokens: list[_LintToken] = []
     for token in sorted(tokens, key=lambda item: item.position):
@@ -777,7 +784,7 @@ def _lint_html_tag_structure(
 
 
 def _lint_html_content_model(tokens: list[_LintToken]) -> list[HtmlTypoLintMessage]:
-    """Check a small, explicit content model on live HTML, across WP wrappers."""
+    """WordPressコメントで区切られた箇所も含め、実際のHTMLに明示した要素の親子規則を適用する。"""
     messages: list[HtmlTypoLintMessage] = []
     open_tokens: list[_LintToken] = []
     for token in tokens:
@@ -813,6 +820,7 @@ def _last_open_html_tag_index(
     open_tokens: list[_LintToken],
     tag_name: str,
 ) -> int | None:
+    """指定種類の未終了HTMLタグのうち最後の位置を探す。"""
     for index in range(len(open_tokens) - 1, -1, -1):
         if open_tokens[index].name == tag_name:
             return index
@@ -822,6 +830,7 @@ def _last_open_html_tag_index(
 def _lint_orphan_html_lines_outside_wordpress_blocks(
     load_data: str,
 ) -> list[HtmlTypoLintMessage]:
+    """WordPressブロックの外側に孤立したHTML行を検出する。"""
     messages: list[HtmlTypoLintMessage] = []
     block_depth = 0
     for line_number, line in enumerate(load_data.splitlines(), start=1):
@@ -852,6 +861,7 @@ def _lint_orphan_html_lines_outside_wordpress_blocks(
 
 
 def _lint_known_fragile_typos(load_data: str) -> list[HtmlTypoLintMessage]:
+    """壊れやすい既知の表記ミスを検出する。"""
     messages: list[HtmlTypoLintMessage] = []
     line_starts: list[int] = _line_start_positions(load_data)
     ignored_ranges: list[tuple[int, int]] = _wordpress_block_body_ranges(
@@ -884,7 +894,7 @@ def _lint_known_fragile_typos(load_data: str) -> list[HtmlTypoLintMessage]:
 
 
 def _lint_full_width_html_syntax(load_data: str) -> list[HtmlTypoLintMessage]:
-    """Report full-width punctuation used as live HTML tag syntax."""
+    """実際のHTMLタグ構文に使われた全角記号を報告する。"""
     messages: list[HtmlTypoLintMessage] = []
     line_starts: list[int] = _line_start_positions(load_data)
     ignored_ranges: list[tuple[int, int]] = _html_example_body_ranges(load_data)
@@ -931,6 +941,7 @@ def _lint_full_width_html_syntax(load_data: str) -> list[HtmlTypoLintMessage]:
 
 
 def _html_example_body_ranges(load_data: str) -> list[tuple[int, int]]:
+    """コード例など、HTML構文として扱わない本文の範囲を返す。"""
     tag_names = "|".join(sorted(ATTRIBUTE_EXAMPLE_TAGS))
     pattern = re.compile(
         rf"<({tag_names})\b[^>]*>([\s\S]*?)</\1\s*>",
@@ -943,6 +954,7 @@ def _html_example_body_ranges(load_data: str) -> list[tuple[int, int]]:
 
 
 def _html_tag_like_ranges(load_data: str) -> list[tuple[int, int]]:
+    """HTMLタグに似た表記を持つ範囲を探す。"""
     ranges: list[tuple[int, int]] = []
     position = 0
     while position < len(load_data):
@@ -981,6 +993,7 @@ def _html_tag_like_ranges(load_data: str) -> list[tuple[int, int]]:
 
 
 def _looks_like_html_tag_start(load_data: str, position: int) -> bool:
+    """指定位置がHTMLタグの開始らしいか判定する。"""
     candidate_position: int = position + 1
     while candidate_position < len(load_data) and load_data[candidate_position].isspace():
         candidate_position += 1
@@ -998,6 +1011,7 @@ def _wordpress_block_body_ranges(
     load_data: str,
     block_names: set[str],
 ) -> list[tuple[int, int]]:
+    """指定されたWordPressブロックの本文の範囲を取得する。"""
     ranges: list[tuple[int, int]] = []
     block_stack: list[tuple[str, int]] = []
     for block_match in BLOCK_COMMENT_PATTERN.finditer(load_data):
@@ -1024,6 +1038,7 @@ def _wordpress_block_body_ranges(
 
 
 def _contaminated_wordpress_separator_body_ranges(load_data: str) -> list[tuple[int, int]]:
+    """コードの混入した区切りブロックの本文の範囲を求める。"""
     ranges: list[tuple[int, int]] = []
     for start, end in _wordpress_block_body_ranges(load_data, {"separator"}):
         block_body = load_data[start:end]
@@ -1033,6 +1048,7 @@ def _contaminated_wordpress_separator_body_ranges(load_data: str) -> list[tuple[
 
 
 def _mask_ranges(load_data: str, ranges: list[tuple[int, int]]) -> str:
+    """位置を保ったまま、指定範囲を検査から除外するためにマスクする。"""
     if not ranges:
         return load_data
 
@@ -1045,10 +1061,12 @@ def _mask_ranges(load_data: str, ranges: list[tuple[int, int]]) -> str:
 
 
 def _position_in_ranges(position: int, ranges: list[tuple[int, int]]) -> bool:
+    """指定位置が対象範囲のどれかに含まれるか判定する。"""
     return any(start <= position < end for start, end in ranges)
 
 
 def _lint_embedded_stylesheets(load_data: str) -> list[HtmlTypoLintMessage]:
+    """HTMLに埋め込まれたスタイルシートを検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     pattern: re.Pattern[str] = re.compile(r"<style\b[^>]*>(.*?)</style\s*>", re.IGNORECASE | re.DOTALL)
     for match in pattern.finditer(load_data):
@@ -1065,6 +1083,7 @@ def _css_issue_to_html(
     issue: CssLintIssue,
     line_offset: int = 0,
 ) -> HtmlTypoLintMessage:
+    """CSS診断をHTML文書上の行番号に対応付ける。"""
     return HtmlTypoLintMessage(
         issue.severity,
         issue.message_key,
@@ -1074,6 +1093,7 @@ def _css_issue_to_html(
 
 
 def _wordpress_block_tokens(load_data: str) -> list[_LintToken]:
+    """原文からWordPressコメントのトークンを取得する。"""
     line_starts: list[int] = _line_start_positions(load_data)
     tokens: list[_LintToken] = []
     for block_match in BLOCK_COMMENT_PATTERN.finditer(load_data):
@@ -1096,6 +1116,7 @@ def _html_tag_tokens(
     load_data: str,
     line_number_offset: int = 0,
 ) -> list[_LintToken]:
+    """原文を解析してHTMLタグのトークンを取得する。"""
     collector: _HtmlTagTokenCollector = _HtmlTagTokenCollector(
         _line_start_positions(load_data),
         line_number_offset,
@@ -1110,12 +1131,14 @@ def _position_from_parser_pos(
     line_number: int,
     column_number: int,
 ) -> int:
+    """パーサーの行と列を原文の文字位置に変換する。"""
     if line_number <= 0 or line_number > len(line_starts):
         return 0
     return line_starts[line_number - 1] + column_number
 
 
 def _load_lint_reference() -> dict[str, Any]:
+    """同梱のLinter参照辞書を読み込む。"""
     try:
         data = json.loads(LINT_REFERENCE_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -1126,6 +1149,7 @@ def _load_lint_reference() -> dict[str, Any]:
 
 
 def _load_wordpress_class_reference() -> dict[str, Any]:
+    """WordPressのクラスとタグの対応表を読み込む。"""
     try:
         data = json.loads(WORDPRESS_CLASS_REFERENCE_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -1136,6 +1160,7 @@ def _load_wordpress_class_reference() -> dict[str, Any]:
 
 
 def _load_wordpress_serialization_reference() -> dict[str, Any]:
+    """確認済みのWordPress保存HTMLとの対応表を読み込む。"""
     try:
         data = json.loads(WORDPRESS_SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -1155,6 +1180,7 @@ def _load_wordpress_serialization_reference() -> dict[str, Any]:
 def _reference_wordpress_classes(
     reference_data: dict[str, Any],
 ) -> tuple[set[str], dict[str, set[str]]]:
+    """参照データから既知のWordPressクラスとタグの制約を取り出す。"""
     values: Any | None = reference_data.get("classes")
     if not isinstance(values, dict):
         return set(), {}
@@ -1320,6 +1346,7 @@ KNOWN_WORDPRESS_CLASS_TAGS: dict[str, set[str]] = LINT_REFERENCE_CACHE.wordpress
 
 
 def _lint_wordpress_block_typos(load_data: str) -> list[HtmlTypoLintMessage]:
+    """WordPressブロック名の表記ミスを検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     line_starts: list[int] = _line_start_positions(load_data)
     for block_match in BLOCK_COMMENT_PATTERN.finditer(load_data):
@@ -1346,6 +1373,7 @@ def _lint_wordpress_block_structure(
     load_data: str,
     html_tokens: list[_LintToken],
 ) -> list[HtmlTypoLintMessage]:
+    """WordPressのブロック境界と各ブロックの構造を検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     line_starts: list[int] = _line_start_positions(load_data)
     block_stack: list[_WordPressBlockStackItem] = []
@@ -1606,6 +1634,7 @@ def _lint_wordpress_parent_child(
     block_stack: list[_WordPressBlockStackItem],
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
+    """WordPressブロックの親子関係を検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     parent = block_stack[-1].name if block_stack else ""
     required_parent = WORDPRESS_REQUIRED_PARENTS.get(block_name)
@@ -1641,6 +1670,7 @@ def _last_open_wordpress_block_index(
     block_stack: list[_WordPressBlockStackItem],
     block_name: str,
 ) -> int | None:
+    """指定種類の未終了WordPressブロックのうち最後の位置を探す。"""
     for index in range(len(block_stack) - 1, -1, -1):
         if block_stack[index].name == block_name:
             return index
@@ -1654,6 +1684,7 @@ def _missing_wordpress_block_message(
     *,
     repair_line: int | None = None,
 ) -> HtmlTypoLintMessage:
+    """閉じられていないWordPressブロックの診断を作る。"""
     block_name = block.name
     message_key = "html_typo_lint.missing_wordpress_closing_block"
     if block_name == "html":
@@ -1671,10 +1702,9 @@ def _missing_wordpress_block_message(
 def _lint_html_wordpress_boundaries(
     spans: list[_WordPressBlockStackItem], tokens: list[_LintToken],
 ) -> list[HtmlTypoLintMessage]:
-    """Find HTML opened inside a block but still open at its explicit boundary.
+    """ブロック内で開かれ、終了境界に達しても閉じていないHTMLタグを検出する。
 
-    A container's surrounding HTML is outside its child's body, so remains valid.
-    Invalid WP boundaries are handled by the primary block-stack diagnostics.
+    コンテナの外枠は子ブロックの本文に含めない。WordPressの境界自体が不正なら、ブロックスタックの診断で扱う。
     """
     boundaries = sorted(
         (span for span in spans if span.boundary_valid and not span.self_closing
@@ -1714,6 +1744,7 @@ def _parse_wordpress_block_attributes(
     attributes_start_position: int,
     line_starts: list[int],
 ) -> _ParsedWordPressBlockAttributes:
+    """開始コメントのJSON属性を読み取り、その有効性と診断位置を返す。"""
     if attributes_text is None:
         return {}, True, None
     attributes_text = attributes_text.strip()
@@ -1746,6 +1777,7 @@ def _lint_unknown_wordpress_block_attributes(
     block_attributes: dict[str, Any],
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
+    """WordPressブロックに未登録の属性がないか確認する。"""
     allowed_attributes: set[str] | None = KNOWN_WORDPRESS_BLOCK_ATTRIBUTES.get(block_name)
     if allowed_attributes is None:
         return []
@@ -1774,6 +1806,7 @@ def _lint_wordpress_block_attribute_semantics(
     block_attributes: dict[str, Any],
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
+    """既知のWordPressブロック属性の型と値を検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     allowed_attributes: set[str] | None = KNOWN_WORDPRESS_BLOCK_ATTRIBUTES.get(block_name)
     for attribute, value in block_attributes.items():
@@ -1844,6 +1877,7 @@ def _lint_wordpress_block_attribute_semantics(
 
 
 def _wordpress_attribute_value_has_type(value: Any, expected_type: str) -> bool:
+    """WordPress属性の値が指定された型に合うか判定する。"""
     if expected_type == "array":
         return isinstance(value, list)
     if expected_type == "integer":
@@ -1858,6 +1892,7 @@ def _wordpress_attribute_value_has_type(value: Any, expected_type: str) -> bool:
 
 
 def _wordpress_attribute_value_text(value: Any) -> str:
+    """診断で表示するWordPress属性値を文字列に整える。"""
     try:
         return json.dumps(value, ensure_ascii=False)
     except (TypeError, ValueError):
@@ -1872,6 +1907,7 @@ def _lint_wordpress_block_attribute_html_consistency(
     root_collector: _BlockRootCollector | None = None,
     body_line_offset: int = 0,
 ) -> list[HtmlTypoLintMessage]:
+    """WordPressコメント属性と保存HTMLの整合を検査する。"""
     if block_name == "group" and root_collector is not None:
         return _lint_wordpress_group_root_attributes(
             block_attributes,
@@ -1916,7 +1952,7 @@ def _lint_wordpress_group_root_attributes(
     collector: _BlockRootCollector,
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
-    """Check verified Group JSON-to-class/style serialization relationships."""
+    """確認済みのGroupブロックについて、JSON属性とclass・styleの対応を検査する。"""
     if len(collector.root_tags) != 1:
         return []
     html_attributes = collector.root_tags[0][1]
@@ -1946,7 +1982,7 @@ def _lint_verified_wordpress_serialization(
     collector: _BlockRootCollector,
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
-    """Apply only JSON-to-HTML relationships backed by saved correct examples."""
+    """正しい保存例で裏付けられたJSONとHTMLの対応だけを検査する。"""
     block_rules = WORDPRESS_SERIALIZATION_RULES.get(block_name)
     if not isinstance(block_rules, dict) or len(collector.root_tags) != 1:
         return []
@@ -2089,6 +2125,7 @@ def _serialization_target_attributes(
     target_name: str,
     target_rule: Any,
 ) -> dict[str, str] | None:
+    """保存HTMLの対応規則が対象とする要素の属性を取得する。"""
     if target_name == "root":
         return collector.root_tags[0][1] if len(collector.root_tags) == 1 else None
     if not isinstance(target_rule, dict):
@@ -2117,6 +2154,7 @@ def _nested_wordpress_attribute(
     block_attributes: dict[str, Any],
     json_path: str,
 ) -> Any:
+    """ドット区切りのパスからWordPress属性の値を取得する。"""
     value: Any = block_attributes
     for path_part in json_path.split("."):
         if not isinstance(value, dict) or path_part not in value:
@@ -2129,6 +2167,7 @@ def _lint_wordpress_block_html_shape(
     block_name: str, collector: _BlockRootCollector, line_number: int,
     body_line_offset: int = 0,
 ) -> list[HtmlTypoLintMessage]:
+    """WordPressブロックのルート要素の形と個数を検査する。"""
     expected_tags = WORDPRESS_HTML_SHAPES[block_name]
     if (
         len(collector.root_tags) == 1
@@ -2147,6 +2186,7 @@ def _lint_wordpress_paragraph_attributes(
     block_attributes: dict[str, Any], collector: _BlockRootCollector,
     line_number: int, paragraph_line: int,
 ) -> list[HtmlTypoLintMessage]:
+    """Paragraphのコメント属性とルート要素のクラスやCSS宣言を照合する。"""
     if len(collector.root_tags) != 1 or collector.root_tags[0][0] != "p":
         return []
     html_attributes = collector.root_tags[0][1]
@@ -2283,6 +2323,7 @@ def _lint_wordpress_paragraph_inline_compatibility(
 
 def _wordpress_style_value(value: str) -> str:
     # Gutenberg's style engine converts preset references to CSS variables.
+    """WordPressのプリセット値をCSS変数の表記に変換する。"""
     if value.startswith("var:"):
         return "var(--wp--" + value[4:].replace("|", "--") + ")"
     return value
@@ -2293,6 +2334,7 @@ def _lint_wordpress_heading_level_consistency(
     collector: _BlockRootCollector,
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
+    """見出しのレベル属性とHTML見出しタグを照合する。"""
     level = block_attributes.get("level")
     if level is None:
         level = 2
@@ -2322,6 +2364,7 @@ def _lint_wordpress_spacer_height_consistency(
     block_body: str,
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
+    """スペーサーの高さとHTMLの指定を照合する。"""
     height = block_attributes.get("height")
     if not isinstance(height, str):
         return []
@@ -2352,6 +2395,7 @@ def _lint_wordpress_image_size_consistency(
     block_body: str,
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
+    """画像のサイズ属性とHTML側のクラスを照合する。"""
     size_slug = block_attributes.get("sizeSlug")
     if not isinstance(size_slug, str):
         return []
@@ -2383,6 +2427,7 @@ def _wordpress_attribute_html_mismatch_message(
     attribute_value: str,
     html_value: str,
 ) -> HtmlTypoLintMessage:
+    """WordPress属性と保存HTMLの不一致を示す診断を作る。"""
     return HtmlTypoLintMessage(
         "warning",
         "html_typo_lint.wordpress_block_attribute_html_mismatch",
@@ -2398,6 +2443,7 @@ def _wordpress_attribute_html_mismatch_message(
 
 
 def _normalize_css_value(value: str) -> str:
+    """比較のためCSS値の表記をそろえる。"""
     return re.sub(r"\s+", "", value.strip().lower())
 
 
@@ -2410,6 +2456,7 @@ def _lint_wordpress_paragraph_body(
     *,
     suppress_missing_p: bool = False,
 ) -> list[HtmlTypoLintMessage]:
+    """段落ブロックの本文に必要なタグと構造を検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     p_open = next((token for token in tokens if token.name == "p" and token.token_type == "open"), None)
     p_close = next((token for token in tokens if token.name == "p" and token.token_type == "close"), None)
@@ -2454,6 +2501,7 @@ def _lint_wordpress_separator_body(
     line_starts: list[int],
     line_number: int,
 ) -> list[HtmlTypoLintMessage]:
+    """区切りブロックの本文に紛れ込んだコードを検査する。"""
     code_match = re.search(r"</?code(?:\s|>)", block_body, re.IGNORECASE)
     if code_match is None:
         return []
@@ -2474,7 +2522,7 @@ def _lint_decorated_wordpress_block_should_use_html(
     line_number: int,
     block_attributes: dict[str, Any],
 ) -> list[HtmlTypoLintMessage]:
-    """Warn when fragile WordPress blocks are used for styled decoration."""
+    """装飾に使うと崩れやすいWordPressブロックを検出して警告する。"""
     messages: list[HtmlTypoLintMessage] = []
     if "style" in block_attributes:
         messages.append(
@@ -2516,6 +2564,7 @@ def _first_body_content_line_number(
     line_starts: list[int],
     fallback_line_number: int,
 ) -> int:
+    """ブロック本文の最初の有効な内容の行番号を求める。"""
     content_match = re.search(r"\S", block_body)
     return _match_line_number(
         content_match,
@@ -2531,12 +2580,14 @@ def _match_line_number(
     line_starts: list[int],
     fallback_line_number: int,
 ) -> int:
+    """一致箇所を原文の行番号に変換する。"""
     if match is None:
         return fallback_line_number
     return _line_number_at(body_start_position + match.start(), line_starts)
 
 
 def _paragraph_duplicate_key(block_body: str) -> str:
+    """重複検出に使う段落の比較キーを作る。"""
     without_comments = BLOCK_COMMENT_PATTERN.sub(" ", block_body)
     without_tags = re.sub(r"<[^<>]+>", " ", without_comments)
     text = unescape(without_tags)
@@ -2547,6 +2598,7 @@ def _paragraph_duplicate_key(block_body: str) -> str:
 
 
 def _line_start_positions(load_data: str) -> list[int]:
+    """原文の各行の開始位置を求める。"""
     return [0] + [
         match.end()
         for match in re.finditer(r"\n", load_data)
@@ -2554,6 +2606,7 @@ def _line_start_positions(load_data: str) -> list[int]:
 
 
 def _line_number_at(position: int, line_starts: list[int]) -> int:
+    """原文の文字位置を1始まりの行番号に変換する。"""
     line_number = 1
     for index, line_start in enumerate(line_starts, start=1):
         if line_start > position:
@@ -2563,11 +2616,13 @@ def _line_number_at(position: int, line_starts: list[int]) -> int:
 
 
 def _column_number_at(position: int, line_starts: list[int]) -> int:
+    """原文の文字位置を行内の列番号に変換する。"""
     line_number = _line_number_at(position, line_starts)
     return position - line_starts[line_number - 1] + 1
 
 
 def _normalize_block_name(block_name: str) -> str:
+    """ブロック名を比較用に正規化する。"""
     clean_block_name = block_name.strip().lower()
     if clean_block_name.startswith("core/"):
         return clean_block_name.removeprefix("core/")
@@ -2575,6 +2630,7 @@ def _normalize_block_name(block_name: str) -> str:
 
 
 def _find_closest_word(word: str, choices: set[str]) -> str | None:
+    """候補一覧から指定語に近い語を探す。"""
     matches = get_close_matches(word, sorted(choices), n=1, cutoff=0.72)
     if not matches:
         return None
@@ -2582,18 +2638,21 @@ def _find_closest_word(word: str, choices: set[str]) -> str | None:
 
 
 def _is_known_html_attribute(attr_name: str) -> bool:
+    """タグで使用できる既知のHTML属性かを判定する。"""
     if attr_name in KNOWN_HTML_ATTRIBUTES:
         return True
     return any(attr_name.startswith(prefix) for prefix in ALLOWED_HTML_ATTRIBUTE_PREFIXES)
 
 
 def _is_global_html_attribute(attr_name: str) -> bool:
+    """HTMLの大域属性として使用できるかを判定する。"""
     if attr_name in KNOWN_GLOBAL_HTML_ATTRIBUTES:
         return True
     return any(attr_name.startswith(prefix) for prefix in ALLOWED_HTML_ATTRIBUTE_PREFIXES)
 
 
 def _is_wordpress_accordion_toggle_button(tag: str, attrs: dict[str, str]) -> bool:
+    """タグがWordPressのアコーディオン開閉ボタンかを判定する。"""
     if tag != "button" or attrs.get("type", "").lower() != "button":
         return False
     class_names = set(attrs.get("class", "").split())
@@ -2608,7 +2667,7 @@ def _lint_html_attribute_continuation(
     break_ranges: dict[int, int],
     line_starts: list[int],
 ) -> HtmlTypoLintMessage | None:
-    """Inspect only the body prefix after a parser-confirmed complete start tag."""
+    """パーサーが開始タグの完結を確認した後、本文の先頭部分だけを調べる。"""
     position = start
     first_attribute: tuple[str, int] | None = None
     while position < end:
@@ -2668,6 +2727,7 @@ class HtmlTypoLintParser(HTMLParser):
         load_data: str = "",
         suppressed_ranges: list[tuple[int, int]] | None = None,
     ) -> None:
+        """原文、診断一覧、タグと属性の解析状態を初期化する。"""
         super().__init__(convert_charrefs=False)
         self.messages: list[HtmlTypoLintMessage] = []
         self.inline_stack: list[tuple[str, int, int]] = []
@@ -3025,6 +3085,7 @@ class _BlockRootCollector(HTMLParser):
     """コメントやエスケープされたコードをタグとして扱うことなく、実際のルート要素を読み取る。"""
 
     def __init__(self) -> None:
+        """ブロック内のルート要素を追跡する解析状態を初期化する。"""
         super().__init__(convert_charrefs=True)
         self.root_tags: list[tuple[str, dict[str, str]]] = []
         self.all_tags: list[tuple[str, dict[str, str]]] = []
@@ -3071,6 +3132,7 @@ class _BlockRootCollector(HTMLParser):
 class _HtmlTagTokenCollector(HTMLParser):
     """HTMLタグのトークンを収集するためのカスタムHTMLパーサー。"""
     def __init__(self, line_starts: list[int], line_number_offset: int = 0) -> None:
+        """HTMLタグを原文の位置付きトークンへ変換する状態を初期化する。"""
         super().__init__(convert_charrefs=False)
         self.line_starts: list[int] = line_starts
         self.line_number_offset: int = line_number_offset

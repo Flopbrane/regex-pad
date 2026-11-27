@@ -1,4 +1,4 @@
-"""Opt-in real WordPress/Qt lifecycle and timing checks without opening a browser."""
+"""実際のWordPressとQtを使い、ブラウザーを開かず終了処理や所要時間を確認する任意の検証。"""
 from __future__ import annotations
 
 import argparse
@@ -22,6 +22,7 @@ from preview.wordpress_preview import WordPressPreview
 
 
 def verify(runtime_root: Path) -> dict[str, object]:
+    """実際のWordPressでプレビューモードの起動と停止を検証する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     opened: list[QUrl] = []
@@ -30,6 +31,7 @@ def verify(runtime_root: Path) -> dict[str, object]:
     feedback: list[tuple[int, int, str]] = []
 
     def wait_for(count: int) -> None:
+        """Qtイベントを処理しながら指定条件の成立を待つ。"""
         deadline = time.monotonic() + 90
         while len(rendered) < count and not failures:
             if time.monotonic() > deadline:

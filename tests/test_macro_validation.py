@@ -1,3 +1,5 @@
+"""マクロの検証を検証する。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,6 +24,7 @@ def _step(
     exclusion_text: str | None = None,
     replacement_text: str | None = "after",
 ) -> MacroJsonStepData:
+    """マクロ手順のテスト用データを組み立てる。"""
     return MacroJsonStepData(
         step_name=step_name,
         enabled=enabled,
@@ -36,14 +39,17 @@ def _step(
 
 
 def _model(*steps: MacroJsonStepData) -> MacroJsonData:
+    """指定された手順を持つテスト用マクロ定義を作る。"""
     return MacroJsonData(1, "Macro", "Description", steps or (_step(),))
 
 
 def _codes(result: MacroValidationResult) -> list[str]:
+    """診断結果から比較用のコード一覧を取得する。"""
     return [diagnostic.code for diagnostic in result.diagnostics]
 
 
 def test_normalizer_returns_detached_copy_without_rewriting_user_text() -> None:
+    """書き換えの利用者の文字列を省いた場合、正規化処理が独立したコピーを返すことを確認する。"""
     source_step = _step(
         search_text="  \\d+\nＡＢＣ  ",
         exclusion_text="",
@@ -62,6 +68,7 @@ def test_normalizer_returns_detached_copy_without_rewriting_user_text() -> None:
 
 
 def test_version_one_reference_macro_has_no_diagnostics() -> None:
+    """バージョンの1件の参照資料のマクロがなしの診断を持つことを確認する。"""
     load_data = MacroJsonLoader(Path("macro")).load("macro_format_v1.json")
 
     result = MacroValidator.validate(MacroNormalizer.normalize(load_data))
@@ -71,6 +78,7 @@ def test_version_one_reference_macro_has_no_diagnostics() -> None:
 
 
 def test_validator_reports_root_errors_together() -> None:
+    """検証処理がルート要素のエラーのまとめてを報告することを確認する。"""
     load_data = MacroJsonData(4, "   ", "", ())
 
     result = MacroValidator.validate(load_data)
@@ -88,6 +96,7 @@ def test_validator_reports_root_errors_together() -> None:
 
 
 def test_disabled_steps_do_not_block_execution_but_report_no_enabled_steps() -> None:
+    """無効な手順は実行を妨げず、有効な手順が一件もない場合はその旨を報告することを確認する。"""
     load_data = _model(
         _step(
             enabled=False,
@@ -105,6 +114,7 @@ def test_disabled_steps_do_not_block_execution_but_report_no_enabled_steps() -> 
 
 
 def test_validator_reports_duplicate_step_names_for_each_step() -> None:
+    """重複した名前を持つ手順それぞれに診断が出ることを確認する。"""
     result = MacroValidator.validate(_model(_step(), _step()))
 
     assert not result.is_valid
@@ -113,6 +123,7 @@ def test_validator_reports_duplicate_step_names_for_each_step() -> None:
 
 
 def test_validator_reports_invalid_search_and_exclusion_regex() -> None:
+    """検証処理が不正な検索と除外の正規表現を報告することを確認する。"""
     result = MacroValidator.validate(
         _model(
             _step(
@@ -132,6 +143,7 @@ def test_validator_reports_invalid_search_and_exclusion_regex() -> None:
 
 
 def test_validator_enforces_replacement_route_relationships() -> None:
+    """置換方法に応じて必要な設定の組み合わせを検証することを確認する。"""
     unicode_result = MacroValidator.validate(
         _model(
             _step(

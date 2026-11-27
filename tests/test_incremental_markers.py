@@ -1,4 +1,4 @@
-"""Check UTF-16 edit offsets and bounded search marker updates."""
+"""UTF-16編集位置の変換と検索マーカーの局所更新を検証する。"""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from search.incremental_markers import IndexedSource
 
 
 def test_indexed_source_updates_unicode_and_newline_positions() -> None:
+    """索引付きの原文がUnicodeと改行の位置を更新することを確認する。"""
     source = IndexedSource("😀 a\nb\n")
     assert source.replace(3, 1, "XY\n") == (2, 3, 2)
     assert source.text == "😀 XY\n\nb\n"
@@ -27,6 +28,7 @@ def test_indexed_source_updates_unicode_and_newline_positions() -> None:
 
 
 def test_indexed_source_matches_full_utf16_offsets_after_mixed_edits() -> None:
+    """混在するが編集する後、索引付きの原文が全体のUTF-16の位置オフセットに一致することを確認する。"""
     random_source = random.Random(318)
     text = "a\n😀b\n終わり"
     index = IndexedSource(text)
@@ -50,6 +52,7 @@ def test_indexed_source_matches_full_utf16_offsets_after_mixed_edits() -> None:
 def test_literal_search_edit_rescans_only_changed_neighborhood(
     tmp_path: Path, monkeypatch,
 ) -> None:
+    """単純文字列検索の編集がだけの変更された周辺を再走査することを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
@@ -65,6 +68,7 @@ def test_literal_search_edit_rescans_only_changed_neighborhood(
     original_find_all = window.search_engine.find_all
 
     def record_scan(text: str, *args, **kwargs):
+        """検索の再走査へ渡された範囲を記録する。"""
         scanned_lengths.append(len(text))
         return original_find_all(text, *args, **kwargs)
 
@@ -92,6 +96,7 @@ def test_literal_search_edit_rescans_only_changed_neighborhood(
 def test_literal_markers_match_full_search_after_mixed_edits(
     tmp_path: Path, whole_word: bool,
 ) -> None:
+    """リテラルのマーカーの一致の全体の検索後の混在するが編集することを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
     window = MainWindow(

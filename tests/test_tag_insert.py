@@ -1,3 +1,5 @@
+"""タグの挿入を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -28,6 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -36,6 +39,7 @@ def app() -> QApplication:
 
 
 def test_tag_snippet_renders_selection_and_cursor_position() -> None:
+    """タグの定型文が選択範囲とカーソル位置を描画することを確認する。"""
     snippet = TagSnippet(
         "label",
         "hint",
@@ -49,6 +53,7 @@ def test_tag_snippet_renders_selection_and_cursor_position() -> None:
 
 
 def test_tag_snippet_uses_default_selection_when_text_is_not_selected() -> None:
+    """文字列がしないの選択中のになるの場合、タグの定型文が既定の選択範囲を使うことを確認する。"""
     snippet = TagSnippet(
         "label",
         "hint",
@@ -63,6 +68,7 @@ def test_tag_snippet_uses_default_selection_when_text_is_not_selected() -> None:
 
 
 def test_insert_tag_menu_has_groups_and_parameter_hints(app: QApplication) -> None:
+    """挿入のタグのメニューがグループとパラメーターのヒントを持つことを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -129,6 +135,7 @@ def test_insert_tag_menu_has_groups_and_parameter_hints(app: QApplication) -> No
 def test_insert_tag_menu_hides_tooltips_when_hover_hints_are_disabled(
     app: QApplication,
 ) -> None:
+    """マウスを重ねたときのヒントが無効なであるの場合、挿入のタグのメニューがツールチップを非表示にすることを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -146,6 +153,7 @@ def test_insert_tag_menu_hides_tooltips_when_hover_hints_are_disabled(
 
 
 def test_insert_tag_picker_shortcut_is_available(app: QApplication) -> None:
+    """挿入のタグの選択画面のショートカットが利用できることを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -154,6 +162,7 @@ def test_insert_tag_picker_shortcut_is_available(app: QApplication) -> None:
 
 
 def test_undo_redo_shortcuts_are_available(app: QApplication) -> None:
+    """Undo／Redoのショートカットが利用できることを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -165,6 +174,7 @@ def test_undo_redo_shortcuts_are_available(app: QApplication) -> None:
 
 
 def test_line_break_insert_shortcuts_are_available(app: QApplication) -> None:
+    """改行の挿入のショートカットが利用できることを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -181,6 +191,7 @@ def test_line_break_insert_shortcuts_are_available(app: QApplication) -> None:
 
 
 def test_inline_html_wrap_shortcuts_are_available(app: QApplication) -> None:
+    """インラインのHTMLの折り返しのショートカットが利用できることを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -209,6 +220,7 @@ def test_inline_html_wrap_shortcuts_are_available(app: QApplication) -> None:
 
 
 def test_inline_html_wrap_actions_wrap_selected_text(app: QApplication) -> None:
+    """インラインのHTMLの折り返しの操作の折り返しの選択文字列を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("before target after")
@@ -239,6 +251,7 @@ def test_inline_html_wrap_actions_wrap_selected_text(app: QApplication) -> None:
 def test_inline_html_wrap_actions_insert_pair_without_selection(
     app: QApplication,
 ) -> None:
+    """インラインののHTMLの折り返しの操作の挿入の対（選択範囲なし）を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("before after")
@@ -266,6 +279,7 @@ def test_inline_html_wrap_actions_insert_pair_without_selection(
 def test_underline_shortcut_reads_selected_user_dictionary(
     app: QApplication, tmp_path: Path
 ) -> None:
+    """下線のショートカットが選択中のユーザー辞書を読み取ることを確認する。"""
     _ = app
     load_data = json.loads(
         Path("dictionaries/paragraph_insert_dict.json").read_text(encoding="utf-8")
@@ -285,6 +299,7 @@ def test_underline_shortcut_reads_selected_user_dictionary(
 
 
 def test_inline_color_wrap_actions_wrap_selected_text(app: QApplication) -> None:
+    """インライン色見本の折り返しの操作の折り返しの選択文字列を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("before target after")
@@ -305,6 +320,7 @@ def test_inline_color_wrap_actions_wrap_selected_text(app: QApplication) -> None
 
 
 def child_menus(menu: QMenu) -> list[QMenu]:
+    """対象メニューの子メニューを取得する。"""
     menus: list[QMenu] = []
     for action in menu.actions():
         child_menu = action.menu()
@@ -314,6 +330,7 @@ def child_menus(menu: QMenu) -> list[QMenu]:
 
 
 def test_editor_context_menu_has_tag_insert_actions(app: QApplication) -> None:
+    """エディターのコンテキストメニューがタグの挿入の操作を持つことを確認する。"""
     _ = app
     window = MainWindow()
     context_menu = window._create_editor_context_menu()
@@ -389,6 +406,7 @@ def test_editor_context_menu_has_tag_insert_actions(app: QApplication) -> None:
 def test_css_insert_context_menu_actions_insert_editable_text(
     app: QApplication,
 ) -> None:
+    """CSSの挿入のコンテキストメニューの操作の挿入の編集可能な文字列を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("<p >Body</p>")
@@ -413,6 +431,7 @@ def test_css_insert_context_menu_actions_insert_editable_text(
 def test_background_color_preset_menu_replaces_only_the_value(
     app: QApplication,
 ) -> None:
+    """背景色のプリセットのメニューがだけの値を置き換えることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText('<div style="">本文</div>')
@@ -451,6 +470,7 @@ def test_background_color_preset_menu_replaces_only_the_value(
 def test_background_color_preset_menu_escape_keeps_manual_input_position(
     app: QApplication,
 ) -> None:
+    """背景色のプリセットのメニューのエスケープが手動の入力欄の位置を保持することを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -469,6 +489,7 @@ def test_background_color_preset_menu_escape_keeps_manual_input_position(
 def test_text_color_preset_menu_reuses_inline_shortcut_colors(
     app: QApplication,
 ) -> None:
+    """文字色のプリセットメニューでインライン挿入のショートカットと同じ色を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText('<span style="">本文</span>')
@@ -506,6 +527,7 @@ def test_text_color_preset_menu_reuses_inline_shortcut_colors(
 def test_text_color_preset_menu_escape_keeps_manual_input_position(
     app: QApplication,
 ) -> None:
+    """文字色のプリセットのメニューのエスケープが手動の入力欄の位置を保持することを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -524,6 +546,7 @@ def test_text_color_preset_menu_escape_keeps_manual_input_position(
 def test_css_insert_style_attribute_stays_inside_opening_tag_after_tag_cursor(
     app: QApplication,
 ) -> None:
+    """CSSの挿入のstyle属性の維持される内の開始タグ後のタグのカーソルを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("<div>本文</div>")
@@ -538,6 +561,7 @@ def test_css_insert_style_attribute_stays_inside_opening_tag_after_tag_cursor(
 
 
 def test_css_insert_declaration_uses_existing_style_value(app: QApplication) -> None:
+    """CSSの挿入のCSS宣言が既存のスタイルの値を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText('<span style="">本文</span>')
@@ -554,6 +578,7 @@ def test_css_insert_declaration_uses_existing_style_value(app: QApplication) -> 
 def test_css_insert_declaration_creates_style_attribute_in_tag(
     app: QApplication,
 ) -> None:
+    """CSSの挿入のCSS宣言がstyle属性内のタグを作ることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("<span>本文</span>")
@@ -570,6 +595,7 @@ def test_css_insert_declaration_creates_style_attribute_in_tag(
 def test_tag_insert_dialog_filters_and_accepts_with_keyboard(
     app: QApplication,
 ) -> None:
+    """タグの挿入のダイアログが絞り込むとともに、キーボードを受け入れることを確認する。"""
     _ = app
     window = MainWindow()
     dialog = TagInsertDialog(window.translator)
@@ -600,6 +626,7 @@ def test_tag_insert_dialog_filters_and_accepts_with_keyboard(
 
 
 def test_tag_insert_dialog_updates_hint_on_hover(app: QApplication) -> None:
+    """タグの挿入のダイアログがヒントでのマウスを重ねたときを更新することを確認する。"""
     _ = app
     window = MainWindow()
     dialog = TagInsertDialog(window.translator)
@@ -618,6 +645,7 @@ def test_tag_insert_dialog_updates_hint_on_hover(app: QApplication) -> None:
 
 
 def test_tag_group_order_prefers_current_file_extension(app: QApplication) -> None:
+    """タグのグループの順序のを優先するの現在のファイルの拡張機能を確認する。"""
     _ = app
     window = MainWindow()
 
@@ -632,11 +660,13 @@ def test_tag_group_order_prefers_current_file_extension(app: QApplication) -> No
 
 
 def child_menus_after_rebuild(window: MainWindow) -> list[QMenu]:
+    """メニューの再構築後に生成された子メニューを取得する。"""
     window._rebuild_insert_tag_menu()
     return child_menus(window.insert_tag_menu)
 
 
 def test_ordered_tag_snippet_groups_prefers_extensions() -> None:
+    """定型文のグループの並び順では拡張定義を優先することを確認する。"""
     assert ordered_tag_snippet_groups(Path("memo.md"))[0].label_key == (
         "tag.group.markdown"
     )
@@ -649,6 +679,7 @@ def test_ordered_tag_snippet_groups_prefers_extensions() -> None:
 
 
 def test_insert_tag_snippet_wraps_selected_text(app: QApplication) -> None:
+    """挿入のタグの定型文が選択文字列へ折り返すことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("hello")
@@ -664,6 +695,7 @@ def test_insert_tag_snippet_wraps_selected_text(app: QApplication) -> None:
 
 
 def test_insert_tag_snippet_can_be_undone_and_redone(app: QApplication) -> None:
+    """挿入のタグの定型文が元に戻したとやり直したが可能であることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("hello")
@@ -685,6 +717,7 @@ def test_insert_tag_snippet_can_be_undone_and_redone(app: QApplication) -> None:
 def test_insert_line_break_actions_insert_fixed_html_text(
     app: QApplication,
 ) -> None:
+    """改行挿入の操作で所定のHTML文字列を挿入することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("beforeafter")
@@ -705,6 +738,7 @@ def test_insert_line_break_actions_insert_fixed_html_text(
 
 
 def test_insert_line_break_replaces_selected_text(app: QApplication) -> None:
+    """挿入の改行が選択文字列を置き換えることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("before middle after")
@@ -719,6 +753,7 @@ def test_insert_line_break_replaces_selected_text(app: QApplication) -> None:
 
 
 def test_insert_link_snippet_places_cursor_in_href(app: QApplication) -> None:
+    """挿入のリンクの定型文がカーソル内のhref属性に配置することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("OpenAI")
@@ -740,6 +775,7 @@ def test_insert_link_snippet_places_cursor_in_href(app: QApplication) -> None:
 def test_insert_html_image_snippet_uses_default_size_alignment_and_margin(
     app: QApplication,
 ) -> None:
+    """挿入のHTMLの画像の定型文が既定のサイズの配置と余白を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("画像の説明")
@@ -763,6 +799,7 @@ def test_insert_html_image_snippet_uses_default_size_alignment_and_margin(
 
 
 def test_html_snippets_are_loaded_from_json() -> None:
+    """HTMLの定型文がJSONの状態でから読み込まれることを確認する。"""
     html_group = tag_snippet_groups()[0]
 
     assert html_group.label_key == "tag.group.html"
@@ -774,6 +811,7 @@ def test_html_snippets_are_loaded_from_json() -> None:
 
 
 def test_tag_dictionary_rejects_empty_required_values(tmp_path: Path) -> None:
+    """タグの辞書が空の必須の値を拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -790,6 +828,7 @@ def test_tag_dictionary_rejects_empty_required_values(tmp_path: Path) -> None:
 
 
 def test_tag_dictionary_rejects_missing_required_key(tmp_path: Path) -> None:
+    """タグの辞書が不足した必須のキーを拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -805,6 +844,7 @@ def test_tag_dictionary_rejects_missing_required_key(tmp_path: Path) -> None:
 
 
 def test_tag_dictionary_rejects_duplicated_label_key(tmp_path: Path) -> None:
+    """タグの辞書が重複した表示名の翻訳キーを拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -831,6 +871,7 @@ def test_tag_dictionary_rejects_duplicated_label_key(tmp_path: Path) -> None:
 def test_tag_dictionary_rejects_duplicated_cursor_placeholder(
     tmp_path: Path,
 ) -> None:
+    """タグの辞書が重複したカーソルのプレースホルダーを拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -847,6 +888,7 @@ def test_tag_dictionary_rejects_duplicated_cursor_placeholder(
 
 
 def test_tag_dictionary_rejects_unknown_placeholder(tmp_path: Path) -> None:
+    """タグの辞書が未登録のプレースホルダーを拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -863,6 +905,7 @@ def test_tag_dictionary_rejects_unknown_placeholder(tmp_path: Path) -> None:
 
 
 def test_tag_dictionary_rejects_broken_placeholder(tmp_path: Path) -> None:
+    """タグの辞書が壊れたのプレースホルダーを拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -879,6 +922,7 @@ def test_tag_dictionary_rejects_broken_placeholder(tmp_path: Path) -> None:
 
 
 def test_tag_dictionary_accepts_structured_parameters(tmp_path: Path) -> None:
+    """タグの辞書が構造化したパラメーターを受け入れることを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -918,6 +962,7 @@ def test_tag_dictionary_accepts_structured_parameters(tmp_path: Path) -> None:
 
 
 def test_tag_dictionary_rejects_invalid_parameters(tmp_path: Path) -> None:
+    """タグの辞書が不正なパラメーターを拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -935,6 +980,7 @@ def test_tag_dictionary_rejects_invalid_parameters(tmp_path: Path) -> None:
 
 
 def test_tag_dictionary_rejects_duplicated_parameter_names(tmp_path: Path) -> None:
+    """タグの辞書が重複したパラメーターのに名前を付けるを拒否することを確認する。"""
     write_tag_dictionary_files(
         tmp_path,
         html_items=[
@@ -955,6 +1001,7 @@ def test_tag_dictionary_rejects_duplicated_parameter_names(tmp_path: Path) -> No
 
 
 def test_tag_dictionary_translation_keys_exist() -> None:
+    """タグの辞書の翻訳キーの存在することを確認する。"""
     snippets = [
         snippet
         for group in tag_snippet_groups()
@@ -978,6 +1025,7 @@ def test_tag_dictionary_translation_keys_exist() -> None:
 
 
 def test_tag_dictionary_rejects_missing_translation_key(tmp_path: Path) -> None:
+    """タグの辞書が不足した翻訳キーを拒否することを確認する。"""
     dictionaries_path = tmp_path / "dictionaries"
     resources_path = tmp_path / "resources"
     dictionaries_path.mkdir()
@@ -1010,6 +1058,7 @@ def write_tag_dictionary_files(
     dictionaries_path: Path,
     html_items: list[dict[str, object]],
 ) -> None:
+    """挿入テスト用のタグ辞書ファイルを作る。"""
     valid_item = {
         "label_key": "tag.html.paragraph",
         "hint_key": "tag.hint.html.paragraph",
@@ -1033,6 +1082,7 @@ def write_app_text_files(
     resources_path: Path,
     extra_keys: dict[str, str] | None = None,
 ) -> None:
+    """挿入テスト用の日英翻訳ファイルを作る。"""
     texts = {
         "tag.group.html": "HTML",
         "tag.group.markdown": "Markdown",
@@ -1050,6 +1100,7 @@ def write_app_text_files(
 
 
 def test_insert_html_div_places_cursor_in_style_parameter(app: QApplication) -> None:
+    """HTMLのdiv要素を挿入すると、style属性の入力位置にカーソルが移ることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("content")
@@ -1069,6 +1120,7 @@ def test_insert_html_div_places_cursor_in_style_parameter(app: QApplication) -> 
 
 
 def test_markdown_snippets_are_loaded_from_json() -> None:
+    """Markdownの定型文をJSONから読み込むことを確認する。"""
     markdown_group = tag_snippet_groups()[1]
 
     assert markdown_group.label_key == "tag.group.markdown"
@@ -1080,6 +1132,7 @@ def test_markdown_snippets_are_loaded_from_json() -> None:
 def test_insert_markdown_code_block_places_cursor_after_opening_fence(
     app: QApplication,
 ) -> None:
+    """開始のフェンス後、挿入のMarkdownのコードブロックがカーソルに配置することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("print('hello')")
@@ -1101,6 +1154,7 @@ def test_insert_markdown_code_block_places_cursor_after_opening_fence(
 def test_insert_markdown_python_code_block_uses_selected_language(
     app: QApplication,
 ) -> None:
+    """挿入のMarkdownのPythonのコードブロックが選択中の言語を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("print('hello')")
@@ -1120,6 +1174,7 @@ def test_insert_markdown_python_code_block_uses_selected_language(
 
 
 def test_wordpress_html_snippets_are_loaded_from_json() -> None:
+    """WordPressのHTMLの定型文がJSONの状態でから読み込まれることを確認する。"""
     wordpress_group = tag_snippet_groups()[2]
 
     assert wordpress_group.label_key == "tag.group.wordpress_html"
@@ -1154,6 +1209,7 @@ def test_wordpress_html_snippets_are_loaded_from_json() -> None:
 
 
 def test_wordpress_media_snippets_use_media_category() -> None:
+    """WordPressのメディアの定型文の使用のメディアの分類を確認する。"""
     wordpress_group = tag_snippet_groups()[2]
 
     media_categories = {
@@ -1172,6 +1228,7 @@ def test_wordpress_media_snippets_use_media_category() -> None:
 
 
 def test_wordpress_link_snippet_uses_link_image_category() -> None:
+    """WordPressのリンクの定型文がリンクの画像の分類を使うことを確認する。"""
     wordpress_group = tag_snippet_groups()[2]
     link_snippet = next(
         snippet
@@ -1185,6 +1242,7 @@ def test_wordpress_link_snippet_uses_link_image_category() -> None:
 
 
 def test_wordpress_soft_subheading_uses_text_category() -> None:
+    """WordPressの表示上の小見出しが文字列の分類を使うことを確認する。"""
     wordpress_group = tag_snippet_groups()[2]
     subheading_snippet = next(
         snippet
@@ -1199,6 +1257,7 @@ def test_wordpress_soft_subheading_uses_text_category() -> None:
 
 
 def test_wordpress_text_columns_and_article_parts_use_layout_category() -> None:
+    """WordPressの文字列の列と原稿の部分の使用のレイアウトの分類を確認する。"""
     wordpress_group = tag_snippet_groups()[2]
     layout_snippets = [
         snippet
@@ -1226,6 +1285,7 @@ def test_wordpress_text_columns_and_article_parts_use_layout_category() -> None:
 
 
 def test_wordpress_custom_frame_uses_layout_category() -> None:
+    """WordPressのカスタムの枠がレイアウトの分類を使うことを確認する。"""
     wordpress_group = tag_snippet_groups()[2]
     frame_snippets = [
         snippet
@@ -1251,6 +1311,7 @@ def test_wordpress_custom_frame_uses_layout_category() -> None:
 
 
 def test_wordpress_snippets_have_expected_mode_groups() -> None:
+    """WordPressの定型文が期待値のモードのグループを持つことを確認する。"""
     snippets = {snippet.label_key: snippet for snippet in tag_snippet_groups()[2].snippets}
 
     assert wordpress_mode_keys(snippets["tag.wordpress.paragraph_block"]) == (
@@ -1326,6 +1387,7 @@ def test_wordpress_snippets_have_expected_mode_groups() -> None:
 def test_insert_wordpress_code_block_uses_pre_code_markup(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressのコードブロックがpreタグのコードのマークアップを使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("print('hello')")
@@ -1350,6 +1412,7 @@ def test_insert_wordpress_code_block_uses_pre_code_markup(
 def test_insert_wordpress_html_code_box_uses_custom_style(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressのHTMLのコードの枠がカスタムのスタイルを使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("sample")
@@ -1371,6 +1434,7 @@ def test_insert_wordpress_html_code_box_uses_custom_style(
 def test_insert_wordpress_link_block_places_cursor_in_href(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressのリンクのブロックがカーソル内のhref属性に配置することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("公式サイト")
@@ -1397,6 +1461,7 @@ def test_insert_wordpress_link_block_places_cursor_in_href(
 def test_insert_wordpress_image_block_uses_default_size_alignment_and_margin(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressの画像のブロックが既定のサイズの配置と余白を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("画像の説明")
@@ -1428,6 +1493,7 @@ def test_insert_wordpress_image_block_uses_default_size_alignment_and_margin(
 def test_insert_wordpress_soft_subheading_paragraph_avoids_h3_markup(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressの表示上の小見出しの段落のを避けるのh3のマークアップを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("最初からできなくても大丈夫です")
@@ -1458,6 +1524,7 @@ def test_insert_wordpress_soft_subheading_paragraph_avoids_h3_markup(
 def test_insert_wordpress_custom_frame_block_has_editable_style_parameters(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressのカスタムの枠ブロックが編集可能なスタイルのパラメーターを持つことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("重要なお知らせ")
@@ -1497,6 +1564,7 @@ def test_insert_wordpress_custom_frame_block_has_editable_style_parameters(
 def test_insert_wordpress_decorative_separator_uses_html_block_parameters(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressの装飾用の区切りがHTMLのブロックのパラメーターを使うことを確認する。"""
     _ = app
     window = MainWindow()
     separator_snippet = next(
@@ -1532,6 +1600,7 @@ def test_insert_wordpress_decorative_separator_uses_html_block_parameters(
 def test_insert_wordpress_frame_block_keeps_multiline_selection_in_single_html_block(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressの枠ブロックが複数行の選択範囲内の単一のHTMLのブロックを保持することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("1行目\nSecond line\n三行目")
@@ -1557,6 +1626,7 @@ def test_insert_wordpress_frame_block_keeps_multiline_selection_in_single_html_b
 def test_insert_wordpress_frame_block_without_selection_keeps_matching_tags(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressの枠ブロック（選択範囲なし）が一致するのタグを保持することを確認する。"""
     _ = app
     window = MainWindow()
     frame_snippet = next(
@@ -1583,6 +1653,7 @@ def test_insert_wordpress_frame_block_without_selection_keeps_matching_tags(
 def test_insert_wordpress_frame_presets_keep_distinct_border_styles(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressの枠のプリセットの保持するの異なるの境界線のスタイルを確認する。"""
     _ = app
     snippets = {snippet.label_key: snippet for snippet in tag_snippet_groups()[2].snippets}
 
@@ -1623,6 +1694,7 @@ def test_insert_wordpress_frame_presets_keep_distinct_border_styles(
 def test_insert_wordpress_frame_uses_configured_alignment_and_display(
     app: QApplication,
 ) -> None:
+    """挿入のWordPressの枠が設定済みの配置と表示を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.frame_alignment = "right"
@@ -1654,6 +1726,7 @@ def test_insert_wordpress_frame_uses_configured_alignment_and_display(
 
 
 def test_insert_wordpress_two_column_text_block(app: QApplication) -> None:
+    """挿入のWordPressの2つの列の文字列のブロックを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("1段目")
@@ -1676,6 +1749,7 @@ def test_insert_wordpress_two_column_text_block(app: QApplication) -> None:
 
 
 def test_insert_wordpress_three_column_text_block(app: QApplication) -> None:
+    """挿入のWordPressの3列の文字列のブロックを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("1段目")
@@ -1698,6 +1772,7 @@ def test_insert_wordpress_three_column_text_block(app: QApplication) -> None:
 
 
 def test_insert_wordpress_table_block(app: QApplication) -> None:
+    """挿入のWordPressの表ブロックを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("料金")
@@ -1724,6 +1799,7 @@ def test_insert_wordpress_table_block(app: QApplication) -> None:
 def test_insert_wordpress_details_html_block_keeps_single_html_block(
     app: QApplication,
 ) -> None:
+    """WordPressの詳細欄を挿入してもHTMLブロックが一つにまとまることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("詳しい説明")

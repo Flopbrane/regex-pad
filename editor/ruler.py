@@ -1,3 +1,5 @@
+"""エディター上端に文字位置のルーラーを表示する。"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -11,14 +13,17 @@ if TYPE_CHECKING:
 
 
 class Ruler(QWidget):
+    """文字の桁位置を描画し、クリックされた桁を通知する。"""
     column_clicked = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """ルーラーとエディターの接続を初期化する。"""
         super().__init__(parent)
         self.editor: TextEditor | None = None
         self.setFixedHeight(24)
 
     def set_editor(self, editor: TextEditor | None) -> None:
+        """文字幅とスクロール位置を取得するエディターを設定する。"""
         if self.editor is not None:
             try:
                 self.editor.horizontalScrollBar().valueChanged.disconnect(self.update)
@@ -34,6 +39,7 @@ class Ruler(QWidget):
         self.update()
 
     def column_at_x(self, x_position: int) -> int | None:
+        """ルーラー上の横位置を文字の桁に変換する。"""
         if self.editor is None:
             return None
 
@@ -47,12 +53,14 @@ class Ruler(QWidget):
         return max(1, round(text_x_position / character_width))
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
+        """クリックされた桁を計算して通知する。"""
         column = self.column_at_x(round(event.position().x()))
         if column is not None:
             self.column_clicked.emit(column)
         super().mousePressEvent(event)
 
     def paintEvent(self, event: QPaintEvent) -> None:
+        """文字幅とスクロール位置に合わせて目盛りを描く。"""
         painter = QPainter(self)
         painter.fillRect(event.rect(), QColor("#f7f7f7"))
         painter.setPen(QColor("#d0d0d0"))

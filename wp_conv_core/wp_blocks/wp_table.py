@@ -1,4 +1,4 @@
-"""WordPress table block builder."""
+"""WordPressの表ブロックを組み立てる。"""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ def wp_create_table_block_from_rows(
     rows: list[list[str]],
     convert_inline_code: bool = False,
 ) -> str:
-    """Convert Markdown table rows to a WordPress Gutenberg table block."""
+    """Markdownの表の行をWordPressのGutenberg表ブロックに変換する。"""
     table_rows: list[list[dict[str, str]]] = []
 
     if headers:
@@ -32,6 +32,7 @@ def _wp_create_table_block_from_row_data(
     rows: list[list[dict[str, str]]],
     convert_inline_code: bool = False,
 ) -> str:
+    """見出し行と本文行からWordPress表のHTMLを組み立てる。"""
     header_rows: list[list[dict[str, str]]] = []
     body_rows = rows
 
@@ -68,6 +69,7 @@ def _wp_create_row_html(
     row: list[dict[str, str]],
     convert_inline_code: bool = False,
 ) -> str:
+    """指定のセルを表の1行分のHTMLにする。"""
     cells = "".join(
         f"<{cell['tag']}>"
         f"{wp_format_inline_text(cell['text'], convert_inline_code=convert_inline_code)}"

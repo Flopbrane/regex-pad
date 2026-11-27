@@ -1,3 +1,5 @@
+"""Unicodeの正規化を検証する。"""
+
 from __future__ import annotations
 
 import pytest
@@ -13,6 +15,7 @@ def test_nfkc_can_append_dot_to_supported_circled_number(
     source_text: str,
     expected_text: str,
 ) -> None:
+    """NFKCが追記のピリオドのへの対応するの丸数字が可能であることを確認する。"""
     assert normalize_matched_text(source_text, "NFKC", True) == expected_text
 
 
@@ -20,14 +23,17 @@ def test_nfkc_can_append_dot_to_supported_circled_number(
 def test_canonical_forms_do_not_append_dot_to_unchanged_circled_number(
     form: NormalizationForm,
 ) -> None:
+    """正規の書式の行わないの追記のピリオドのへの維持されるの丸数字を確認する。"""
     assert normalize_matched_text("①", form, True) == "①"
 
 
 def test_dot_is_not_appended_to_non_circled_matches() -> None:
+    """ピリオドがしないの追記したへの非の丸囲みの一致箇所になることを確認する。"""
     assert normalize_matched_text("１２３", "NFKC", True) == "123"
     assert normalize_matched_text("ＡＢＣ", "NFKC", True) == "ABC"
 
 
 def test_normalize_matched_text_handles_empty_and_multiline_text() -> None:
+    """正規化の一致した文字列が空のと複数行の文字列を処理することを確認する。"""
     assert normalize_matched_text("", "NFKC", True) == ""
     assert normalize_matched_text("①\n②", "NFKC", True) == "1\n2"

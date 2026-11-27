@@ -1,4 +1,4 @@
-"""Local, descriptive inventory for manual cleanup; never deletes listed data."""
+"""手動整理向けにローカルの一覧を記録する。一覧に載せたデータは削除しない。"""
 from __future__ import annotations
 
 import json
@@ -19,6 +19,7 @@ _LOCK = threading.Lock()
 
 
 def _read_json(path: Path) -> dict[str, Any]:
+    """指定ファイルからJSONを読み込む。"""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
@@ -27,6 +28,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _write(path: Path, text: str, app_root: Path) -> None:
+    """整理用の一覧をファイルに書き出す。"""
     if not path.resolve().is_relative_to(app_root):
         raise OSError(f"Inventory output must stay inside the app: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -39,16 +41,19 @@ def _write(path: Path, text: str, app_root: Path) -> None:
 
 
 def _cell(value: object) -> str:
+    """一覧の表に表示するセルの内容を整える。"""
     return escape(str(value), quote=False).replace("|", "\\|").replace("\r", " ").replace("\n", " ").replace("`", "'")
 
 
 def _presence(value: bool | None) -> str:
+    """パスの存在状態を表示用に表す。"""
     if value is None:
         return "確認不可（権限等）"
     return "あり" if value else "なし／未作成・削除済み"
 
 
 def _generated(data: dict[str, Any]) -> str:
+    """一覧に載せる生成時刻を作る。"""
     rows = [f"初回記録: {data['created_at']}  ", f"最終更新: {data['updated_at']}  ", f"配置先: `{_cell(data['app_root'])}`", "",
             "## 資材・設定ファイルの保存先", "", "| 区分 | パス | 現在 | 所在・注意 |", "|---|---|---|---|"]
     for entry in data["entries"]:
@@ -92,13 +97,14 @@ def refresh_inventory(
     runtime_root: Path | None = None, selected_node: Path | None = None,
     environment: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Refresh actual app-local paths and explicit external references only."""
+    """アプリ内に実在するパスと、明示された外部参照だけを一覧に反映する。"""
     app_root = app_root.resolve()
     bundled_root = (bundled_root or app_root / "_internal").resolve()
     with _LOCK:
         warnings: list[str] = []
 
         def exists(path: Path) -> bool | None:
+            """候補パスが存在するか確認する。"""
             try:
                 return path.exists()
             except OSError as error:
@@ -115,6 +121,7 @@ def refresh_inventory(
                    and all(isinstance(entry.get(key), str) for key in ("path", "kind", "origin"))}
 
         def add(path: Path, kind: str, origin: str, *, shared: bool = False) -> None:
+            """一覧に候補パスと説明を追加する。"""
             path = path.resolve()
             if not path.is_relative_to(app_root):
                 shared = True
@@ -221,7 +228,7 @@ def refresh_inventory(
 
 
 def record_inventory_safely(app_root: Path, bundled_root: Path | None = None, **kwargs: Any) -> None:
-    """Inventory failure must not prevent the editor/download from starting."""
+    """一覧の記録に失敗しても、エディターやダウンロードの開始を妨げない。"""
     try:
         refresh_inventory(app_root, bundled_root, **kwargs)
     except Exception as error:  # noqa: BLE001 - Optional inventory must not break startup/preparation.

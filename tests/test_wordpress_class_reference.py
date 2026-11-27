@@ -1,3 +1,5 @@
+"""WordPressのクラスの参照資料を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -26,6 +28,7 @@ SERIALIZATION_REFERENCE_PATH = (
 
 
 def test_reference_contains_verified_table_classes_and_business_sample() -> None:
+    """参照資料が確認済みの表のクラスと業務用のサンプルを含むことを確認する。"""
     reference = json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
     classes = reference["classes"]
 
@@ -89,6 +92,7 @@ def test_reference_contains_verified_table_classes_and_business_sample() -> None
 
 
 def test_serialization_reference_records_verified_group_class_and_style_rules() -> None:
+    """保存時の出力の参照資料が確認済みのグループのクラスとスタイルの規則を記録することを確認する。"""
     reference = json.loads(SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
     group_rules = reference["blocks"]["group"]
     paragraph_rules = reference["blocks"]["paragraph"]
@@ -115,6 +119,7 @@ def test_serialization_reference_records_verified_group_class_and_style_rules() 
 
 
 def test_serialization_reference_records_verified_button_link_rules() -> None:
+    """保存時の出力の参照資料が確認済みのボタンのリンクの規則を記録することを確認する。"""
     reference = json.loads(SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
     buttons_rules = reference["blocks"]["buttons"]
     button_rules = reference["blocks"]["button"]
@@ -145,6 +150,7 @@ def test_serialization_reference_records_verified_button_link_rules() -> None:
 
 
 def test_serialization_reference_records_verified_quote_rules() -> None:
+    """保存時の出力の参照資料が確認済みの引用符の規則を記録することを確認する。"""
     reference = json.loads(SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
     paragraph_rules = reference["blocks"]["paragraph"]
     quote_rules = reference["blocks"]["quote"]
@@ -197,6 +203,7 @@ def test_serialization_reference_records_verified_quote_rules() -> None:
 
 
 def test_serialization_reference_records_verified_accordion_rules() -> None:
+    """保存時の出力の参照資料が確認済みのアコーディオンの規則を記録することを確認する。"""
     reference = json.loads(SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
     accordion_rules = reference["blocks"]["accordion"]
     item_rules = reference["blocks"]["accordion-item"]
@@ -217,6 +224,7 @@ def test_serialization_reference_records_verified_accordion_rules() -> None:
 
 
 def test_serialization_reference_records_verified_columns_rules() -> None:
+    """保存時の出力の参照資料が確認済みの列の規則を記録することを確認する。"""
     reference = json.loads(SERIALIZATION_REFERENCE_PATH.read_text(encoding="utf-8"))
     columns_rules = reference["blocks"]["columns"]
     column_rules = reference["blocks"]["column"]
@@ -232,6 +240,7 @@ def test_serialization_reference_records_verified_columns_rules() -> None:
 
 
 def test_generator_keeps_css_tag_evidence_advisory_until_core_save_is_audited() -> None:
+    """生成処理がCSSのタグの根拠の参考のを保持する（コアの保存が確認済みのになるまで）を確認する。"""
     classes: dict[str, ClassEvidence] = defaultdict(ClassEvidence)
 
     _record_css(

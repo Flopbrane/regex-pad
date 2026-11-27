@@ -1,4 +1,4 @@
-"""Self-contained display snapshots rendered by WordPress, with no PHP server."""
+"""WordPressでレンダリングした結果を、PHPサーバー不要の自己完結した表示用ファイルにする。"""
 from __future__ import annotations
 
 import base64
@@ -20,15 +20,18 @@ MAX_ASSETS = 128
 
 
 class SnapshotCancelled(Exception):
-    """The user stopped the preview during export."""
+    """書き出し中に利用者がプレビューを停止した場合に発生する。"""
 
 
 class LocalAssetRedirect(HTTPRedirectHandler):
+    """静的プレビューの資材が外部へ転送されないようリダイレクトを検査する。"""
     def __init__(self, origin: str) -> None:
+        """リダイレクトを許可する取得先を設定する。"""
         super().__init__()
         self.origin = urlsplit(origin)
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        """転送先が許可範囲内の場合にだけリダイレクトを処理する。"""
         target = urlsplit(newurl)
         if (target.scheme, target.netloc) != (self.origin.scheme, self.origin.netloc):
             raise ValueError("Unexpected preview asset redirect")
@@ -36,7 +39,9 @@ class LocalAssetRedirect(HTTPRedirectHandler):
 
 
 class SnapshotAssets:
+    """プレビューに埋め込むCSSと関連資材を収集する。"""
     def __init__(self, origin: str, cancel: threading.Event) -> None:
+        """資材の取得元と中止条件を設定する。"""
         self.origin = origin
         self.cancel = cancel
         self.cached: dict[str, str] = {}
@@ -45,10 +50,12 @@ class SnapshotAssets:
         self.opener = build_opener(LocalAssetRedirect(origin))
 
     def check_cancel(self) -> None:
+        """プレビューの書き出しが中止されたか確認する。"""
         if self.cancel.is_set():
             raise SnapshotCancelled()
 
     def css(self, text: str, base_url: str) -> str:
+        """CSSを取得し、依存する資材の参照を解決する。"""
         text = CSS_IMPORT.sub(
             lambda match: f'{match[1]}"{self.asset(match[3], base_url)}"', text,
         )
@@ -58,6 +65,7 @@ class SnapshotAssets:
         )
 
     def asset(self, value: str, base_url: str) -> str:
+        """プレビューに含める資材を取得する。"""
         self.check_cancel()
         if not value or value.startswith(("data:", "#")):
             return value
@@ -100,9 +108,10 @@ class SnapshotAssets:
 
 
 class SnapshotHTML(HTMLParser):
-    """Retain display markup and native HTML controls; omit executable scripts."""
+    """表示用HTMLとネイティブのコントロールを保持し、実行されるスクリプトは除く。"""
 
     def __init__(self, page_url: str, assets: SnapshotAssets) -> None:
+        """プレビューHTMLの出力と解析状態を初期化する。"""
         super().__init__(convert_charrefs=False)
         self.page_url = page_url
         self.assets = assets
@@ -111,12 +120,15 @@ class SnapshotHTML(HTMLParser):
         self.in_style = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """開始タグを処理し、表示に必要なHTMLを組み立てる。"""
         self._tag(tag, attrs, False)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """自己終了タグを処理し、表示用の出力に加える。"""
         self._tag(tag, attrs, True)
 
     def _tag(self, tag: str, attrs: list[tuple[str, str | None]], self_closing: bool) -> None:
+        """タグと属性を静的プレビュー用に変換する。"""
         self.assets.check_cancel()
         if tag == "script":
             self.in_script = not self_closing
@@ -157,6 +169,7 @@ class SnapshotHTML(HTMLParser):
             self.in_style = True
 
     def handle_endtag(self, tag: str) -> None:
+        """終了タグを処理し、表示用の出力を組み立てる。"""
         if tag == "script":
             self.in_script = False
         elif not self.in_script:
@@ -165,22 +178,27 @@ class SnapshotHTML(HTMLParser):
             self.in_style = False
 
     def handle_data(self, data: str) -> None:
+        """表示に必要な本文を出力に加える。"""
         if not self.in_script:
             self.output.append(self.assets.css(data, self.page_url) if self.in_style else data)
 
     def handle_entityref(self, name: str) -> None:
+        """名前付き文字参照を出力に加える。"""
         if not self.in_script:
             self.output.append(f"&{name};")
 
     def handle_charref(self, name: str) -> None:
+        """数値文字参照を出力に加える。"""
         if not self.in_script:
             self.output.append(f"&#{name};")
 
     def handle_comment(self, data: str) -> None:
+        """HTMLコメントを解析したときの処理を行う。"""
         if not self.in_script:
             self.output.append(f"<!--{data}-->")
 
     def handle_decl(self, decl: str) -> None:
+        """文書型などの宣言を処理する。"""
         self.output.append(f"<!{decl}>")
 
 
@@ -188,6 +206,7 @@ def write_snapshot(
     html: str, page_url: str, save_file_path: Path,
     metadata: dict[str, object], cancel: threading.Event,
 ) -> None:
+    """WordPressから得たHTMLを静的プレビューとして書き出す。"""
     parts = urlsplit(page_url)
     if parts.scheme != "http" or parts.hostname != "127.0.0.1" or not parts.port:
         raise ValueError("Unexpected WordPress snapshot origin")

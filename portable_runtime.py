@@ -1,4 +1,4 @@
-"""Portable runtime path setup for regex-pad."""
+"""Regex Padのポータブル実行時に使うパスを設定する。"""
 from __future__ import annotations
 
 import os
@@ -8,26 +8,27 @@ from pathlib import Path
 
 
 def app_base_dir() -> Path:
-    """Return the folder that should contain runtime/cache/model data."""
+    """実行時データ、キャッシュ、モデルを置くフォルダーを返す。"""
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
 
 
 def bundled_base_dir() -> Path:
-    """Return the read-only bundled application data folder."""
+    """読み取り専用の同梱データを置くフォルダーを返す。"""
     if getattr(sys, "frozen", False):
         return Path(getattr(sys, "_MEIPASS", app_base_dir())).resolve()
     return Path(__file__).resolve().parent
 
 
 def _add_site_dir(site_dir: Path) -> None:
+    """指定したサイトディレクトリをPythonの検索パスに追加する。"""
     if site_dir.exists():
         site.addsitedir(str(site_dir))
 
 
 def configure_portable_runtime() -> Path:
-    """Keep app-owned modules and caches under the app folder."""
+    """アプリが使うモジュールとキャッシュをアプリフォルダーの下に置く。"""
     base_dir = app_base_dir()
     runtime_dir = base_dir / "runtime"
     venv_dir = runtime_dir / "venv"

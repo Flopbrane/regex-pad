@@ -1,3 +1,5 @@
+"""エディターのポータブル設定を読み書きする。"""
+
 from __future__ import annotations
 
 import json
@@ -9,6 +11,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class EditorSettings:
+    """エディターに適用する表示・検索・保存設定を保持する。"""
     word_wrap_enabled: bool = False
     line_numbers_enabled: bool = True
     ruler_enabled: bool = False
@@ -60,10 +63,13 @@ class EditorSettings:
 
 
 class SettingsManager:
+    """ローカル設定ファイルの読み込みと保存を担当する。"""
     def __init__(self, settings_path: Path) -> None:
+        """設定ファイルの保存先を指定する。"""
         self.settings_path = settings_path
 
     def load(self) -> EditorSettings:
+        """保存された設定を読み込み、欠けている項目には既定値を使う。"""
         if not self.settings_path.exists():
             return EditorSettings()
 
@@ -229,6 +235,7 @@ class SettingsManager:
         macro_editor_geometry: str = "",
         macro_editor_splitter_state: str = "",
     ) -> None:
+        """現在のエディター設定をJSONへ保存する。"""
         save_data = {
             "word_wrap_enabled": word_wrap_enabled,
             "line_numbers_enabled": line_numbers_enabled,
@@ -294,6 +301,7 @@ class SettingsManager:
 
 
 def _setting_bool(load_data: dict[str, Any], key: str, default: bool) -> bool:
+    """設定から真偽値を取得し、不正な場合は既定値を使う。"""
     value = load_data.get(key, default)
     if isinstance(value, bool):
         return value
@@ -313,6 +321,7 @@ def _setting_int_min(
     *,
     minimum: int,
 ) -> int:
+    """設定から下限付き整数を取得し、不正な場合は既定値を使う。"""
     value = load_data.get(key, default)
     if isinstance(value, bool):
         return default
@@ -323,6 +332,7 @@ def _setting_int_min(
 
 
 def _setting_str(load_data: dict[str, Any], key: str, default: str) -> str:
+    """設定から文字列を取得し、不正な場合は既定値を使う。"""
     value = load_data.get(key, default)
     if isinstance(value, str):
         return value

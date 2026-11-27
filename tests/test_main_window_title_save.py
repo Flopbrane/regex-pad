@@ -1,4 +1,4 @@
-"""Main title and suggested save names for active and unsaved tabs."""
+"""現在のタブと未保存タブのウインドウタイトル、保存名の候補を検証する。"""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from settings.settings_manager import SettingsManager
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance() or QApplication(sys.argv)
     assert isinstance(application, QApplication)
     return application
@@ -25,6 +26,7 @@ def app() -> QApplication:
 def test_title_shows_active_full_path_and_setting_persists(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """タイトルが有効な全体のパスと設定のを永続化するを表示することを確認する。"""
     _ = app
     settings_path = tmp_path / "settings.json"
     window = MainWindow(settings_path=settings_path, restore_unsaved_backup=False)
@@ -60,12 +62,14 @@ def test_unsaved_first_line_is_selected_in_save_dialog(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     first_line: str, suggestion: str,
 ) -> None:
+    """未保存の先頭行が選択中の内の保存画面になることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText(first_line + "\n本文")
     selected_names: list[str] = []
 
     def inspect_dialog(dialog: QFileDialog) -> QFileDialog.DialogCode:
+        """保存画面の現在のファイル名候補と選択状態を確認する。"""
         selected_names.extend(dialog.selectedFiles())
         return QFileDialog.DialogCode.Rejected
 
@@ -77,6 +81,7 @@ def test_unsaved_first_line_is_selected_in_save_dialog(
 
 
 def test_options_dialog_exposes_full_path_checkbox(app: QApplication) -> None:
+    """設定画面のを公開するの全体のパスのチェックボックスを確認する。"""
     _ = app
     from dialogs.options_dialog import OptionsDialog
     from localization.translator import Translator
@@ -92,6 +97,7 @@ def test_options_dialog_exposes_full_path_checkbox(app: QApplication) -> None:
 def test_options_choice_updates_title_and_saved_setting(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """オプションの選択がタイトルと保存済みの設定を更新することを確認する。"""
     _ = app
     from dialogs.options_dialog import OptionsDialog
 
@@ -101,6 +107,7 @@ def test_options_choice_updates_title_and_saved_setting(
     window._update_window_title()
 
     def choose_short_name(dialog: OptionsDialog) -> OptionsDialog.DialogCode:
+        """設定画面でタイトルの短いファイル名表示を選ぶ。"""
         dialog.show_full_path_checkbox.setChecked(False)
         return OptionsDialog.DialogCode.Accepted
 

@@ -1,3 +1,5 @@
+"""同梱スキーマの参考表を表示するダイアログを提供する。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,7 +21,7 @@ WINDOW_GAP = 8
 
 
 class SchemaReferenceDialog(QDialog):
-    """Modeless reference window generated from HTML, CSS, and WordPress schemas."""
+    """HTML、CSS、WordPressのスキーマから生成した表をモードレスで表示する。"""
 
     def __init__(
         self,
@@ -27,6 +29,7 @@ class SchemaReferenceDialog(QDialog):
         translator: Translator,
         parent: QWidget | None = None,
     ) -> None:
+        """言語、参照資料、表示タブを初期化する。"""
         super().__init__(parent)
         self.standards_path = standards_path
         self.translator = translator
@@ -56,7 +59,7 @@ class SchemaReferenceDialog(QDialog):
         self.apply_language()
 
     def apply_language(self) -> None:
-        """Reload all generated tables using the current application language."""
+        """現在のアプリ言語で、生成したすべての表を読み直す。"""
         language_code = "en" if self.translator.language_code == "en" else "ja"
         html_topic, css_topic, wordpress_topic = load_schema_help_topics(
             self.standards_path,
@@ -78,7 +81,7 @@ class SchemaReferenceDialog(QDialog):
         )
 
     def place_next_to(self, target: QWidget) -> None:
-        """Place the reference beside the editor when the current screen has room."""
+        """画面に余裕があれば、参考表のウインドウをエディターの横へ置く。"""
         screen = target.screen()
         if screen is None:
             return
@@ -104,6 +107,7 @@ class SchemaReferenceDialog(QDialog):
         self.move(x, y)
 
     def _create_browser(self) -> QTextBrowser:
+        """参考表を表示するテキストブラウザーを作る。"""
         browser = QTextBrowser(self)
         browser.setOpenExternalLinks(False)
         return browser

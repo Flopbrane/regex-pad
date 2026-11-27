@@ -1,8 +1,6 @@
-"""Recording-only core ported from logger_project for Regex Pad.
+"""logger_projectから移植した、Regex Pad向けのログ記録専用機能。
 
-This module intentionally contains no query, summary, triage, or analysis
-features.  Logging is best effort: a failure to serialize or append a record
-is reported to stderr and is never allowed to stop the editor.
+検索、要約、優先度判定、分析は行わない。ログの保存は可能な範囲で行い、直列化や追記に失敗した場合は標準エラー出力に報告してエディターの動作を続ける。
 """
 
 from __future__ import annotations
@@ -27,7 +25,7 @@ from portable_runtime import app_base_dir
 
 
 class AppLogger:
-    """Write structured daily JSONL logs to the portable application folder."""
+    """アプリのポータブルフォルダーに、日別の構造化ログをJSONL形式で書き込む。"""
 
     _trace_id: ContextVar[str | None] = ContextVar(
         "regex_pad_trace_id",
@@ -41,28 +39,31 @@ class AppLogger:
         app_name: str = "regex_pad",
         default_output: LogOutput = LogOutput.FILE,
     ) -> None:
+        """ログの保存先と既定の出力条件を設定する。"""
         self.log_dir = log_dir or app_base_dir() / "logs"
         self.app_name = app_name
         self.default_output = default_output
 
     def new_trace_id(self) -> str:
-        """Create and activate a new trace identifier."""
+        """新しいトレースIDを作成し、現在のIDとして設定する。"""
         trace_id = uuid.uuid4().hex
         self._trace_id.set(trace_id)
         return trace_id
 
     def get_trace_id(self) -> str:
-        """Return the current trace identifier, creating it when necessary."""
+        """現在のトレースIDを返し、未作成なら生成する。"""
         return self._trace_id.get() or self.new_trace_id()
 
     def set_trace_id(self, trace_id: str) -> None:
-        """Use an externally supplied trace identifier."""
+        """外部から指定されたトレースIDを使う。"""
         self._trace_id.set(trace_id)
 
     def _log_file(self, timestamp: datetime) -> Path:
+        """記録日時から日別ログの保存先を求める。"""
         return self.log_dir / f"{self.app_name}_{timestamp.date().isoformat()}.jsonl"
 
     def _caller_where(self) -> LogWhere:
+        """呼び出し元のファイル名、行、関数名を取り出す。"""
         frame: FrameType | None = inspect.currentframe()
         logger_folder = Path(__file__).resolve().parent
         try:
@@ -81,6 +82,7 @@ class AppLogger:
         return {}
 
     def _safe(self, value: Any) -> Any:
+        """ログ用の値を安全に直列化する。"""
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
         if isinstance(value, datetime):
@@ -113,11 +115,9 @@ class AppLogger:
         where: LogWhere | None = None,
         output: LogOutput | None = None,
     ) -> None:
-        """Build and emit one structured log record.
+        """構造化ログを1件組み立てて出力する。
 
-        Logging success is deliberately not returned as an operation result.
-        Callers must separately return, raise, or provide their own failure
-        result after recording an error.
+        ログ記録の成否は処理の戻り値に含めない。呼び出し元はエラーを記録した後、戻り値、例外、失敗結果を別途決める。
         """
         try:
             timestamp = datetime.now(timezone.utc)
@@ -165,7 +165,7 @@ class AppLogger:
         status: str = "failed",
         category: str = "exception",
     ) -> None:
-        """Record an exception without deciding whether the caller recovers."""
+        """例外を記録する。例外からの復旧は呼び出し元が判断する。"""
         try:
             resolved_traceback = traceback_object or error.__traceback__
             exception_context = dict(context or {})
@@ -210,22 +210,27 @@ class AppLogger:
         message: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Allow the requested ``logger(error)`` recording form."""
+        """`logger(error)` の形式で例外を記録できるようにする。"""
         self.exception(error, message, **kwargs)
 
     def debug(self, message: str, **kwargs: Any) -> None:
+        """デバッグ情報を記録する。"""
         self.log(LogLevel.DEBUG, message, **kwargs)
 
     def info(self, message: str, **kwargs: Any) -> None:
+        """情報レベルのログを記録する。"""
         self.log(LogLevel.INFO, message, **kwargs)
 
     def warning(self, message: str, **kwargs: Any) -> None:
+        """警告レベルのログを記録する。"""
         self.log(LogLevel.WARNING, message, **kwargs)
 
     def error(self, message: str, **kwargs: Any) -> None:
+        """エラーレベルのログを記録する。"""
         self.log(LogLevel.ERROR, message, **kwargs)
 
     def critical(self, message: str, **kwargs: Any) -> None:
+        """重大レベルのログを記録する。"""
         self.log(LogLevel.CRITICAL, message, **kwargs)
 
 
@@ -233,7 +238,7 @@ _LOGGER: AppLogger | None = None
 
 
 def get_logger() -> AppLogger:
-    """Return the process-wide Regex Pad logger."""
+    """プロセス全体で共有するRegex Padのロガーを返す。"""
     global _LOGGER
     if _LOGGER is None:
         _LOGGER = AppLogger()
@@ -241,11 +246,9 @@ def get_logger() -> AppLogger:
 
 
 def install_exception_hooks(app_logger: AppLogger | None = None) -> None:
-    """Record uncaught main-thread and Python-thread exceptions.
+    """メインスレッドとPythonの各スレッドで捕捉されなかった例外を記録する。
 
-    The original hooks are still called because execution cannot safely resume
-    after an arbitrary uncaught exception.  Expected recoverable errors should
-    instead be caught at their operation boundary and passed to ``logger(error)``.
+    予期しない例外の後で安全に続行できるとは限らないため、元の例外フックも呼ぶ。想定内の復旧可能なエラーは処理の境界で捕捉し、`logger(error)` に渡す。
     """
     resolved_logger = app_logger or get_logger()
     original_sys_hook = sys.excepthook
@@ -256,6 +259,7 @@ def install_exception_hooks(app_logger: AppLogger | None = None) -> None:
         error: BaseException,
         traceback_object: TracebackType | None,
     ) -> None:
+        """未捕捉の例外を記録し、元のフックに渡す。"""
         del exception_type
         resolved_logger.exception(
             error,
@@ -267,6 +271,7 @@ def install_exception_hooks(app_logger: AppLogger | None = None) -> None:
         original_sys_hook(type(error), error, traceback_object)
 
     def thread_hook(args: threading.ExceptHookArgs) -> None:
+        """スレッドの未捕捉例外を記録し、元のフックに渡す。"""
         if args.exc_value is None:
             original_thread_hook(args)
             return

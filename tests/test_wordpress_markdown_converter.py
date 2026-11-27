@@ -1,3 +1,5 @@
+"""WordPressのMarkdown変換器を検証する。"""
+
 from __future__ import annotations
 
 import pytest
@@ -12,6 +14,7 @@ from editor.wordpress_markdown_converter import (
 
 
 def test_convert_complex_markdown_blocks_converts_table() -> None:
+    """変換の複雑なMarkdownがに変換するの表を拒否することを確認する。"""
     result = convert_complex_markdown_blocks_to_wordpress_html(
         "| Purpose | AI |\n"
         "|---|---|\n"
@@ -25,6 +28,7 @@ def test_convert_complex_markdown_blocks_converts_table() -> None:
 
 
 def test_convert_complex_markdown_blocks_accepts_escaped_pipe_text() -> None:
+    """変換の複雑なMarkdownがを受け入れるのエスケープされた縦棒の文字列を拒否することを確認する。"""
     result = convert_complex_markdown_blocks_to_wordpress_html(
         r"\| Purpose \| AI \|"
         "\n"
@@ -38,6 +42,7 @@ def test_convert_complex_markdown_blocks_accepts_escaped_pipe_text() -> None:
 
 
 def test_convert_markdown_table_keeps_literal_escaped_pipe_in_cell() -> None:
+    """変換のMarkdownの表がリテラルのエスケープされた縦棒内のセルを保持することを確認する。"""
     result = convert_markdown_tables_to_wordpress_html(
         "| Tool | Note |\n"
         "|---|---|\n"
@@ -48,6 +53,7 @@ def test_convert_markdown_table_keeps_literal_escaped_pipe_in_cell() -> None:
 
 
 def test_convert_markdown_table_pads_short_rows_for_stable_columns() -> None:
+    """変換のMarkdownの表のを補うの短いの行の用の安定した列を確認する。"""
     result = convert_markdown_tables_to_wordpress_html(
         "| Purpose | AI | Cost |\n"
         "|---|---|---|\n"
@@ -59,6 +65,7 @@ def test_convert_markdown_table_pads_short_rows_for_stable_columns() -> None:
 
 
 def test_convert_markdown_tables_converts_only_table_blocks() -> None:
+    """変換のMarkdownの表がだけの表のブロックに変換することを確認する。"""
     result = convert_markdown_tables_to_wordpress_html(
         "| Purpose | AI |\n"
         "|---|---|\n"
@@ -72,6 +79,7 @@ def test_convert_markdown_tables_converts_only_table_blocks() -> None:
 
 
 def test_convert_complex_markdown_blocks_converts_unordered_list() -> None:
+    """変換の複雑なMarkdownがに変換するの番号なしのリストを拒否することを確認する。"""
     result = convert_complex_markdown_blocks_to_wordpress_html(
         "- **Runway** for realistic B-roll\n"
         "- `Kling` for short motion clips"
@@ -86,6 +94,7 @@ def test_convert_complex_markdown_blocks_converts_unordered_list() -> None:
 
 
 def test_convert_markdown_lists_converts_only_list_blocks() -> None:
+    """変換のMarkdownのリストがだけのリストのブロックに変換することを確認する。"""
     result = convert_markdown_lists_to_wordpress_html(
         "| Purpose | AI |\n"
         "|---|---|\n"
@@ -100,6 +109,7 @@ def test_convert_markdown_lists_converts_only_list_blocks() -> None:
 
 
 def test_convert_complex_markdown_blocks_converts_ordered_list() -> None:
+    """変換の複雑なMarkdownがに変換するの番号付きのリストを拒否することを確認する。"""
     result = convert_complex_markdown_blocks_to_wordpress_html(
         "1. Prepare source\n2. Convert block"
     )
@@ -111,6 +121,7 @@ def test_convert_complex_markdown_blocks_converts_ordered_list() -> None:
 
 
 def test_convert_complex_markdown_blocks_keeps_table_and_list_blocks() -> None:
+    """変換の複雑なMarkdownが保持するの表とリストのブロックを拒否することを確認する。"""
     result = convert_complex_markdown_blocks_to_wordpress_html(
         "| Purpose | AI |\n"
         "|---|---|\n"
@@ -126,21 +137,25 @@ def test_convert_complex_markdown_blocks_keeps_table_and_list_blocks() -> None:
 
 
 def test_convert_complex_markdown_blocks_rejects_plain_text() -> None:
+    """変換の複雑なMarkdownがを拒否するのプレーンテキストの文字列を拒否することを確認する。"""
     with pytest.raises(WordPressMarkdownConversionError, match="Markdown table or list"):
         convert_complex_markdown_blocks_to_wordpress_html("plain text")
 
 
 def test_convert_markdown_tables_rejects_list_only_selection() -> None:
+    """変換のMarkdownの表がリストだけの選択範囲を拒否することを確認する。"""
     with pytest.raises(WordPressMarkdownConversionError, match="Markdown table"):
         convert_markdown_tables_to_wordpress_html("- list only")
 
 
 def test_convert_markdown_lists_rejects_table_only_selection() -> None:
+    """変換のMarkdownのリストが表だけの選択範囲を拒否することを確認する。"""
     with pytest.raises(WordPressMarkdownConversionError, match="Markdown list"):
         convert_markdown_lists_to_wordpress_html("| A | B |\n|---|---|\n| 1 | 2 |")
 
 
 def test_convert_markdown_list_to_marker_safe_frame() -> None:
+    """Markdownのリストをマーカーに干渉しない枠に変換することを確認する。"""
     result = convert_list_to_wordpress_frame_html(
         "- **重要**な項目\n- `code` の項目",
         alignment="center",
@@ -160,6 +175,7 @@ def test_convert_markdown_list_to_marker_safe_frame() -> None:
 
 
 def test_convert_ordered_wordpress_list_block_to_numbered_frame_rows() -> None:
+    """変換の番号付きのWordPressのリストブロックのへの番号付きの枠の行を確認する。"""
     result = convert_list_to_wordpress_frame_html(
         '<!-- wp:list {"ordered":true} -->\n'
         '<ol class="wp-block-list">\n'
@@ -174,5 +190,6 @@ def test_convert_ordered_wordpress_list_block_to_numbered_frame_rows() -> None:
 
 
 def test_convert_list_to_frame_rejects_non_list_selection() -> None:
+    """変換のリストのへの枠が非のリストの選択範囲を拒否することを確認する。"""
     with pytest.raises(WordPressMarkdownConversionError, match="Markdown list"):
         convert_list_to_wordpress_frame_html("普通の文章です")

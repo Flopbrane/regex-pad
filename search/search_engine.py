@@ -209,6 +209,7 @@ class SearchEngine:
             replacement_count = 0
 
             def replace_allowed_match(match: Match[str]) -> str:
+                """除外されていない一致にだけ置換文字列を展開する。"""
                 nonlocal replacement_count
                 if self._is_excluded(match, excluded_ranges):
                     return match.group(0)

@@ -1,4 +1,4 @@
-"""Verify local character counting across Qt edits and Unicode text."""
+"""Qtの編集とUnicode文字を含む文書で、局所的な文字数の更新を検証する。"""
 
 from __future__ import annotations
 
@@ -14,10 +14,12 @@ from main import MainWindow
 
 
 def _qt_position(text: str, python_position: int) -> int:
+    """本文の文字位置をQtのUTF-16位置へ変換する。"""
     return len(text[:python_position].encode("utf-16-le")) // 2
 
 
 def test_character_count_tracks_multiline_unicode_edits_and_undo() -> None:
+    """文字の件数が複数行のUnicodeの編集とUndoを追跡することを確認する。"""
     app = QApplication.instance() or QApplication([])
     assert app is not None
     editor = QPlainTextEdit()
@@ -54,6 +56,7 @@ def test_character_count_tracks_multiline_unicode_edits_and_undo() -> None:
 def test_typing_updates_count_and_draft_title_without_full_text_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """入力時に全文を取得せず、文字数と未保存タブのタイトルが更新されることを確認する。"""
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
     app = QApplication.instance() or QApplication([])
     assert app is not None
@@ -61,6 +64,7 @@ def test_typing_updates_count_and_draft_title_without_full_text_read(
     window.editor.setPlainText("first😀\nsecond")
 
     def fail_full_read() -> str:
+        """全文の再取得が発生した時点でテストを失敗させる。"""
         raise AssertionError("full document read on typing")
 
     monkeypatch.setattr(window.editor, "toPlainText", fail_full_read)

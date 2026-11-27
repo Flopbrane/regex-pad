@@ -112,8 +112,9 @@ enabled, use **Reset selection scope** to capture a new selection. Closing the
 dialog clears search, exclusion, and scope markers. Reopening keeps the text
 fields and checkboxes, even if another passage is selected in the editor. The
 search text becomes empty only when you delete it or press **Clear**. A successful
-Find or Replace clears result markers, preview rows, and the old selected-scope
-reference while keeping the input fields and checkboxes. Select a new passage
+Find or Replace clears old result markers, preview rows, and the old selected-scope
+reference while keeping the input fields and checkboxes. Find brings the current
+match near the center of the editor and marks it. Select a new passage
 or use **Reset selection scope** before another selected-only operation.
 
 ### Search/Replace Presets in the current source build

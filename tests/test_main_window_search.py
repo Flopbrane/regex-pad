@@ -1,3 +1,5 @@
+"""メインウインドウの検索を検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -18,6 +20,7 @@ from search.search_engine import SearchMatch, SearchOptions
 
 
 def _process_delayed_ui_events(delay_ms: int = 75) -> None:
+    """テスト対象の遅延処理が実行されるまでQtイベントを処理する。"""
     loop = QEventLoop()
     QTimer.singleShot(delay_ms, loop.quit)
     loop.exec()
@@ -29,6 +32,7 @@ def test_save_lint_confirmation_respects_severity(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     severity: str, confirmations: int,
 ) -> None:
+    """保存時の確認が文法チェックの重大度に応じて出ることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", unsaved_backup_path=tmp_path / "backup.json")
     window.html_typo_lint_enabled = True
@@ -39,6 +43,7 @@ def test_save_lint_confirmation_respects_severity(
     requests = []
 
     def confirm(*args, **kwargs):
+        """確認ダイアログへの利用者の応答をテスト用に代用する。"""
         requests.append(args)
         return QMessageBox.StandardButton.No
 
@@ -52,6 +57,7 @@ def test_save_lint_confirmation_respects_severity(
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -60,6 +66,7 @@ def app() -> QApplication:
 
 
 def test_find_next_selects_regex_match(app: QApplication) -> None:
+    """次の検索が正規表現の一致を選択することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("abc item-123 xyz")
@@ -73,6 +80,7 @@ def test_find_next_selects_regex_match(app: QApplication) -> None:
 
 
 def test_replace_all_uses_regex_groups(app: QApplication) -> None:
+    """全置換が正規表現のグループを使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("item-01 item-20")
@@ -90,6 +98,7 @@ def test_replace_all_button_uses_unicode_normalization_route(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """全置換のボタンがUnicodeの正規化の経路を使うことを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("① ＡＢＣ １２３ ② ⑩ ⑳")
@@ -112,6 +121,7 @@ def test_replace_all_button_uses_unicode_normalization_route(
 
 
 def test_replace_current_uses_unicode_normalization_route(app: QApplication) -> None:
+    """1件置換がUnicodeの正規化の経路を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("⑩ follows ①")
@@ -133,6 +143,7 @@ def test_replace_all_returns_focus_to_find_text(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
+    """全置換が検索欄へのフォーカスを返すことを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("target target")
@@ -161,6 +172,7 @@ def test_replace_current_returns_focus_to_find_text(
     app: QApplication,
     tmp_path,
 ) -> None:
+    """1件置換の後、検索文字列の入力欄にフォーカスが戻ることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("target target")
@@ -185,6 +197,7 @@ def test_replace_marked_returns_focus_to_find_text(
     app: QApplication,
     tmp_path,
 ) -> None:
+    """マーカー付きの一致を置換した後、検索欄にフォーカスが戻ることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("target keep target")
@@ -209,6 +222,7 @@ def test_replace_all_button_previews_and_replaces(
     app: QApplication,
     tmp_path,
 ) -> None:
+    """全置換ボタンで変更のプレビューと適用ができることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("target target")
@@ -228,6 +242,7 @@ def test_replace_all_button_replaces_wordpress_paragraph_gap_regex(
     app: QApplication,
     tmp_path,
 ) -> None:
+    """全置換のボタンがWordPressの段落の隙間の正規表現を置き換えることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText(
@@ -258,6 +273,7 @@ def test_low_load_mode_skips_auto_search_highlights(
     app: QApplication,
     tmp_path,
 ) -> None:
+    """低負荷モードが自動の検索の強調表示を省くことを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.reduced_error_check_enabled = True
@@ -271,6 +287,7 @@ def test_low_load_mode_skips_auto_search_highlights(
 
 
 def test_replace_current_keeps_cursor_after_replaced_text(app: QApplication) -> None:
+    """置換された文字列後、1件置換がカーソルを保持することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("target 1\nkeep\ntarget 2\nkeep\ntarget 3")
@@ -287,6 +304,7 @@ def test_replace_current_keeps_cursor_after_replaced_text(app: QApplication) -> 
 def test_find_next_after_replace_current_continues_to_following_match(
     app: QApplication,
 ) -> None:
+    """1件置換した後の次検索が、後続の一致箇所へ進むことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("target 1\nkeep\ntarget 2\nkeep\ntarget 3")
@@ -306,6 +324,7 @@ def test_find_next_after_replace_current_continues_to_following_match(
 def test_replace_current_with_newline_keeps_cursor_at_new_line_start(
     app: QApplication,
 ) -> None:
+    """1件置換（改行あり）がカーソルでの新規の行の先頭を保持することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("alpha, beta, gamma")
@@ -319,6 +338,7 @@ def test_replace_current_with_newline_keeps_cursor_at_new_line_start(
 
 
 def test_invalid_regex_does_not_modify_document(app: QApplication) -> None:
+    """不正な正規表現が文書を変更しないことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("keep this text")
@@ -333,6 +353,7 @@ def test_invalid_regex_does_not_modify_document(app: QApplication) -> None:
 
 
 def test_replace_all_can_target_selected_text_only(app: QApplication) -> None:
+    """全置換が選択文字列のだけを対象にできることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("first 123\nsecond 456\nthird 789")
@@ -352,6 +373,7 @@ def test_replace_all_can_target_selected_text_only(app: QApplication) -> None:
 
 
 def test_dialog_replace_all_honours_selection_and_exclusion(app: QApplication) -> None:
+    """ダイアログの全置換で選択範囲と除外条件を適用することを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "outside target\n[target] target\noutside target"
@@ -380,6 +402,7 @@ def test_dialog_replace_all_honours_selection_and_exclusion(app: QApplication) -
 def test_dialog_can_reset_scope_to_current_editor_selection(
     app: QApplication,
 ) -> None:
+    """ダイアログがリセットの対象範囲のへの現在のエディターの選択範囲が可能であることを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "first target\nsecond target\nthird target"
@@ -410,6 +433,7 @@ def test_dialog_can_reset_scope_to_current_editor_selection(
 
 
 def test_regex_normalise_rewrites_document_text(app: QApplication) -> None:
+    """正規表現を使ったUnicode正規化置換で本文を書き換えられることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("ＷｏｒｄＰｒｅｓｓとＨＴＭＬ")
@@ -421,6 +445,7 @@ def test_regex_normalise_rewrites_document_text(app: QApplication) -> None:
 
 
 def test_regex_normalise_can_target_selected_text_only(app: QApplication) -> None:
+    """正規表現の正規化が選択文字列のだけを対象にできることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("外側：１\n内側：２")
@@ -439,6 +464,7 @@ def test_regex_normalise_can_target_selected_text_only(app: QApplication) -> Non
 
 
 def test_find_next_can_target_selected_text_only(app: QApplication) -> None:
+    """次の検索が選択文字列のだけを対象にできることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("target\ninside target\noutside")
@@ -458,6 +484,7 @@ def test_find_next_can_target_selected_text_only(app: QApplication) -> None:
 
 
 def test_find_previous_selects_previous_match(app: QApplication) -> None:
+    """前の検索が前の一致を選択することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("alpha beta alpha")
@@ -476,6 +503,7 @@ def test_paragraph_insert_linter_shows_dictionary_backed_message(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """段落挿入の文法チェッカーが辞書の裏付けられたのメッセージを表示することを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("plain text")
@@ -486,6 +514,7 @@ def test_paragraph_insert_linter_shows_dictionary_backed_message(
         title: str,
         message: str,
     ) -> QMessageBox.StandardButton:
+        """画面へ表示される警告の内容を記録する。"""
         captured["title"] = title
         captured["message"] = message
         return QMessageBox.StandardButton.Ok
@@ -502,6 +531,7 @@ def test_paragraph_insert_linter_shows_dictionary_backed_message(
 def test_grammar_check_action_is_available_from_search_menu(
     app: QApplication,
 ) -> None:
+    """文法チェックの操作が検索のメニューを利用できることを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -515,6 +545,7 @@ def test_grammar_check_action_is_available_from_search_menu(
 def test_grammar_check_reports_html_and_wordpress_typos(
     app: QApplication,
 ) -> None:
+    """文法チェックがHTMLとWordPressの表記ミスを報告することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText(
@@ -565,6 +596,7 @@ def test_grammar_check_reports_html_and_wordpress_typos(
 def test_grammar_check_highlights_issue_lines(
     app: QApplication,
 ) -> None:
+    """文法チェックが指摘の行を強調表示することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText(
@@ -588,6 +620,7 @@ def test_grammar_check_highlights_issue_lines(
 def test_grammar_check_detects_qualification_article_malformed_openers(
     app: QApplication, tmp_path: Path, sample_name: str, expected_count: int,
 ) -> None:
+    """文法チェックが修飾の原稿の壊れたの開始記号を検出することを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     case_folder = Path(__file__).parent / "fixtures" / "linter_cases" / "qualification_article_20261023"
     source = (case_folder / sample_name).read_text(encoding="utf-8-sig")
@@ -617,6 +650,7 @@ def test_grammar_check_detects_qualification_article_malformed_openers(
 def test_grammar_check_clears_issue_highlights_when_no_issues(
     app: QApplication,
 ) -> None:
+    """文法チェックで指摘がなくなったとき、既存の強調表示を消すことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText('<p clas="lead">誤字</p>')
@@ -641,6 +675,7 @@ def test_grammar_check_clears_issue_highlights_when_no_issues(
 def test_grammar_check_clears_issue_highlights_on_edit(
     app: QApplication,
 ) -> None:
+    """文法チェックが指摘の強調表示での編集を消すことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText('<p clas="lead">誤字</p>')
@@ -655,6 +690,7 @@ def test_grammar_check_clears_issue_highlights_on_edit(
 def test_grammar_check_clears_issue_highlights_when_dialog_hides(
     app: QApplication,
 ) -> None:
+    """ダイアログが非表示にするの場合、文法チェックが指摘の強調表示を消すことを確認する。"""
     window = MainWindow()
     window.editor.setPlainText('<p clas="lead">誤字</p>')
     window.run_grammar_check()
@@ -670,6 +706,7 @@ def test_grammar_check_clears_issue_highlights_when_dialog_hides(
 def test_grammar_check_reports_no_issues(
     app: QApplication,
 ) -> None:
+    """文法チェックが指摘なしを報告することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText(
@@ -692,6 +729,7 @@ def test_grammar_check_results_are_kept_per_tab(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """文法チェックの結果が保持されたごとのタブであることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     first_editor = window.editor
@@ -749,6 +787,7 @@ def test_grammar_check_result_file_is_deleted_when_tab_closes(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """タブが閉じるの場合、文法チェックの結果のファイルが削除されたになることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText('<p clas="lead">本文</p>')
@@ -769,6 +808,7 @@ def test_grammar_check_temp_folder_is_deleted_when_window_closes(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """ウインドウが閉じるの場合、文法チェックの一時的なフォルダーが削除されたになることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText('<p clas="lead">本文</p>')
@@ -786,6 +826,7 @@ def test_grammar_check_temp_folder_is_deleted_when_window_closes(
 
 
 def test_preview_matches_shows_line_context_and_replacement(app: QApplication) -> None:
+    """プレビューがを表示するの行の周辺の文脈と置換に一致することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("first\nsecond  \nthird")
@@ -811,6 +852,7 @@ def test_preview_matches_shows_line_context_and_replacement(app: QApplication) -
 
 
 def test_preview_row_click_jumps_to_original_tab_and_line(app: QApplication) -> None:
+    """プレビューの行のクリックのへ移動するのへの元のタブと行を確認する。"""
     _ = app
     window = MainWindow()
     source_editor = window.editor
@@ -840,6 +882,7 @@ def test_preview_row_click_jumps_to_original_tab_and_line(app: QApplication) -> 
 
 
 def test_preview_rows_clear_after_source_edit(app: QApplication) -> None:
+    """プレビューの行の消去後の原文の編集を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("first\nsecond  ")
@@ -857,6 +900,7 @@ def test_preview_rows_clear_after_source_edit(app: QApplication) -> None:
 def test_clearing_search_text_clears_preview_even_in_reduced_mode(
     app: QApplication,
 ) -> None:
+    """軽量モードでも検索文字列を消すとプレビューが消えることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("target")
@@ -879,6 +923,7 @@ def test_clearing_search_text_clears_preview_even_in_reduced_mode(
 def test_reopening_search_dialog_does_not_duplicate_find_handler(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """開き直しの検索のダイアログが検索の処理を重複させないことを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("target target")
@@ -895,6 +940,7 @@ def test_reopening_search_dialog_does_not_duplicate_find_handler(
     original_find_next = window.search_engine.find_next
 
     def count_find(*args, **kwargs):
+        """検索の呼び出し回数を記録し、本来の検索処理を実行する。"""
         nonlocal find_calls
         find_calls += 1
         return original_find_next(*args, **kwargs)
@@ -907,6 +953,7 @@ def test_reopening_search_dialog_does_not_duplicate_find_handler(
 def test_closing_preview_source_tab_clears_rows_and_target(
     app: QApplication,
 ) -> None:
+    """終了のプレビューの元のタブが行と対象を消すことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("first\nsecond  ")
@@ -928,6 +975,7 @@ def test_closing_preview_source_tab_clears_rows_and_target(
 def test_preview_matches_shows_line_after_all_same_line_replacements(
     app: QApplication,
 ) -> None:
+    """すべての同じ行の置換後、プレビューがを表示するの行に一致することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText('<h2 class="wp-block-heading"></h2>')
@@ -952,6 +1000,7 @@ def test_preview_matches_shows_line_after_all_same_line_replacements(
 def test_preview_line_numbers_read_source_once_for_many_matches(
     app: QApplication, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """プレビューの行番号の読み込みの原文の1回だけの用の複数の一致箇所を確認する。"""
     _ = app
     window = MainWindow()
     source = "x\n" * 200
@@ -962,6 +1011,7 @@ def test_preview_line_numbers_read_source_once_for_many_matches(
     reads = 0
 
     def count_read() -> str:
+        """テスト中に本文を読み出した回数を記録する。"""
         nonlocal reads
         reads += 1
         return original()
@@ -976,6 +1026,7 @@ def test_preview_line_numbers_read_source_once_for_many_matches(
 
 
 def test_preview_matches_uses_selected_text_only(app: QApplication) -> None:
+    """プレビューがを使うの選択文字列のだけに一致することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("outside  \ninside  \noutside  ")
@@ -1000,6 +1051,7 @@ def test_preview_matches_uses_selected_text_only(app: QApplication) -> None:
 
 
 def test_search_highlights_all_matches(app: QApplication) -> None:
+    """検索がすべての一致箇所を強調表示することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("alpha\nbeta alpha\nalpha")
@@ -1013,6 +1065,7 @@ def test_search_highlights_all_matches(app: QApplication) -> None:
 def test_search_highlight_positions_stay_aligned_after_emoji(
     app: QApplication,
 ) -> None:
+    """検索の強調表示の位置の維持するの位置が一致した後の絵文字を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("emoji 💦 before\n<p><strong>target</strong></p>")
@@ -1026,6 +1079,7 @@ def test_search_highlight_positions_stay_aligned_after_emoji(
 
 
 def test_find_next_positions_stay_aligned_after_emoji(app: QApplication) -> None:
+    """次の検索の位置の維持するの位置が一致した後の絵文字を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("emoji 💦 before\n<p><strong>target</strong></p>")
@@ -1036,6 +1090,7 @@ def test_find_next_positions_stay_aligned_after_emoji(app: QApplication) -> None
 
 
 def test_search_highlights_can_target_selected_text_only(app: QApplication) -> None:
+    """検索ができるの対象の選択文字列のだけを強調表示することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("target\ninside target\noutside target")
@@ -1055,6 +1110,7 @@ def test_search_highlights_can_target_selected_text_only(app: QApplication) -> N
 def test_selected_scope_shows_search_and_exclusion_marker_colors(
     app: QApplication,
 ) -> None:
+    """選択中の対象範囲が検索と除外のマーカーの色を表示することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("outside target\n[target] target\noutside target")
@@ -1091,6 +1147,7 @@ def test_selected_scope_shows_search_and_exclusion_marker_colors(
 def test_scope_toggle_close_and_reopen_keep_real_editor_selection(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """対象範囲の切り替えの閉じる操作と開き直す操作の保持するの実際のエディターの選択範囲を確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("A target\nB target\n")
     cursor = window.editor.textCursor()
@@ -1134,6 +1191,7 @@ def test_scope_toggle_close_and_reopen_keep_real_editor_selection(
 def test_scope_reset_replaces_new_paragraph_without_revisiting_old_one(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """対象範囲を設定し直すと、以前の段落に戻らず新しい段落だけを置換することを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     source = "A <strong > end\nB <strong > end\nC <strong > end"
     window.editor.setPlainText(source)
@@ -1175,6 +1233,7 @@ def test_scope_reset_replaces_new_paragraph_without_revisiting_old_one(
 def test_find_clears_old_scope_markers_and_preview_but_keeps_conditions(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """検索が古いの対象範囲のマーカーとプレビューの一方の保持するの条件を消すことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("A target\nB target")
     cursor = window.editor.textCursor()
@@ -1195,6 +1254,7 @@ def test_find_clears_old_scope_markers_and_preview_but_keeps_conditions(
     assert window.editor.textCursor().selectedText() == "target"
     assert window.search_scope is None
     assert window.editor.search_matches == []
+    assert window.editor.current_search_match_bounds == (2, 8)
     assert window.editor.search_scope_bounds is None
     assert dialog.preview_table.rowCount() == 0
     assert window._preview_source is None
@@ -1203,6 +1263,7 @@ def test_find_clears_old_scope_markers_and_preview_but_keeps_conditions(
     assert dialog.selected_only_check_box.isChecked()
     dialog.find_button.click()
     assert window.search_scope is None
+    assert window.editor.current_search_match_bounds is None
 
     cursor = window.editor.textCursor()
     cursor.setPosition(len("A target\n"))
@@ -1213,9 +1274,45 @@ def test_find_clears_old_scope_markers_and_preview_but_keeps_conditions(
     assert window.search_scope is None
 
 
+@pytest.mark.parametrize("backward", [False, True])
+def test_search_centers_current_result_and_clears_marker_on_edit(
+    app: QApplication, tmp_path: Path, backward: bool,
+) -> None:
+    """検索結果を画面中央に表示し、編集するとマーカーを消すことを確認する。"""
+    window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
+    editor = window.editor
+    source = "\n".join("target" if row == 80 else f"line {row}" for row in range(160))
+    editor.setPlainText(source)
+    window.resize(700, 500)
+    window.show()
+    app.processEvents()
+    editor.moveCursor(QTextCursor.MoveOperation.End if backward else QTextCursor.MoveOperation.Start)
+    search = window.find_previous if backward else window.find_next
+    search("target", SearchOptions())
+    app.processEvents()
+
+    position = source.index("target")
+    cursor = editor.textCursor()
+    assert cursor.selectedText() == "target"
+    assert editor.current_search_match_bounds == (position, position + len("target"))
+    assert editor.search_matches == []
+    center = editor.viewport().rect().center().y()
+    assert abs(editor.cursorRect(cursor).center().y() - center) <= 2 * editor.fontMetrics().height()
+    assert any(
+        selection.cursor.selectedText() == "target"
+        and selection.format.background().color().name() == editor.current_match_marker_color.lower()
+        for selection in editor.extraSelections()
+    )
+    editor.insertPlainText("edited")
+    assert editor.current_search_match_bounds is None
+    assert not editor.extraSelections()
+    window.hide()
+
+
 def test_reopening_search_keeps_text_until_user_clears_it(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """開き直しの検索が文字列を保持する（利用者がその内容を消すまで）を確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("first\nsecond")
     window.show_find_replace_dialog()
@@ -1248,6 +1345,7 @@ def test_reopening_search_keeps_text_until_user_clears_it(
 def test_selected_only_find_then_replace_uses_current_match_not_old_scope(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """選択範囲限定の検索の続いての置換が現在の一致のしないの古いの対象範囲を使うことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("A target\nB target")
     cursor = window.editor.textCursor()
@@ -1275,6 +1373,7 @@ def test_selected_only_find_then_replace_uses_current_match_not_old_scope(
 def test_close_cancels_pending_markers_after_replacement(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """置換後に閉じると、保留中のマーカー更新を取り消すことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("target\n😀 target\n")
     window.show_find_replace_dialog()
@@ -1298,6 +1397,7 @@ def test_close_cancels_pending_markers_after_replacement(
 def test_manual_edit_invalidates_scope_and_does_not_mark_another_tab(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """手動の編集が対象範囲と行わないの目印の別のタブを無効にすることを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("target\n😀 target\n")
     cursor = window.editor.textCursor()
@@ -1332,6 +1432,7 @@ def test_manual_edit_invalidates_scope_and_does_not_mark_another_tab(
 def test_find_replace_dialog_stays_bound_to_opening_tab(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """検索・置換ダイアログの維持されるの関連付けたのへの開始のタブを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     source_editor = window.editor
@@ -1362,6 +1463,7 @@ def test_find_replace_dialog_stays_bound_to_opening_tab(
 def test_find_replace_dialog_rebinds_only_after_close_and_reopen(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """検索・置換ダイアログをいったん閉じて開き直した場合にだけ対象文書が切り替わることを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     source_editor = window.editor
@@ -1387,6 +1489,7 @@ def test_find_replace_dialog_rebinds_only_after_close_and_reopen(
 def test_find_replace_dialog_close_then_reopen_from_other_tab(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """検索・置換ダイアログの閉じる操作の続いての開き直す操作のからの別のタブを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     original_editor = window.editor
@@ -1408,6 +1511,7 @@ def test_find_replace_dialog_close_then_reopen_from_other_tab(
 def test_selected_search_scope_survives_switching_tabs(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """選択中の検索範囲が切り替えのタブが起きても動作することを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     source_editor = window.editor
@@ -1434,6 +1538,7 @@ def test_selected_search_scope_survives_switching_tabs(
 def test_find_replace_dialog_uses_editor_identity_for_same_named_tabs(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """検索・置換ダイアログがエディターの識別情報の用の同じ名前付きのタブを使うことを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     source_editor = window.editor
@@ -1456,6 +1561,7 @@ def test_find_next_can_target_visible_text_only(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """次を検索するときに、画面に表示されている範囲だけを対象にできることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("visible target\nhidden target")
@@ -1478,6 +1584,7 @@ def test_replace_all_can_target_visible_text_only(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """全置換が表示中の文字列のだけを対象にできることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("visible target\nhidden target")
@@ -1495,6 +1602,7 @@ def test_replace_all_can_target_visible_text_only(
 def test_replace_marked_matches_replaces_current_markers_only(
     app: QApplication,
 ) -> None:
+    """現在のマーカーが指す一致箇所だけを置換することを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("target keep target")
@@ -1507,6 +1615,7 @@ def test_replace_marked_matches_replaces_current_markers_only(
 
 
 def test_replace_marked_matches_supports_regex_groups(app: QApplication) -> None:
+    """マーカー付きの一致の置換で正規表現のグループ参照が使えることを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("item-01 keep item-20")
@@ -1522,6 +1631,7 @@ def test_selected_and_visible_options_use_intersection(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """選択中のと表示中のオプションの使用の共通部分を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("first target\nsecond target\nthird target")
@@ -1542,6 +1652,7 @@ def test_selected_and_visible_options_use_intersection(
 
 
 def test_invalid_regex_clears_search_highlights(app: QApplication) -> None:
+    """不正な正規表現が検索の強調表示を消すことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("alpha")
@@ -1554,6 +1665,7 @@ def test_invalid_regex_clears_search_highlights(app: QApplication) -> None:
 
 
 def test_search_refresh_clears_stale_highlights_immediately(app: QApplication) -> None:
+    """検索の再表示が古くなったの強調表示のすぐにを消すことを確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("alpha beta")
@@ -1567,6 +1679,7 @@ def test_search_refresh_clears_stale_highlights_immediately(app: QApplication) -
 def test_dialog_exclusion_is_shared_by_find_highlight_preview_and_replace(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """ダイアログの除外条件が検索、マーカー表示、プレビュー、置換に共通して使われることを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     source = "<br><br>\nplain\n<p>\ncomma、\n"
     window.editor.setPlainText(source)
@@ -1591,6 +1704,7 @@ def test_dialog_exclusion_is_shared_by_find_highlight_preview_and_replace(
 
 
 def test_preview_keeps_exclusions_that_span_lines(app: QApplication, tmp_path: Path) -> None:
+    """プレビューが複数行にまたがる除外範囲を保持することを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("BEGIN\nkeep target\nEND\nchange target")
     window.show_find_replace_dialog()
@@ -1606,6 +1720,7 @@ def test_preview_keeps_exclusions_that_span_lines(app: QApplication, tmp_path: P
 
 
 def test_marked_replace_rechecks_changed_exclusion(app: QApplication, tmp_path: Path) -> None:
+    """マーカー付きの置換が変更された除外を再確認することを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("[target] target")
     window.update_search_highlights("target", SearchOptions())
@@ -1617,6 +1732,7 @@ def test_marked_replace_rechecks_changed_exclusion(app: QApplication, tmp_path: 
 def test_exclusion_inside_search_scope(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, visible_only: bool,
 ) -> None:
+    """除外内の検索範囲を確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("outside target\n[target] target\noutside target")
     bounds = (len("outside target\n"), len("outside target\n[target] target\n"))
@@ -1630,6 +1746,7 @@ def test_exclusion_inside_search_scope(
 
 
 def test_invalid_exclusion_never_modifies_document(app: QApplication, tmp_path: Path) -> None:
+    """除外条件が不正な場合に本文を変更しないことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("target")
     window.show_find_replace_dialog()
@@ -1643,6 +1760,7 @@ def test_invalid_exclusion_never_modifies_document(app: QApplication, tmp_path: 
 def test_current_replace_refuses_manually_selected_excluded_newline(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """除外対象の改行を手動で選択しても、1件置換の対象にならないことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("<p>\nplain\n")
     cursor = window.editor.textCursor()
@@ -1656,6 +1774,7 @@ def test_current_replace_refuses_manually_selected_excluded_newline(
 def test_current_replace_evaluates_exclusion_inside_selected_scope(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """1件置換で選択範囲内の除外条件を評価することを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("KEEP target")
     cursor = window.editor.textCursor()
@@ -1670,6 +1789,7 @@ def test_current_replace_evaluates_exclusion_inside_selected_scope(
 
 
 def test_preview_same_line_preserves_excluded_result(app: QApplication, tmp_path: Path) -> None:
+    """プレビューの同じ行が除外した結果を維持することを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("[target] target target")
     window.show_find_replace_dialog()
@@ -1685,6 +1805,7 @@ def test_preview_same_line_preserves_excluded_result(app: QApplication, tmp_path
 
 
 def test_main_window_can_switch_display_language(app: QApplication) -> None:
+    """メインウインドウが切り替えの表示の言語が可能であることを確認する。"""
     _ = app
     window = MainWindow()
 
@@ -1705,6 +1826,7 @@ def test_main_window_can_switch_display_language(app: QApplication) -> None:
 
 
 def test_reload_file_can_use_cp932_encoding(app: QApplication, tmp_path) -> None:
+    """再読込のファイルが使用のCP932の文字コードが可能であることを確認する。"""
     _ = app
     load_file_path = tmp_path / "sample_cp932.txt"
     load_file_path.write_text("日本語の文章です。", encoding="cp932")
@@ -1722,6 +1844,7 @@ def test_successful_replacement_clears_markers_until_explicit_search(
     app: QApplication, tmp_path: Path, replace_kind: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """置換後は、利用者が改めて検索するまでマーカーが消えた状態を保つことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("target target")
     window.show_find_replace_dialog()
@@ -1774,6 +1897,7 @@ def test_successful_replacement_clears_markers_until_explicit_search(
 def test_normalise_operation_clears_markers_after_replacement(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """置換後、正規化の操作がマーカーを消すことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("\uff21 \uff21")
     window.show_find_replace_dialog()
@@ -1792,6 +1916,7 @@ def test_normalise_operation_clears_markers_after_replacement(
 def test_empty_search_clears_all_markers_and_scope_background(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """空の検索がすべてのマーカーと対象範囲の背景を消すことを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     window.editor.setPlainText("target [target]\n")
     cursor = window.editor.textCursor()
@@ -1818,6 +1943,7 @@ def test_empty_search_clears_all_markers_and_scope_background(
 def test_cursor_motion_does_not_rebuild_unchanged_search_markers(
     app: QApplication, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """カーソル移動の行わないの再構築の維持されるの検索マーカーを確認する。"""
     window = MainWindow(settings_path=tmp_path / "settings.json", restore_unsaved_backup=False)
     editor = window.editor
     editor.setPlainText("😀 target\ntarget\n")
@@ -1833,6 +1959,7 @@ def test_cursor_motion_does_not_rebuild_unchanged_search_markers(
     original_apply = editor._apply_extra_selections
 
     def count_apply() -> None:
+        """検索マーカーの更新回数を数える。"""
         nonlocal calls
         calls += 1
         original_apply()
@@ -1854,6 +1981,7 @@ def test_save_file_runs_pre_save_grammar_check_and_can_cancel(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
+    """ファイル保存前に文法チェックが実行され、保存を取り消せることを確認する。"""
     _ = app
     save_file_path = tmp_path / "sample.wp.html"
     save_file_path.write_text("original", encoding="utf-8")
@@ -1873,6 +2001,7 @@ def test_save_file_runs_pre_save_grammar_check_and_can_cancel(
         *_args: object,
         **_kwargs: object,
     ) -> QMessageBox.StandardButton:
+        """保存前に表示される確認の内容を記録する。"""
         captured["title"] = title
         captured["text"] = text
         return QMessageBox.StandardButton.No

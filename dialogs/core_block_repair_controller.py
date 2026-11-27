@@ -23,6 +23,7 @@ def repair_core_blocks(
     editor: TextEditor, current_editor: Callable[[], TextEditor | None], target: str,
     translator: Translator, parent: QWidget,
 ) -> bool:
+    """修復候補を確認し、元文書の状態が一致する場合に選択分を適用する。"""
     document = editor.document()
     revision = document.revision()
     source = _source(document)

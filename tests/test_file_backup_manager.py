@@ -1,9 +1,12 @@
+"""ファイルのバックアップの管理処理を検証する。"""
+
 from __future__ import annotations
 
 from fileio.file_backup_manager import FileBackupManager
 
 
 def test_file_backup_manager_creates_backup_for_existing_file(tmp_path) -> None:
+    """ファイルのバックアップの管理処理がバックアップの用の既存のファイルを作ることを確認する。"""
     load_file_path = tmp_path / "article.txt"
     load_file_path.write_text("old text", encoding="utf-8")
     manager = FileBackupManager(tmp_path / "backups")
@@ -16,6 +19,7 @@ def test_file_backup_manager_creates_backup_for_existing_file(tmp_path) -> None:
 
 
 def test_file_backup_manager_skips_missing_file(tmp_path) -> None:
+    """ファイルのバックアップの管理処理が不足したファイルを省くことを確認する。"""
     load_file_path = tmp_path / "missing.txt"
     manager = FileBackupManager(tmp_path / "backups")
 
@@ -26,6 +30,7 @@ def test_file_backup_manager_skips_missing_file(tmp_path) -> None:
 
 
 def test_file_backup_manager_keeps_only_latest_backup_per_file(tmp_path) -> None:
+    """ファイルごとに最新のバックアップだけを保持することを確認する。"""
     first_file_path = tmp_path / "first.txt"
     second_file_path = tmp_path / "second.txt"
     manager = FileBackupManager(tmp_path / "backups")

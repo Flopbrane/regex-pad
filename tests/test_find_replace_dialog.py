@@ -1,3 +1,5 @@
+"""検索・置換ダイアログを検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -25,6 +27,7 @@ from localization.translator import Translator
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -33,6 +36,7 @@ def app() -> QApplication:
 
 
 def test_recipe_sets_find_replace_and_regex_mode(app: QApplication) -> None:
+    """レシピが検索・置換と正規表現のモードを設定することを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = FindReplaceDialog(translator)
@@ -45,6 +49,7 @@ def test_recipe_sets_find_replace_and_regex_mode(app: QApplication) -> None:
 
 
 def test_selected_scope_label_includes_replace(app: QApplication) -> None:
+    """選択中の対象範囲の表示名が置換を含めることを確認する。"""
     _ = app
     dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
 
@@ -52,6 +57,7 @@ def test_selected_scope_label_includes_replace(app: QApplication) -> None:
 
 
 def test_clear_button_empties_all_text_fields(app: QApplication) -> None:
+    """クリアボタンですべてのテキスト入力欄が空になることを確認する。"""
     _ = app
     dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
     dialog.find_text_edit.setText("検索")
@@ -69,6 +75,7 @@ def test_clear_button_empties_all_text_fields(app: QApplication) -> None:
 def test_selection_scope_reset_button_emits_only_when_enabled(
     app: QApplication,
 ) -> None:
+    """有効なの場合、選択範囲の対象範囲のリセットのボタンがだけを通知することを確認する。"""
     _ = app
     dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
     emitted: list[bool] = []
@@ -85,6 +92,7 @@ def test_selection_scope_reset_button_emits_only_when_enabled(
 
 
 def test_paragraph_boundary_recipe_matches_lf_and_crlf(app: QApplication) -> None:
+    """段落の境界のレシピがLFとCRLFに一致することを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -111,6 +119,7 @@ def test_paragraph_boundary_recipe_matches_lf_and_crlf(app: QApplication) -> Non
 def test_paragraph_boundary_recipe_can_allow_surrounding_spaces(
     app: QApplication,
 ) -> None:
+    """段落の境界のレシピが許可の周囲の空白が可能であることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -135,6 +144,7 @@ def test_paragraph_boundary_recipe_can_allow_surrounding_spaces(
 
 
 def test_preview_table_displays_rows(app: QApplication) -> None:
+    """プレビューの表が行を表示することを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -160,6 +170,7 @@ def test_preview_table_displays_rows(app: QApplication) -> None:
 def test_preview_table_clears_when_search_parameters_change(
     app: QApplication,
 ) -> None:
+    """検索条件の変更の場合、プレビューの表が消すことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -176,6 +187,7 @@ def test_preview_table_clears_when_search_parameters_change(
 
 
 def test_dialog_returns_visible_only_search_option(app: QApplication) -> None:
+    """ダイアログが表示範囲限定の検索の設定項目を返すことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -188,6 +200,7 @@ def test_dialog_returns_visible_only_search_option(app: QApplication) -> None:
 def test_unicode_normalize_controls_use_dedicated_replacement_options(
     app: QApplication,
 ) -> None:
+    """Unicodeの正規化の入力部品の使用の専用の置換のオプションを確認する。"""
     _ = app
     dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
 
@@ -217,6 +230,7 @@ def test_unicode_normalize_controls_use_dedicated_replacement_options(
 
 
 def test_exclusion_edit_updates_options_and_clears_preview(app: QApplication) -> None:
+    """除外文字列の編集で検索条件が更新され、置換プレビューが消えることを確認する。"""
     dialog = FindReplaceDialog(Translator(Path("resources"), "ja"))
     dialog.set_preview_rows([(1, "before", "after")], "preview")
     received = []
@@ -232,6 +246,7 @@ def test_exclusion_edit_updates_options_and_clears_preview(app: QApplication) ->
 
 
 def test_invalid_exclusion_has_its_own_lint_label(app: QApplication) -> None:
+    """不正な除外がその固有の文法チェックの表示名を持つことを確認する。"""
     dialog = FindReplaceDialog(Translator(Path("resources"), "en"))
     dialog.find_text_edit.setText("valid")
     dialog.regular_expression_check_box.setChecked(True)
@@ -247,6 +262,7 @@ def test_invalid_exclusion_has_its_own_lint_label(app: QApplication) -> None:
     "replace_marked_button", "preview_button",
 ])
 def test_exclusion_is_passed_to_every_search_action(app: QApplication, button_name: str) -> None:
+    """除外が渡されたへのすべての検索の操作になることを確認する。"""
     dialog = FindReplaceDialog(Translator(Path("resources"), "en"))
     dialog.find_text_edit.setText("target")
     dialog.exclusion_text_edit.setText("skip target")
@@ -264,6 +280,7 @@ def test_exclusion_is_passed_to_every_search_action(app: QApplication, button_na
 
 
 def test_regex_inputs_resize_for_multiline_patterns(app: QApplication) -> None:
+    """正規表現の入力欄のサイズ変更の用の複数行のパターンを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -299,6 +316,7 @@ def test_regex_inputs_resize_for_multiline_patterns(app: QApplication) -> None:
 def test_multiline_regex_input_keeps_text_visible_around_blank_line(
     app: QApplication,
 ) -> None:
+    """複数行の正規表現の入力欄が文字列の表示中の周辺の空の行を保持することを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -322,6 +340,7 @@ def test_multiline_regex_input_keeps_text_visible_around_blank_line(
 
 
 def test_regex_input_height_is_capped_for_many_lines(app: QApplication) -> None:
+    """正規表現の入力欄の高さが上限付きの用の複数の行になることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -345,6 +364,7 @@ def test_regex_input_height_is_capped_for_many_lines(app: QApplication) -> None:
 
 
 def test_regex_inputs_refresh_visible_text_after_selection(app: QApplication) -> None:
+    """正規表現の入力欄の再表示の表示中の文字列後の選択範囲を確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -363,6 +383,7 @@ def test_regex_inputs_refresh_visible_text_after_selection(app: QApplication) ->
 
 
 def test_dialog_has_explicit_previous_next_buttons(app: QApplication) -> None:
+    """検索ダイアログに「前へ」と「次へ」のボタンがあることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = FindReplaceDialog(translator)
@@ -379,6 +400,7 @@ def test_normalise_button_emits_selected_operation(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """正規化のボタンが選択中の操作を通知することを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = FindReplaceDialog(translator)
@@ -386,6 +408,7 @@ def test_normalise_button_emits_selected_operation(
     dialog.normalise_requested.connect(emitted.append)
 
     def select_operation(*_args: object, **_kwargs: object) -> tuple[str, bool]:
+        """正規化操作の選択をテスト用に確定する。"""
         return "全角アルファベット → 半角アルファベット", True
 
     monkeypatch.setattr(QInputDialog, "getItem", select_operation)
@@ -399,6 +422,7 @@ def test_normalise_button_cancel_does_not_emit(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """正規化のボタンのキャンセルが通知しないことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = FindReplaceDialog(translator)
@@ -406,6 +430,7 @@ def test_normalise_button_cancel_does_not_emit(
     dialog.normalise_requested.connect(emitted.append)
 
     def cancel_operation(*_args: object, **_kwargs: object) -> tuple[str, bool]:
+        """正規化操作の選択のキャンセルを再現する。"""
         return "", False
 
     monkeypatch.setattr(QInputDialog, "getItem", cancel_operation)
@@ -418,6 +443,7 @@ def test_normalise_button_cancel_does_not_emit(
 def test_regex_snippet_insert_enables_regex_mode_and_places_cursor(
     app: QApplication,
 ) -> None:
+    """正規表現の定型句を挿入すると正規表現が有効になり、入力位置にカーソルが移ることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -434,6 +460,7 @@ def test_regex_snippet_insert_enables_regex_mode_and_places_cursor(
 def test_line_break_shortcuts_insert_into_focused_find_replace_input(
     app: QApplication,
 ) -> None:
+    """改行のショートカットの挿入へのフォーカス中の検索・置換の入力欄を確認する。"""
     _ = app
     dialog = FindReplaceDialog(Translator(Path("resources"), "en"))
 
@@ -449,6 +476,7 @@ def test_line_break_shortcuts_insert_into_focused_find_replace_input(
 
 
 def test_regex_insert_menu_is_grouped(app: QApplication) -> None:
+    """正規表現の挿入のメニューがグループ化したになることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -470,6 +498,7 @@ def test_regex_insert_menu_is_grouped(app: QApplication) -> None:
 
 
 def test_regex_lint_can_be_disabled(app: QApplication) -> None:
+    """正規表現の検査が無効なが可能であることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -486,6 +515,7 @@ def test_regex_lint_can_be_disabled(app: QApplication) -> None:
 def test_low_load_mode_suppresses_regex_lint_and_auto_search_signal(
     app: QApplication,
 ) -> None:
+    """低負荷モードが正規表現の検査と自動の検索のシグナルを抑えることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -508,6 +538,7 @@ def test_low_load_mode_suppresses_regex_lint_and_auto_search_signal(
 
 
 def test_regex_mode_toggles_find_and_replace_highlighting(app: QApplication) -> None:
+    """正規表現モードに応じて検索欄と置換欄の色付けが切り替わることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = FindReplaceDialog(translator)
@@ -526,6 +557,7 @@ def test_regex_mode_toggles_find_and_replace_highlighting(app: QApplication) -> 
 def test_regex_highlighter_marks_regex_tokens_without_escaped_literals(
     app: QApplication,
 ) -> None:
+    """エスケープ済みのリテラルを省いた場合、正規表現の構文の色付け処理が正規表現のトークンにマーカーを付けることを確認する。"""
     _ = app
     highlighter = RegexInputHighlighter(FindReplaceDialog(Translator(Path("resources"), "en")).find_text_edit.document())
     text = (

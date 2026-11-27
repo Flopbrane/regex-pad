@@ -1,4 +1,4 @@
-"""Behavioral regression checks for the structured macro editor."""
+"""構造化マクロエディターの操作について回帰を確認する。"""
 
 from pathlib import Path
 from typing import cast
@@ -18,6 +18,7 @@ from macro.json_loader import MacroJsonLoader
 
 @pytest.fixture
 def editor(tmp_path: Path):
+    """テストで操作するエディターを用意する。"""
     app = QApplication.instance() or QApplication([])
     window = MacroEditorWindow(Translator(Path("resources"), "ja"))
     controller = MacroEditorController(window, AppLogger(tmp_path / "logs"))
@@ -31,6 +32,7 @@ def editor(tmp_path: Path):
 @pytest.mark.parametrize("exclusion", [None, "", " \\d+\nＡ "])
 @pytest.mark.parametrize("replacement", [None, "", " \\g<1>\nＢ "])
 def test_bridge_roundtrip_preserves_null_empty_and_exact_text(exclusion, replacement):
+    """変換処理の往復変換がnullの空のと完全に同じ文字列を維持することを確認する。"""
     model = MacroJsonLoader(Path("macro")).load("macro_format_v1.json")
     model.steps[0].exclusion_text = exclusion
     model.steps[0].replacement_text = replacement
@@ -41,6 +43,7 @@ def test_bridge_roundtrip_preserves_null_empty_and_exact_text(exclusion, replace
 
 
 def test_form_retains_invalid_regex_and_diagnostic_navigation(editor):
+    """フォームが不正な正規表現と診断の移動を保持することを確認する。"""
     window, controller = editor
     window.macro_name.setText("test")
     fields = window.step_editor.fields
@@ -62,6 +65,7 @@ def test_form_retains_invalid_regex_and_diagnostic_navigation(editor):
 
 
 def test_boolean_options_are_checkboxes_and_keep_editor_history(editor):
+    """真偽値の設定をチェックボックスで編集でき、変更を履歴から元に戻せることを確認する。"""
     window, controller = editor
     fields = window.step_editor.fields
     boolean_names = (
@@ -83,6 +87,7 @@ def test_boolean_options_are_checkboxes_and_keep_editor_history(editor):
 
 
 def test_normalization_options_are_separated_from_search_scope(editor):
+    """正規化のオプションが分離したからの検索範囲であることを確認する。"""
     window, _controller = editor
     step_editor = window.step_editor
     form = step_editor.form
@@ -96,6 +101,7 @@ def test_normalization_options_are_separated_from_search_scope(editor):
 
 
 def test_heading_numbering_step_upgrades_format_and_is_saveable(editor, tmp_path):
+    """見出しの番号付け手順を追加すると形式バージョンが上がり、保存できることを確認する。"""
     window, controller = editor
     window.macro_name.setText("Markdown numbering")
     operation = cast(QCheckBox, window.step_editor.fields["operation"])
@@ -116,6 +122,7 @@ def test_heading_numbering_step_upgrades_format_and_is_saveable(editor, tmp_path
 
 
 def test_step_operations_preserve_order_and_independent_data(editor, monkeypatch):
+    """手順の操作の保持の順序と独立したデータを確認する。"""
     window, controller = editor
     controller.session.document.steps[0].search_text = "first"
     controller.duplicate_step(0)
@@ -136,6 +143,7 @@ def test_step_operations_preserve_order_and_independent_data(editor, monkeypatch
 
 
 def test_save_reload_and_warning_only_save(editor, tmp_path):
+    """保存の再読込と警告だけの保存を確認する。"""
     window, controller = editor
     window.macro_name.setText("テスト")
     cast(RegexInputEdit, window.step_editor.fields["search_text"]).setPlainText(
@@ -159,6 +167,7 @@ def test_save_reload_and_warning_only_save(editor, tmp_path):
 
 
 def test_load_and_save_failure_preserve_edits(editor, tmp_path, monkeypatch):
+    """読み込みと保存の失敗の保持が編集することを確認する。"""
     window, controller = editor
     window.macro_name.setText("keep me")
     cast(RegexInputEdit, window.step_editor.fields["search_text"]).setPlainText(
@@ -181,6 +190,7 @@ def test_load_and_save_failure_preserve_edits(editor, tmp_path, monkeypatch):
 
 
 def test_invalid_model_does_not_overwrite_file(editor, tmp_path, monkeypatch):
+    """不正なマクロ定義で既存ファイルを上書きしないことを確認する。"""
     _, controller = editor
     destination = tmp_path / "keep.json"
     destination.write_text("keep", encoding="utf-8")
@@ -192,6 +202,7 @@ def test_invalid_model_does_not_overwrite_file(editor, tmp_path, monkeypatch):
 
 
 def test_close_cancel_and_failed_save_keep_window_open(editor, monkeypatch):
+    """閉じる操作のキャンセルと失敗した保存の保持するのウインドウの開く操作を確認する。"""
     window, controller = editor
     window.show()
     window.macro_name.setText("modified")
@@ -208,6 +219,7 @@ def test_close_cancel_and_failed_save_keep_window_open(editor, monkeypatch):
 
 
 def test_unicode_route_and_null_switches(editor):
+    """Unicodeの経路とnullの切り替えることを確認する。"""
     window, controller = editor
     fields = window.step_editor.fields
     cast(RegexInputEdit, fields["replacement_text"]).setPlainText("kept in form")
@@ -226,6 +238,7 @@ def test_unicode_route_and_null_switches(editor):
 
 
 def test_loading_semantic_error_preserves_values_for_correction(editor, tmp_path):
+    """読み込みの意味上のエラーが値の用の修正を維持することを確認する。"""
     from macro.json_saver import MacroJsonSaver
 
     _, controller = editor
@@ -244,6 +257,7 @@ def test_loading_semantic_error_preserves_values_for_correction(editor, tmp_path
 
 
 def test_main_window_reuses_macro_editor_and_preserves_body(tmp_path):
+    """メインウインドウがマクロエディターを再利用するとともに、本文を維持することを確認する。"""
     from main import MainWindow
 
     app = QApplication.instance() or QApplication([])
@@ -262,6 +276,7 @@ def test_main_window_reuses_macro_editor_and_preserves_body(tmp_path):
 def test_input_value_error_returns_to_affected_field_without_losing_text(
     editor, monkeypatch
 ):
+    """失うの文字列を省いた場合、入力欄の値のエラーが影響を受けたの項目を返すことを確認する。"""
     from macro.editor_bridge import MacroEditorInputError
 
     window, controller = editor
@@ -270,6 +285,7 @@ def test_input_value_error_returns_to_affected_field_without_losing_text(
     )
 
     def fail_conversion(_document):
+        """入力値の変換に失敗する状況を再現する。"""
         raise MacroEditorInputError(0, "search_text", "input rejected")
 
     monkeypatch.setattr(MacroEditorBridge, "to_json_model", fail_conversion)
@@ -283,6 +299,7 @@ def test_input_value_error_returns_to_affected_field_without_losing_text(
 
 
 def test_actions_emit_and_language_switch_keeps_edits(editor):
+    """操作の通知と言語切り替えが編集を保持することを確認する。"""
     window, controller = editor
     cast(RegexInputEdit, window.step_editor.fields["search_text"]).setPlainText(
         "exact \\d+\ntext"
@@ -303,6 +320,7 @@ def test_actions_emit_and_language_switch_keeps_edits(editor):
 
 
 def test_macro_editor_preferences_survive_main_window_restart(tmp_path):
+    """マクロエディターの設定の動作を続けるのメインウインドウの再起動を確認する。"""
     from main import MainWindow
     from settings.settings_manager import SettingsManager
 

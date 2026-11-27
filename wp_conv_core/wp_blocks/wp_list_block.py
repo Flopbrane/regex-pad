@@ -1,4 +1,4 @@
-"""WordPress list block builder."""
+"""WordPressのリストブロックを組み立てる。"""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def wp_create_list_block(
     ordered: bool = False,
     convert_inline_code: bool = False,
 ) -> str:
-    """Convert list items to a WordPress Gutenberg list block."""
+    """リスト項目をWordPressのGutenbergリストブロックに変換する。"""
     tag_name: Literal["ol", "ul"] = "ol" if ordered else "ul"
     safe_items = [
         wp_format_inline_text(item.strip(), convert_inline_code=convert_inline_code)
@@ -49,7 +49,7 @@ def wp_create_list_block(
 
 
 def wp_normalize_adjacent_list_blocks(save_data: str) -> str:
-    """Merge adjacent same-type list blocks into one block."""
+    """隣り合う同じ種類のリストブロックを1つにまとめる。"""
     save_data = save_data.replace(WP_ADJACENT_UNORDERED_LIST_BLOCK_PATTERN, "\n\n")
     return save_data.replace(WP_ADJACENT_ORDERED_LIST_BLOCK_PATTERN, "\n\n")
 

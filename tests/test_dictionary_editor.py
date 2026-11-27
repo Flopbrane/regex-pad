@@ -1,4 +1,4 @@
-"""Editable insertion dictionaries keep bundled and Linter references intact."""
+"""挿入辞書を編集しても同梱辞書とLinterの参照辞書が保たれることを検証する。"""
 
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -37,6 +38,7 @@ def app() -> QApplication:
 
 
 def test_only_insertion_dictionaries_are_editable(tmp_path: Path) -> None:
+    """だけの挿入の辞書が編集可能なであることを確認する。"""
     service = DictionaryEditService(tmp_path)
     assert set(EDITABLE_DICTIONARIES) == {
         "html_dict.json", "markdown_dict.json", "wordpress_html_dict.json",
@@ -50,6 +52,7 @@ def test_only_insertion_dictionaries_are_editable(tmp_path: Path) -> None:
 
 
 def test_save_custom_html_template_without_touching_bundled_file(tmp_path: Path) -> None:
+    """保存のカスタムHTMLのテンプレート（触れているの同梱のファイルなし）を確認する。"""
     service = DictionaryEditService(tmp_path)
     bundled_text = (PROJECT_ROOT / "dictionaries" / "html_dict.json").read_bytes()
     data = service.load("html_dict.json")
@@ -70,6 +73,7 @@ def test_save_custom_html_template_without_touching_bundled_file(tmp_path: Path)
 
 
 def test_invalid_edit_does_not_replace_existing_user_copy(tmp_path: Path) -> None:
+    """不正な編集が既存の利用者のコピーを置き換えないことを確認する。"""
     service = DictionaryEditService(tmp_path)
     data = service.load("html_dict.json")
     service.save("html_dict.json", data)
@@ -84,6 +88,7 @@ def test_invalid_edit_does_not_replace_existing_user_copy(tmp_path: Path) -> Non
 
 
 def test_paragraph_shortcut_template_can_be_customized(tmp_path: Path) -> None:
+    """段落のショートカットのテンプレートが変更されたが可能であることを確認する。"""
     service = DictionaryEditService(tmp_path)
     data = service.load("paragraph_insert_dict.json")
     assert isinstance(data, dict)
@@ -97,6 +102,7 @@ def test_paragraph_shortcut_template_can_be_customized(tmp_path: Path) -> None:
 def test_editor_lists_no_linter_dictionary_and_saves_raw_json(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """辞書エディターの一覧にLinter辞書が現れず、編集したJSONを保存できることを確認する。"""
     translator = Translator(PROJECT_ROOT / "resources", "ja")
     saved: list[Path] = []
     dialog = DictionaryEditorDialog(translator, DictionaryEditService(tmp_path), saved.append)
@@ -117,6 +123,7 @@ def test_editor_lists_no_linter_dictionary_and_saves_raw_json(
 def test_editor_field_change_updates_dictionary_model(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """エディターの項目の変更が辞書のモデルを更新することを確認する。"""
     translator = Translator(PROJECT_ROOT / "resources", "ja")
     dialog = DictionaryEditorDialog(
         translator, DictionaryEditService(tmp_path), lambda _path: None
@@ -138,6 +145,7 @@ def test_editor_field_change_updates_dictionary_model(
 def test_preset_editor_opens_dictionary_action_and_saved_copy_becomes_active(
     app: QApplication, tmp_path: Path,
 ) -> None:
+    """プリセットエディターから辞書編集を開き、保存したコピーが有効になることを確認する。"""
     translator = Translator(PROJECT_ROOT / "resources", "ja")
     preset_window = MacroEditorWindow(translator)
     requested: list[bool] = []
@@ -167,6 +175,7 @@ def test_preset_editor_opens_dictionary_action_and_saved_copy_becomes_active(
 def test_relative_user_dictionary_folder_resolves_beside_app(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
+    """相対のユーザー辞書のフォルダーが横にあるのアプリを解決することを確認する。"""
     import main as main_module
 
     monkeypatch.setattr(main_module, "app_base_dir", lambda: tmp_path)

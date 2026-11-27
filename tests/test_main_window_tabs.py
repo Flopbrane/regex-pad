@@ -1,3 +1,5 @@
+"""メインウインドウのタブを検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -17,6 +19,7 @@ from settings.settings_manager import SettingsManager
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -28,6 +31,7 @@ def test_new_file_adds_tab_without_clearing_current_text(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """消去時の現在の文字列を省いた場合、新規のファイルがタブを追加することを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -49,6 +53,7 @@ def test_main_window_uses_config_json_by_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """メインウインドウが既定の設定ファイルとしてconfig.jsonを使うことを確認する。"""
     _ = app
     config_path = tmp_path / "config.json"
     monkeypatch.setattr(main_module, "default_config_path", lambda: config_path)
@@ -62,6 +67,7 @@ def test_main_window_applies_config_colors_and_font_on_startup(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウが構成設定の色とフォントでの起動時のを適用することを確認する。"""
     _ = app
     settings_path = tmp_path / "config.json"
     SettingsManager(settings_path).save(
@@ -100,6 +106,7 @@ def test_main_window_applies_config_colors_and_font_on_startup(
 
 
 def test_unsaved_tab_title_uses_first_line(app: QApplication, tmp_path: Path) -> None:
+    """未保存のタブのタイトルが先頭行を使うことを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -117,6 +124,7 @@ def test_duplicate_tab_copies_text_as_unsaved_tab(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """タブを複製すると、同じ本文を持つ未保存のタブが開くことを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -137,6 +145,7 @@ def test_tab_width_setting_is_applied_to_new_tabs(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """タブ幅の設定が新規のタブが適用されることを確認する。"""
     _ = app
     settings_path = tmp_path / "settings.json"
     SettingsManager(settings_path).save(
@@ -171,6 +180,7 @@ def test_close_tab_autosaves_unsaved_changes_without_prompt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """閉じる操作のタブのを自動保存するの未保存の変更（確認画面なし）を確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -196,6 +206,7 @@ def test_close_tab_stops_when_autosave_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """自動保存が失敗するの場合、閉じる操作のタブが停止することを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -230,6 +241,7 @@ def test_move_tab_to_new_window_moves_text_and_removes_source_tab(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """移動のタブのへの新規のウインドウが文字列を移動するとともに、元のタブを取り除くことを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("compare this\nbody")
@@ -247,6 +259,7 @@ def test_move_tab_to_new_window_stops_when_autosave_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """自動保存が失敗するの場合、移動のタブのへの新規のウインドウが停止することを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -277,6 +290,7 @@ def test_each_window_has_uuid_and_child_window_is_registered(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """各ウインドウがUUIDと子要素のウインドウの登録済みのを持つことを確認する。"""
     _ = app
     window = MainWindow(settings_path=tmp_path / "settings.json")
     window.editor.setPlainText("child window source")

@@ -1,3 +1,5 @@
+"""段落挿入用のJSON辞書とその検証を扱う。"""
+
 from __future__ import annotations
 
 import json
@@ -22,11 +24,12 @@ SHORTCUT_FIELDS = {
 
 
 class ParagraphInsertDictionaryError(ValueError):
-    """Raised when the paragraph-insertion dictionary is invalid."""
+    """段落挿入辞書の内容が不正な場合に発生する。"""
 
 
 @dataclass(frozen=True)
 class TextReplacementRule:
+    """段落処理で使う文字列置換の規則を保持する。"""
     search: str
     exclude: str
     replacement: str
@@ -34,6 +37,7 @@ class TextReplacementRule:
 
 @dataclass(frozen=True)
 class ParagraphGrammarRules:
+    """段落の構造を調べる規則を保持する。"""
     paragraph_block_search: str
     paragraph_tag_search: str
     paragraph_replacement: str
@@ -50,6 +54,7 @@ class ParagraphGrammarRules:
 
 @dataclass(frozen=True)
 class ParagraphInsertRule:
+    """段落への挿入操作のテンプレートと設定を保持する。"""
     key: str
     search: str
     exclude: str
@@ -67,12 +72,14 @@ class ParagraphInsertRule:
 
 @dataclass(frozen=True)
 class ParagraphInsertRuleBook:
+    """段落挿入の規則とテンプレートをまとめる。"""
     load_file_path: Path
     grammar: ParagraphGrammarRules
     operations: dict[str, ParagraphInsertRule]
     shortcut_insertions: dict[str, str]
 
     def operation(self, key: str) -> ParagraphInsertRule:
+        """指定された段落挿入操作の規則を返す。"""
         try:
             return self.operations[key]
         except KeyError as error:
@@ -83,7 +90,7 @@ class ParagraphInsertRuleBook:
     def render_shortcut(
         self, key: str, selected_text: str = "", value: str = ""
     ) -> tuple[str, int]:
-        """Render dictionary text and return the cursor position in the result."""
+        """辞書テンプレートを展開し、結果の文字列とカーソル位置を返す。"""
         try:
             template = self.shortcut_insertions[key]
         except KeyError as error:
@@ -110,7 +117,7 @@ class ParagraphInsertRuleBook:
 def paragraph_insert_dictionary_path(
     dictionaries_path: Path | None = None,
 ) -> Path:
-    """Resolve the active paragraph-insertion dictionary with a bundled fallback."""
+    """使用中の段落挿入辞書のパスを取得し、見つからなければ同梱辞書を使う。"""
     if dictionaries_path is not None:
         candidate = dictionaries_path / PARAGRAPH_INSERT_DICTIONARY_FILE_NAME
         if candidate.is_file():
@@ -121,6 +128,7 @@ def paragraph_insert_dictionary_path(
 def load_paragraph_insert_rule_book(
     dictionaries_path: Path | None = None,
 ) -> ParagraphInsertRuleBook:
+    """段落挿入辞書を読み込み、使える形に検証する。"""
     load_file_path = paragraph_insert_dictionary_path(dictionaries_path)
     try:
         load_data = json.loads(load_file_path.read_text(encoding="utf-8"))
@@ -216,7 +224,7 @@ def load_paragraph_insert_rule_book(
 def _validate_shortcut_insertions(
     templates: dict[str, str], load_file_path: Path
 ) -> None:
-    """Reject templates that lose selected text or the insertion cursor."""
+    """選択文字列や挿入後のカーソル位置を失うテンプレートを拒否する。"""
     missing = SHORTCUT_FIELDS.keys() - templates.keys()
     if missing:
         raise ParagraphInsertDictionaryError(
@@ -245,6 +253,7 @@ def _text_rule(
     key: str,
     load_file_path: Path,
 ) -> TextReplacementRule:
+    """辞書設定から文字列置換規則を作る。"""
     value = _require_object(parent.get(key), f"grammar.{key}", load_file_path)
     rule = TextReplacementRule(
         search=_require_nonempty_string(
@@ -270,6 +279,7 @@ def _operation_rule(
     value: Any,
     load_file_path: Path,
 ) -> ParagraphInsertRule:
+    """辞書設定から挿入操作の規則を作る。"""
     data = _require_object(value, f"operations.{key}", load_file_path)
     selection = _require_object(
         data.get("selection"),
@@ -386,6 +396,7 @@ def _operation_rule(
 
 
 def _validate_pattern(pattern: str, field: str, load_file_path: Path) -> None:
+    """指定された正規表現が使えることを確認する。"""
     try:
         re.compile(pattern, re.IGNORECASE | re.MULTILINE)
     except re.error as error:
@@ -400,6 +411,7 @@ def _validate_operation_placeholders(
     operation_key: str,
     load_file_path: Path,
 ) -> None:
+    """操作テンプレートのプレースホルダーを検証する。"""
     placeholders = set(re.findall(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", replacement))
     supported = {"selection", "cursor", *default_parameters}
     unknown = placeholders - supported
@@ -416,6 +428,7 @@ def _validate_named_groups(
     field: str,
     load_file_path: Path,
 ) -> None:
+    """正規表現に必要な名前付きグループがあるか確認する。"""
     compiled = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
     missing = required_groups - compiled.groupindex.keys()
     if missing:
@@ -429,10 +442,12 @@ def _message_key(
     key: str,
     load_file_path: Path,
 ) -> str:
+    """辞書からメッセージの翻訳キーを得る。"""
     return _require_string(messages.get(key), f"grammar.messages.{key}", load_file_path)
 
 
 def _require_object(value: Any, field: str, load_file_path: Path) -> dict[str, Any]:
+    """指定値がJSONオブジェクトであることを確認する。"""
     if not isinstance(value, dict):
         raise ParagraphInsertDictionaryError(
             f"{field} must be an object ({load_file_path})"
@@ -441,6 +456,7 @@ def _require_object(value: Any, field: str, load_file_path: Path) -> dict[str, A
 
 
 def _require_string(value: Any, field: str, load_file_path: Path) -> str:
+    """指定値が文字列であることを確認する。"""
     if not isinstance(value, str):
         raise ParagraphInsertDictionaryError(
             f"{field} must be a string ({load_file_path})"
@@ -449,6 +465,7 @@ def _require_string(value: Any, field: str, load_file_path: Path) -> str:
 
 
 def _require_nonempty_string(value: Any, field: str, load_file_path: Path) -> str:
+    """指定値が空でない文字列であることを確認する。"""
     result = _require_string(value, field, load_file_path)
     if not result:
         raise ParagraphInsertDictionaryError(
@@ -458,6 +475,7 @@ def _require_nonempty_string(value: Any, field: str, load_file_path: Path) -> st
 
 
 def _require_bool(value: Any, field: str, load_file_path: Path) -> bool:
+    """指定値が真偽値であることを確認する。"""
     if not isinstance(value, bool):
         raise ParagraphInsertDictionaryError(
             f"{field} must be true or false ({load_file_path})"

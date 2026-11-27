@@ -16,6 +16,7 @@ from macro.validation_types import MacroValidationResult
 class MacroValidationError(ValueError):
     """マクロの検証に失敗した場合に送出される例外。"""
     def __init__(self, validation: MacroValidationResult) -> None:
+        """実行前に見つかったマクロ定義の検証結果を保持する。"""
         super().__init__("macro validation failed")
         self.validation: MacroValidationResult = validation
 
@@ -25,6 +26,7 @@ class MacroManager:
     def __init__(
         self, macro_folder: Path | None = None, runner: MacroRunner | None = None
     ) -> None:
+        """マクロの読み込み、検証、実行に使う処理を用意する。"""
         self.loader: MacroJsonLoader = MacroJsonLoader(macro_folder)
         self.saver: MacroJsonSaver = MacroJsonSaver(macro_folder)
         self.runner: MacroRunner = runner or MacroRunner()

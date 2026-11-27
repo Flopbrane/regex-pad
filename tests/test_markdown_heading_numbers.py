@@ -1,4 +1,4 @@
-"""Coverage for sequential Markdown heading numbering and preset persistence."""
+"""Markdownの見出し番号による連番付けとプリセットの保存を検証する。"""
 
 from macro.editor_bridge import MacroEditorBridge
 from macro.editor_data_model import MacroEditorDocumentData, MacroEditorStepData
@@ -8,6 +8,7 @@ from macro.markdown_heading_numbers import number_items_under_headings
 
 
 def test_heading_switches_parent_and_preserves_unrelated_lines() -> None:
+    """見出しの切り替えるの親要素とが無関係な行を維持することを確認する。"""
     source = (
         "1. before\n"
         "## 3. Plans\n"
@@ -34,12 +35,14 @@ def test_heading_switches_parent_and_preserves_unrelated_lines() -> None:
 
 
 def test_heading_level_and_line_endings_are_preserved() -> None:
+    """見出しレベルと行の改行形式が保持されたであることを確認する。"""
     source = "# 12. Chapter\r\n9. Child\r\n### 13. Next\r\n1. More"
     expected = "# 12. Chapter\r\n# 12-9. Child\r\n### 13. Next\r\n### 13-1. More"
     assert number_items_under_headings(source) == (expected, 2)
 
 
 def test_existing_child_heading_keeps_its_parent_number() -> None:
+    """既存の子要素の見出しがその親要素の番号を保持することを確認する。"""
     source = "## 3. Chapter\n## 3-1. Existing\n2. Remaining\n"
     expected = "## 3. Chapter\n## 3-1. Existing\n## 3-2. Remaining\n"
     assert number_items_under_headings(source) == (expected, 1)
@@ -47,6 +50,7 @@ def test_existing_child_heading_keeps_its_parent_number() -> None:
 
 
 def test_special_step_survives_json_roundtrip_and_runs_after_prior_step() -> None:
+    """特殊な手順がJSONの往復変換が起きても動作するとともに、直前の手順後、実行することを確認する。"""
     document = MacroEditorDocumentData(
         format_version=3,
         macro_name="Markdown numbering",

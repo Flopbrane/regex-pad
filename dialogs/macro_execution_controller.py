@@ -1,4 +1,4 @@
-"""Bind one preview to its originating editor/document and apply in one Undo."""
+"""プレビューを元のエディターと文書に結び付け、1回のUndoで戻せる形で適用する。"""
 
 from collections.abc import Callable
 
@@ -16,6 +16,7 @@ from macro.macro_preview import MacroPreview
 
 
 class MacroExecutionController:
+    """マクロの実行プレビューから元原稿への適用までを管理する。"""
     def __init__(
         self,
         translator: Translator,
@@ -27,6 +28,7 @@ class MacroExecutionController:
         selected_bounds: Callable[[TextEditor], tuple[int, int] | None] | None = None,
         visible_bounds: Callable[[TextEditor], tuple[int, int] | None] | None = None,
     ) -> None:
+        """原稿の参照方法、画面とロガーを設定する。"""
         self.translator = translator
         self.logger = logger
         self.current_editor = current_editor
@@ -38,6 +40,7 @@ class MacroExecutionController:
         self.manager = MacroManager()
 
     def preview_and_apply(self, model: MacroJsonData) -> bool:
+        """マクロをプレビューし、確認後に原稿を再検証して適用する。"""
         editor = self.current_editor()
         if editor is None or not isValid(editor) or not self.editor_exists(editor):
             return False
@@ -81,6 +84,7 @@ class MacroExecutionController:
 
     @staticmethod
     def apply_preview(editor: TextEditor, preview: MacroPreview) -> bool:
+        """結果を元原稿と照合して1回で元に戻せる形で適用する。"""
         if (
             not preview.can_apply
             or editor.toPlainText() != preview.result.original_text
@@ -96,6 +100,7 @@ class MacroExecutionController:
         return True
 
     def _unexpected(self, error: Exception) -> None:
+        """想定外の実行エラーを記録して利用者に知らせる。"""
         self.logger.exception(error, "Macro execution failed", action="macro_run")
         QMessageBox.critical(
             self.parent,

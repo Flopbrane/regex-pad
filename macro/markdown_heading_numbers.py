@@ -1,4 +1,4 @@
-"""Number plain Markdown list items using the nearest numbered heading."""
+"""直前の番号付き見出しを使い、Markdownの番号付き項目を振り直す。"""
 
 import re
 
@@ -10,10 +10,9 @@ _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(?:.*)$")
 
 
 def number_items_under_headings(source_text: str) -> tuple[str, int]:
-    """Scan top to bottom and prefix unindented item numbers with the heading number.
+    """文書を上から走査し、インデントのない項目番号の前に見出し番号を付ける。
 
-    Non-numbered headings end the current section. Fenced code is copied untouched.
-    Existing text, spacing after the list marker, and line endings are preserved.
+    番号のない見出しで現在の区間を終える。フェンス付きコードはそのままコピーし、既存の本文、項目記号の後ろの空白、改行コードを保持する。
     """
     parent: tuple[str, str] | None = None
     fence: tuple[str, int] | None = None

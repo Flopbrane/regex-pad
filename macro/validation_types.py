@@ -1,4 +1,4 @@
-"""Diagnostic data types returned by pseudo-macro validation."""
+"""疑似マクロの検証結果を表す診断データ型を定義する。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 
 
 class MacroDiagnosticSeverity(str, Enum):
-    """Severity used by future pseudo-macro Linter presentation."""
+    """疑似マクロの診断画面で使う重大度を定義する。"""
 
     ERROR = "error"
     WARNING = "warning"
@@ -17,7 +17,7 @@ class MacroDiagnosticSeverity(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class MacroDiagnostic:
-    """Describe one model-level validation finding."""
+    """マクロ定義の検証で得た診断1件を表す。"""
 
     severity: MacroDiagnosticSeverity
     code: str
@@ -29,34 +29,35 @@ class MacroDiagnostic:
 
 @dataclass(frozen=True, slots=True)
 class MacroValidationResult:
-    """Collect diagnostics and expose execution gating properties."""
+    """診断結果をまとめて保持し、実行できるかを示す。"""
 
     diagnostics: tuple[MacroDiagnostic, ...] = ()
 
     @property
     def is_valid(self) -> bool:
-        """Return whether no Error diagnostic prevents execution."""
+        """実行を止めるエラーがないかを返す。"""
         return not self.errors
 
     @property
     def errors(self) -> tuple[MacroDiagnostic, ...]:
-        """Return Error diagnostics only."""
+        """重大度がエラーの診断だけを返す。"""
         return self._with_severity(MacroDiagnosticSeverity.ERROR)
 
     @property
     def warnings(self) -> tuple[MacroDiagnostic, ...]:
-        """Return Warning diagnostics only."""
+        """重大度が警告の診断だけを返す。"""
         return self._with_severity(MacroDiagnosticSeverity.WARNING)
 
     @property
     def information(self) -> tuple[MacroDiagnostic, ...]:
-        """Return Information diagnostics only."""
+        """重大度が情報の診断だけを返す。"""
         return self._with_severity(MacroDiagnosticSeverity.INFORMATION)
 
     def _with_severity(
         self,
         severity: MacroDiagnosticSeverity,
     ) -> tuple[MacroDiagnostic, ...]:
+        """指定された重大度に該当する診断だけを返す。"""
         return tuple(
             diagnostic
             for diagnostic in self.diagnostics

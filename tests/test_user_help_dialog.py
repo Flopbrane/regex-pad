@@ -1,3 +1,5 @@
+"""操作ヘルプのダイアログを検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -16,6 +18,7 @@ from main import MainWindow
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -24,6 +27,7 @@ def app() -> QApplication:
 
 
 def test_user_help_dialog_uses_application_language(app: QApplication) -> None:
+    """操作ヘルプのダイアログがアプリケーションの言語を使うことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = UserHelpDialog(translator)
@@ -52,6 +56,7 @@ def test_user_help_dialog_uses_application_language(app: QApplication) -> None:
 
 
 def test_user_help_dialog_can_navigate_topics(app: QApplication) -> None:
+    """操作ヘルプのダイアログが移動するの項目が可能であることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = UserHelpDialog(translator)
@@ -97,6 +102,7 @@ def test_user_help_dialog_can_navigate_topics(app: QApplication) -> None:
 
 
 def test_user_help_dialog_has_english_attribute_guide(app: QApplication) -> None:
+    """操作ヘルプのダイアログが英語の属性のガイドを持つことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = UserHelpDialog(translator)
@@ -113,6 +119,7 @@ def test_user_help_dialog_has_english_attribute_guide(app: QApplication) -> None
 
 
 def test_user_help_dialog_has_english_html_dictionary(app: QApplication) -> None:
+    """操作ヘルプのダイアログが英語のHTMLの辞書を持つことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = UserHelpDialog(translator)
@@ -133,6 +140,7 @@ def test_user_help_dialog_has_english_html_dictionary(app: QApplication) -> None
 def test_user_help_dialog_has_english_wordpress_parameter_notes(
     app: QApplication,
 ) -> None:
+    """操作ヘルプのダイアログが英語のWordPressのパラメーターの補足を持つことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = UserHelpDialog(translator)
@@ -148,6 +156,7 @@ def test_user_help_dialog_has_english_wordpress_parameter_notes(
 
 
 def test_main_window_has_user_help_action(app: QApplication) -> None:
+    """メインウインドウが操作ヘルプの操作を持つことを確認する。"""
     _ = app
     window = MainWindow()
 

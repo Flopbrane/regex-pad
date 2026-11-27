@@ -7,6 +7,7 @@ from enum import IntEnum
 
 
 class ColorContext(IntEnum):
+    """色コードの検出時に行をまたいで引き継ぐHTML・CSSの状態。"""
     HTML = 0
     HTML_COMMENT = 1
     HTML_TAG = 2

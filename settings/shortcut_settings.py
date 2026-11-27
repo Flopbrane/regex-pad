@@ -1,4 +1,4 @@
-"""Portable storage for user shortcuts and plain-text insertion snippets."""
+"""利用者が設定したショートカットとプレーンテキストの定型文を保存する。"""
 
 from __future__ import annotations
 
@@ -10,12 +10,12 @@ from pathlib import Path
 
 
 class ShortcutSettingsError(ValueError):
-    """Raised when shortcut settings cannot be read or saved safely."""
+    """ショートカットの設定を安全に読み込みまたは保存できない場合に発生する。"""
 
 
 @dataclass(frozen=True, slots=True)
 class TextShortcut:
-    """One named plain-text snippet with a keyboard shortcut."""
+    """ショートカットキーが付いた名前付きの定型文1件を表す。"""
 
     identifier: str
     name: str
@@ -25,14 +25,14 @@ class TextShortcut:
 
 @dataclass(slots=True)
 class ShortcutSettings:
-    """Editable app-action overrides and user-created snippets."""
+    """アプリ操作のキー割り当て変更と、利用者が作った定型文を保持する。"""
 
     overrides: dict[str, str] = field(default_factory=dict)
     snippets: list[TextShortcut] = field(default_factory=list)
 
 
 def load_shortcut_settings(load_file_path: Path) -> ShortcutSettings:
-    """Read settings, using empty defaults only when the file is absent."""
+    """設定を読み込み、ファイルが存在しない場合だけ空の既定値を使う。"""
     if not load_file_path.exists():
         return ShortcutSettings()
     try:
@@ -64,7 +64,7 @@ def load_shortcut_settings(load_file_path: Path) -> ShortcutSettings:
 
 
 def save_shortcut_settings(save_file_path: Path, save_data: ShortcutSettings) -> None:
-    """Atomically replace the local JSON file after all data is prepared."""
+    """データを先に準備してから、ローカルのJSONファイルを安全に置き換える。"""
     payload = {
         "version": 1,
         "overrides": save_data.overrides,

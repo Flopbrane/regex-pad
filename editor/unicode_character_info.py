@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class UnicodeCharacterInfo:
+    """文字のコードポイント、名前、分類とNFKCの結果を保持する。"""
     character: str
     code_point: str
     name: str | None

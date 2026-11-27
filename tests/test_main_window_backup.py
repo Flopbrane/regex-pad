@@ -1,3 +1,5 @@
+"""メインウインドウのバックアップを検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -21,6 +23,7 @@ from settings.settings_manager import SettingsManager
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -33,6 +36,7 @@ def test_main_window_restores_unsaved_backup_when_accepted(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """承認されたの場合、メインウインドウが未保存バックアップを復元することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     UnsavedBackupManager(backup_path).save(
@@ -58,6 +62,7 @@ def test_main_window_restores_unsaved_backup_session_when_accepted(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """承認されたの場合、メインウインドウが未保存バックアップのセッションを復元することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     UnsavedBackupManager(backup_path).save_session(
@@ -106,6 +111,7 @@ def test_main_window_keeps_unsaved_backup_when_restore_is_declined(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """復元が拒まれたになるの場合、メインウインドウが未保存バックアップを保持することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     UnsavedBackupManager(backup_path).save(
@@ -131,6 +137,7 @@ def test_main_window_skips_unsaved_backup_restore_when_option_is_disabled(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """設定項目が無効になるの場合、メインウインドウが未保存バックアップの復元を省くことを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     settings_path = tmp_path / "settings.json"
@@ -172,6 +179,7 @@ def test_main_window_saves_and_clears_unsaved_backup(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウが保存するとともに、未保存バックアップを消すことを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     window = MainWindow(
@@ -194,6 +202,7 @@ def test_main_window_saves_session_for_all_modified_tabs(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウがセッションの用のすべての変更済みのタブを保存することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     window = MainWindow(
@@ -226,6 +235,7 @@ def test_reload_action_has_no_keyboard_shortcut(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """再読込の操作がなしのキー操作を持つことを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -240,6 +250,7 @@ def test_reload_file_cancel_keeps_modified_text_after_backup(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """バックアップ後、再読込のファイルのキャンセルが変更済みの文字列を保持することを確認する。"""
     _ = app
     load_file_path = tmp_path / "sample.txt"
     load_file_path.write_text("saved text", encoding="utf-8")
@@ -273,6 +284,7 @@ def test_main_window_saves_empty_modified_tab_to_unsaved_session(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウが空の変更済みのタブのへの未保存のセッションを保存することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     window = MainWindow(
@@ -294,6 +306,7 @@ def test_main_window_saves_history_snapshot_for_timed_auto_backup(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウが履歴のスナップショットの用の定期の自動のバックアップを保存することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     window = MainWindow(
@@ -319,6 +332,7 @@ def test_main_window_cancels_close_tab_when_autosave_fails_before_confirmation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """確認前の自動保存に失敗すると、タブを閉じる操作を取り消すことを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -351,6 +365,7 @@ def test_main_window_saving_one_tab_preserves_other_modified_tab_backup(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウの保存時の1件のタブが別の変更済みのタブのバックアップを維持することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     window = MainWindow(
@@ -375,6 +390,7 @@ def test_main_window_duplicate_tab_is_added_to_unsaved_session(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウの重複したタブが追加されたへの未保存のセッションになることを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     window = MainWindow(
@@ -396,6 +412,7 @@ def test_main_window_closing_discarded_tab_updates_unsaved_session(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """メインウインドウの終了の破棄されたタブが未保存のセッションを更新することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     window = MainWindow(
@@ -423,6 +440,7 @@ def test_main_window_saves_existing_file_backup_before_overwrite(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """上書き前、メインウインドウが既存のファイルのバックアップを保存することを確認する。"""
     _ = app
     save_file_path = tmp_path / "saved.txt"
     save_file_path.write_text("old text", encoding="utf-8")
@@ -452,6 +470,7 @@ def test_main_window_default_backup_paths_are_under_internal_folder(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウの既定のバックアップのパスが内部データ用フォルダーであることを確認する。"""
     _ = app
     window = MainWindow(
         settings_path=tmp_path / "settings.json",
@@ -468,6 +487,7 @@ def test_main_window_custom_backup_folder_is_used_as_file_backup_root(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """設定で指定したフォルダーがファイルバックアップの保存先になることを確認する。"""
     _ = app
     backup_folder = tmp_path / "custom-backup"
     window = MainWindow(
@@ -485,6 +505,7 @@ def test_main_window_uses_configured_auto_backup_interval(
     app: QApplication,
     tmp_path: Path,
 ) -> None:
+    """メインウインドウが設定済みの自動のバックアップの間隔を使うことを確認する。"""
     _ = app
     settings_path = tmp_path / "settings.json"
     SettingsManager(settings_path).save(
@@ -524,6 +545,7 @@ def test_main_window_restores_file_backup_into_editor(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """メインウインドウがファイルのバックアップへのエディターを復元することを確認する。"""
     _ = app
     save_file_path = tmp_path / "saved.txt"
     save_file_path.write_text("backup text", encoding="utf-8")
@@ -544,6 +566,7 @@ def test_main_window_restores_file_backup_into_editor(
     window.editor.document().setModified(False)
 
     def select_first_backup(*args, **kwargs) -> tuple[str, bool]:
+        """復元候補の先頭をテスト用に選択する。"""
         labels = args[3]
         return labels[0], True
 
@@ -561,6 +584,7 @@ def test_main_window_autosaves_modified_text_before_file_backup_restore(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """バックアップから復元する前に、編集中の内容を自動保存することを確認する。"""
     _ = app
     save_file_path = tmp_path / "saved.txt"
     save_file_path.write_text("backup text", encoding="utf-8")
@@ -582,10 +606,12 @@ def test_main_window_autosaves_modified_text_before_file_backup_restore(
     original_save_session = window.unsaved_backup_manager.save_session
 
     def capture_save_session(session: UnsavedBackupSession) -> bool:
+        """復元前に保存された未保存セッションを記録する。"""
         saved_sessions.append([tab.text for tab in session.tabs])
         return original_save_session(session)
 
     def select_first_backup(*args, **kwargs) -> tuple[str, bool]:
+        """復元候補の先頭をテスト用に選択する。"""
         labels = args[3]
         return labels[0], True
 
@@ -614,6 +640,7 @@ def test_main_window_restores_unsaved_backup_history_from_restore_menu(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """メインウインドウが未保存バックアップの履歴のからの復元のメニューを復元することを確認する。"""
     _ = app
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     manager = UnsavedBackupManager(backup_path)
@@ -635,6 +662,7 @@ def test_main_window_restores_unsaved_backup_history_from_restore_menu(
     window.editor.document().setModified(True)
 
     def select_history_backup(*args, **kwargs) -> tuple[str, bool]:
+        """復元一覧から履歴バックアップを選択する。"""
         labels = args[3]
         history_label = next(
             label for label in labels if "history" in label.lower() or "履歴" in label

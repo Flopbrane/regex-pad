@@ -1,3 +1,5 @@
+"""マウスを重ねたときのヒントを検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -15,12 +17,14 @@ from main import MainWindow
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance() or QApplication([])
     assert isinstance(application, QApplication)
     return application
 
 
 def test_menu_hover_signal_reaches_status_bar(app: QApplication) -> None:
+    """メニュー項目にマウスを重ねたときのシグナルがステータスバーに届くことを確認する。"""
     window = MainWindow()
     try:
         for root in (
@@ -44,6 +48,7 @@ def test_menu_hover_signal_reaches_status_bar(app: QApplication) -> None:
 
 
 def test_picker_hover_setting_preserves_keyboard_hint(app: QApplication) -> None:
+    """選択画面のマウスを重ねたときの設定がキーボードのヒントを維持することを確認する。"""
     window = MainWindow()
     dialog = TagInsertDialog(window.translator)
     try:
@@ -87,15 +92,18 @@ def test_picker_hover_setting_preserves_keyboard_hint(app: QApplication) -> None
 def test_options_reach_reused_picker_and_saved_settings(
     app: QApplication, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """オプションの到達の再利用した選択画面と保存済みの設定を確認する。"""
     window = MainWindow()
     states: list[bool] = []
     enabled = False
 
     def accept_options(dialog: OptionsDialog) -> int:
+        """テストで指定したオプションを確定する。"""
         dialog.hover_hints_checkbox.setChecked(enabled)
         return QDialog.DialogCode.Accepted
 
     def inspect_picker(dialog: TagInsertDialog) -> int:
+        """再利用されるタグ選択画面の状態を確認する。"""
         states.append(dialog.hover_hints_enabled)
         assert bool(dialog.snippet_list.item(0).toolTip()) is enabled
         return QDialog.DialogCode.Rejected

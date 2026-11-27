@@ -1,4 +1,4 @@
-"""Best-effort JSONL persistence for application log records."""
+"""アプリケーションログをJSONL形式で保存する。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 
 
 def append_log_record(save_file_path: Path, save_data: dict[str, Any]) -> bool:
-    """Append one JSON record without allowing logger failures to stop the app."""
+    """JSONレコードを1件追記し、ログ保存の失敗でアプリが停止するのを防ぐ。"""
     try:
         save_file_path.parent.mkdir(parents=True, exist_ok=True)
         with save_file_path.open("a", encoding="utf-8", newline="\n") as log_file:

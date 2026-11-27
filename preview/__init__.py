@@ -1,1 +1,1 @@
-"""Optional WordPress preview support."""
+"""任意で使えるWordPressプレビュー機能を提供する。"""

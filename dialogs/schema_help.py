@@ -1,3 +1,5 @@
+"""同梱スキーマから操作ヘルプ用の参考表を作る。"""
+
 from __future__ import annotations
 
 import json
@@ -102,7 +104,7 @@ def load_schema_help_topics(
     standards_path: Path,
     language_code: str,
 ) -> tuple[HelpTopic, HelpTopic, HelpTopic]:
-    """Build separate HTML, CSS, and WordPress topics from bundled schemas."""
+    """同梱のスキーマからHTML、CSS、WordPressの参考項目をそれぞれ生成する。"""
     language = "en" if language_code == "en" else "ja"
     html_topic = _load_topic(
         standards_path / "html_tag_schema.json",
@@ -127,6 +129,7 @@ def _load_topic(
     language: str,
     schema_kind: str,
 ) -> HelpTopic:
+    """指定の参照資料を読み込み、ヘルプ項目を作る。"""
     text = _TEXT[language]
     title_keys = {
         "html": "html_title",
@@ -148,6 +151,7 @@ def _load_topic(
 
 
 def _build_html_topic(schema: dict[str, Any], language: str) -> str:
+    """HTMLタグと属性の参考表を組み立てる。"""
     text = _TEXT[language]
     lines = [
         f"# {text['html_title']}",
@@ -236,6 +240,7 @@ def _build_html_topic(schema: dict[str, Any], language: str) -> str:
 
 
 def _build_css_topic(schema: dict[str, Any], language: str) -> str:
+    """CSSプロパティの参考表を組み立てる。"""
     text = _TEXT[language]
     lines = [
         f"# {text['css_title']}",
@@ -293,6 +298,7 @@ def _build_css_topic(schema: dict[str, Any], language: str) -> str:
 
 
 def _build_wordpress_topic(schema: dict[str, Any], language: str) -> str:
+    """WordPressブロックと属性の参考表を組み立てる。"""
     text = _TEXT[language]
     coverage = str(schema.get("coverage", "-"))
     lines = [
@@ -363,6 +369,7 @@ def _build_wordpress_topic(schema: dict[str, Any], language: str) -> str:
 
 
 def _format_rule(rule: dict[str, Any]) -> str:
+    """スキーマの検証規則を表示用に整える。"""
     raw_types = rule.get("type", rule.get("value_types", "unknown"))
     type_names = raw_types if isinstance(raw_types, list) else [raw_types]
     parts = [" / ".join(_code(str(type_name)) for type_name in type_names)]
@@ -386,6 +393,7 @@ def _format_rule(rule: dict[str, Any]) -> str:
 
 
 def _localized_schema_description(rule: dict[str, Any], language: str) -> str | None:
+    """指定言語のスキーマ説明を取得する。"""
     localized_key = f"description_{language}"
     description = rule.get(localized_key, rule.get("description"))
     if isinstance(description, str) and description.strip():
@@ -398,6 +406,7 @@ def _format_html_tag_description(
     tag_data: dict[str, Any],
     language: str,
 ) -> str:
+    """HTMLタグの説明を表示用に整える。"""
     description = _localized_schema_description(tag_data, language)
     if description is not None:
         return description
@@ -412,6 +421,7 @@ def _format_html_attribute_description(
     rule: dict[str, Any],
     language: str,
 ) -> str:
+    """HTML属性の説明を表示用に整える。"""
     description = _localized_schema_description(rule, language)
     if description is not None:
         return description
@@ -424,6 +434,7 @@ def _english_html_attribute_description(
     tag_name: str | None,
     attribute_name: str,
 ) -> str:
+    """HTML属性の英語の補足説明を取得する。"""
     descriptions = {
         "abbr": "Provides an abbreviated label for a table header cell.",
         "alt": "Provides alternative text for an image or media source.",
@@ -486,6 +497,7 @@ def _japanese_html_attribute_description(
     tag_name: str | None,
     attribute_name: str,
 ) -> str:
+    """HTML属性の日本語の補足説明を取得する。"""
     descriptions = {
         "abbr": "表見出しセルの省略ラベルを指定します。",
         "alt": "画像やメディアの代替テキストを指定します。",
@@ -549,6 +561,7 @@ def _format_wordpress_block_description(
     block_data: dict[str, Any],
     language: str,
 ) -> str:
+    """WordPressブロックの説明を表示用に整える。"""
     description = _localized_schema_description(block_data, language)
     if description is not None:
         return description
@@ -563,6 +576,7 @@ def _format_wordpress_attribute_description(
     rule: dict[str, Any],
     language: str,
 ) -> str:
+    """WordPress属性の説明を表示用に整える。"""
     description = _localized_schema_description(rule, language)
     if description is not None:
         return description
@@ -575,6 +589,7 @@ def _english_wordpress_attribute_description(
     block_name: str | None,
     attribute_name: str,
 ) -> str:
+    """WordPress属性の英語の補足説明を取得する。"""
     descriptions = {
         "align": "Sets block alignment such as wide, full, left, or center.",
         "alt": "Stores alternative text for an image block.",
@@ -646,6 +661,7 @@ def _japanese_wordpress_attribute_description(
     block_name: str | None,
     attribute_name: str,
 ) -> str:
+    """WordPress属性の日本語の補足説明を取得する。"""
     descriptions = {
         "align": "wide/full/left/center などのブロック配置を指定します。",
         "alt": "画像ブロックの代替テキストを保存します。",
@@ -718,6 +734,7 @@ def _format_css_property_description(
     rule: dict[str, Any],
     language: str,
 ) -> str:
+    """CSSプロパティの説明を表示用に整える。"""
     description = _localized_schema_description(rule, language)
     if description is not None:
         return description
@@ -728,6 +745,7 @@ def _format_css_property_description(
 
 
 def _english_css_property_description(property_name: str) -> str:
+    """CSSプロパティの英語の補足説明を取得する。"""
     descriptions = {
         "aspect-ratio": "Sets the preferred width-to-height ratio of a box.",
         "background": "Sets multiple background values at once.",
@@ -803,6 +821,7 @@ def _english_css_property_description(property_name: str) -> str:
 
 
 def _japanese_css_property_description(property_name: str) -> str:
+    """CSSプロパティの日本語の補足説明を取得する。"""
     descriptions = {
         "aspect-ratio": "要素の横幅と高さの比率を指定します。",
         "background": "背景に関する値をまとめて指定します。",
@@ -878,6 +897,7 @@ def _japanese_css_property_description(property_name: str) -> str:
 
 
 def _table_header(*labels: str) -> str:
+    """参考表の見出しと区切り行を作る。"""
     return "\n".join(
         (
             _table_row(*labels),
@@ -887,18 +907,22 @@ def _table_header(*labels: str) -> str:
 
 
 def _table_row(*values: str) -> str:
+    """セルの値から参考表の行を作る。"""
     return "| " + " | ".join(_escape_cell(value) for value in values) + " |"
 
 
 def _code(value: str) -> str:
+    """文字列をインラインコードとして表示できる形にする。"""
     return f"`{value.replace('`', '\\`')}`"
 
 
 def _escape_cell(value: str) -> str:
+    """表のセル内の記号が区切りとして扱われないようにする。"""
     return value.replace("|", "\\|").replace("\n", "<br>")
 
 
 def _require_dict(data: dict[str, Any], key: str) -> dict[str, Any]:
+    """入力値が辞書であることを確認して返す。"""
     value = data[key]
     if not isinstance(value, dict):
         raise TypeError(f"{key} must be an object")
@@ -906,12 +930,14 @@ def _require_dict(data: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
+    """値が辞書ならその値を返し、それ以外は空の辞書を返す。"""
     if not isinstance(value, dict):
         raise TypeError("schema entry must be an object")
     return value
 
 
 def _as_list(value: Any) -> list[Any]:
+    """値がリストならその値を返し、それ以外は空のリストを返す。"""
     if not isinstance(value, list):
         raise TypeError("schema entry must be an array")
     return value

@@ -1,3 +1,5 @@
+"""辞書からタグを選んで挿入する画面を提供する。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,6 +29,7 @@ from localization.translator import Translator
 
 @dataclass(frozen=True)
 class TagSnippetChoice:
+    """選択した定型項目とその挿入方法を表す。"""
     label: str
     search_text: str
     hint: str
@@ -34,9 +37,11 @@ class TagSnippetChoice:
 
 
 class TagInsertDialog(QDialog):
+    """分類された辞書からタグの定型項目を選ぶ画面。"""
     snippet_selected = Signal(TagSnippet)
 
     def __init__(self, translator: Translator, parent: QWidget | None = None) -> None:
+        """タグ一覧、分類、ヒント欄を組み立てる。"""
         super().__init__(parent)
         self.translator = translator
         self.choices: list[TagSnippetChoice] = []
@@ -57,6 +62,7 @@ class TagInsertDialog(QDialog):
         self.apply_language()
 
     def apply_language(self) -> None:
+        """現在の言語を各部に反映する。"""
         self.setWindowTitle(self.translator.text("tag_picker.title"))
         self.search_label.setText(self.translator.text("tag_picker.filter"))
         self.search_edit.setPlaceholderText(
@@ -66,6 +72,7 @@ class TagInsertDialog(QDialog):
         self.close_button.setText(self.translator.text("tag_picker.close"))
 
     def set_snippet_groups(self, groups: tuple[TagSnippetGroup, ...]) -> None:
+        """使用できる定型項目のグループを設定する。"""
         self.choices = []
         for group in groups:
             group_label = self.translator.text(group.label_key)
@@ -86,9 +93,11 @@ class TagInsertDialog(QDialog):
         self._refresh_list()
 
     def selected_choice(self) -> TagSnippet | None:
+        """確定された挿入項目を返す。"""
         return self.selected_snippet
 
     def set_hover_hints_enabled(self, enabled: bool) -> None:
+        """マウス位置に応じた説明の表示を切り替える。"""
         self.hover_hints_enabled = enabled
         for index in range(self.snippet_list.count()):
             item = self.snippet_list.item(index)
@@ -97,6 +106,7 @@ class TagInsertDialog(QDialog):
                 item.setToolTip(escape(choice.hint, quote=False) if enabled else "")
 
     def _create_layout(self) -> None:
+        """タグ挿入画面の部品を配置する。"""
         search_layout = QHBoxLayout()
         search_layout.addWidget(self.search_label)
         search_layout.addWidget(self.search_edit)
@@ -115,6 +125,7 @@ class TagInsertDialog(QDialog):
         self.resize(560, 420)
 
     def _connect_signals(self) -> None:
+        """タグ一覧と入力操作のシグナルを接続する。"""
         self.search_edit.textChanged.connect(self._refresh_list)
         self.search_edit.installEventFilter(self)
         self.snippet_list.installEventFilter(self)
@@ -126,6 +137,7 @@ class TagInsertDialog(QDialog):
         self.close_button.clicked.connect(self.reject)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """キー入力などのイベントをタグ選択操作に振り分ける。"""
         if event.type() != QEvent.Type.KeyPress:
             return super().eventFilter(watched, event)
         if not isinstance(event, QKeyEvent):
@@ -153,6 +165,7 @@ class TagInsertDialog(QDialog):
         return super().eventFilter(watched, event)
 
     def _refresh_list(self) -> None:
+        """絞り込み条件に合う項目を一覧に表示する。"""
         filter_text = self.search_edit.text().strip().lower()
         self.snippet_list.clear()
         for choice in self.choices:
@@ -174,14 +187,16 @@ class TagInsertDialog(QDialog):
         current: QListWidgetItem | None,
         _previous: QListWidgetItem | None,
     ) -> None:
+        """現在行の変更に合わせてヒントを更新する。"""
         self._show_item_hint(current)
 
     def _handle_hovered_item(self, item: QListWidgetItem) -> None:
+        """マウスを重ねた項目の説明を表示する。"""
         if self.hover_hints_enabled:
             self._show_item_hint(item)
 
     def _show_item_hint(self, item: QListWidgetItem | None) -> None:
-        """Show the hint for the selected or hovered snippet list item."""
+        """選択中またはマウスが重なっている定型項目のヒントを表示する。"""
         if item is None:
             self.hint_label.clear()
             return
@@ -190,6 +205,7 @@ class TagInsertDialog(QDialog):
             self.hint_label.setText(choice.hint)
 
     def _move_selection(self, delta: int) -> None:
+        """定型項目の選択を指定方向に移す。"""
         if self.snippet_list.count() == 0:
             return
         current_row = self.snippet_list.currentRow()
@@ -198,6 +214,7 @@ class TagInsertDialog(QDialog):
         self.snippet_list.setCurrentRow(next_row)
 
     def _accept_current(self) -> None:
+        """選択中の定型項目を確定する。"""
         current = self.snippet_list.currentItem()
         if current is None:
             return

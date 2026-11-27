@@ -19,6 +19,7 @@ class MacroJsonSaver:
     """UTF-8 JSONを設定可能な擬似マクロフォルダにアトミックに書き込む。"""
 
     def __init__(self, macro_folder: Path | None = None) -> None:
+        """マクロJSONを保存する基準フォルダーを設定する。"""
         self.macro_folder: Path = macro_folder or default_macro_folder()
 
     def save(

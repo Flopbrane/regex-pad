@@ -1,4 +1,4 @@
-"""Inline Markdown formatting helpers for WordPress block output."""
+"""WordPress向けに出力するMarkdownのインライン書式を処理する。"""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def wp_format_inline_text(
     line_break_html: str = "<br>",
     convert_inline_code: bool = False,
 ) -> str:
-    """Escape text and convert safe inline Markdown patterns to HTML."""
+    """文字列をエスケープし、安全なインラインMarkdownの書式をHTMLに変換する。"""
     parts: list[str] = []
     current_position = 0
 
@@ -44,6 +44,7 @@ def wp_format_inline_text(
 
 
 def _wp_escape_and_link_urls(text: str, convert_inline_code: bool = False) -> str:
+    """本文をエスケープし、対象URLをHTMLリンクにする。"""
     safe_text = escape(text)
     safe_text = _wp_format_emphasis(safe_text, convert_inline_code=convert_inline_code)
     return WP_URL_PATTERN.sub(
@@ -53,12 +54,14 @@ def _wp_escape_and_link_urls(text: str, convert_inline_code: bool = False) -> st
 
 
 def _wp_create_link_html(label: str, url: str) -> str:
+    """指定されたURLと表示名からHTMLリンクを組み立てる。"""
     safe_label = escape(label.strip())
     safe_url = escape(url.strip(), quote=True)
     return f'<a href="{safe_url}">{safe_label}</a>'
 
 
 def _wp_format_emphasis(text: str, convert_inline_code: bool = False) -> str:
+    """Markdownの強調記号をHTMLの強調タグに変換する。"""
     if convert_inline_code:
         text = WP_INLINE_CODE_PATTERN.sub(_wp_replace_backticks_with_code_tag, text)
     text = WP_BOLD_PATTERN.sub(r"<strong>\1</strong>", text)
@@ -66,5 +69,6 @@ def _wp_format_emphasis(text: str, convert_inline_code: bool = False) -> str:
 
 
 def _wp_replace_backticks_with_code_tag(code_match: re.Match[str]) -> str:
+    """バッククォートで囲まれた範囲をHTMLのコードタグに変換する。"""
     return f"<code>{code_match.group(1)}</code>"
 

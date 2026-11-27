@@ -1,3 +1,5 @@
+"""モジュールの整理を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -11,20 +13,24 @@ import module_cleaner as cleaner
 
 
 def write_file(path: Path, text: str = "fixture") -> Path:
+    """テスト用のファイルを指定場所に作る。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path
 
 
 def record(app_root: Path, items: list[dict[str, object]]) -> None:
+    """整理ツールのテスト用インストール記録を用意する。"""
     write_file(app_root / "install_records/install_diff.json", json.dumps({"added_files": items}))
 
 
 def owned(path: Path) -> dict[str, object]:
+    """テスト対象のパスをアプリ所有として記録する。"""
     return {"path": str(path), "owned_by_this_app": True, "delete_candidate": True}
 
 
 def directory_link(path: Path, target: Path) -> None:
+    """整理処理の境界を試すためディレクトリリンクを作る。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
         result = subprocess.run(["cmd", "/c", "mklink", "/J", str(path), str(target)], capture_output=True, check=False)
@@ -35,6 +41,7 @@ def directory_link(path: Path, target: Path) -> None:
 
 
 def remove_link(path: Path) -> None:
+    """テストで作ったディレクトリリンクを片付ける。"""
     if path.is_junction():
         path.rmdir()  # Remove only this junction, never its target contents.
     elif path.is_symlink():
@@ -42,6 +49,7 @@ def remove_link(path: Path) -> None:
 
 
 def test_wordpress_cleanup_includes_downloads_bundle_and_snapshots_without_records(tmp_path: Path) -> None:
+    """記録を省いた場合、WordPressの整理がを取得するの配布物とスナップショットを含めることを確認する。"""
     app_root = tmp_path / "portable"
     for name in (
         "runtime/wordpress-preview/wordpress.zip",
@@ -67,6 +75,7 @@ def test_wordpress_cleanup_includes_downloads_bundle_and_snapshots_without_recor
 
 
 def test_manifest_is_scoped_deduplicated_and_resolves_relative_paths(tmp_path: Path) -> None:
+    """一覧が範囲が限定された重複を除いたになるとともに、相対のパスを解決することを確認する。"""
     app_root = tmp_path / "app"
     nested = write_file(app_root / "runtime/wordpress-preview/wordpress.zip")
     module = write_file(app_root / "modules/owned.whl")
@@ -83,6 +92,7 @@ def test_manifest_is_scoped_deduplicated_and_resolves_relative_paths(tmp_path: P
 
 
 def test_scan_and_dry_run_do_not_delete_wordpress_data(tmp_path: Path) -> None:
+    """走査と試行表示の行わないの削除のWordPressのデータを確認する。"""
     data = write_file(tmp_path / "runtime/wordpress-preview/wordpress.zip")
     assert cleaner.scan(tmp_path) == 0
     assert cleaner.dry_run(tmp_path) == 0
@@ -92,6 +102,7 @@ def test_scan_and_dry_run_do_not_delete_wordpress_data(tmp_path: Path) -> None:
 
 
 def test_clean_requires_confirmation_unless_yes_is_supplied(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """確認を省くオプションがないときは、整理処理を実行する前に確認を求めることを確認する。"""
     data = write_file(tmp_path / "Temp/WordPressPreview/snapshot.html")
     monkeypatch.setattr("builtins.input", lambda prompt: "cancel")
     assert cleaner.clean(tmp_path, yes=False) == 1
@@ -100,6 +111,7 @@ def test_clean_requires_confirmation_unless_yes_is_supplied(tmp_path: Path, monk
 
 @pytest.mark.parametrize("nested", [False, True])
 def test_cleanup_refuses_directory_junctions_and_preserves_targets(tmp_path: Path, nested: bool) -> None:
+    """整理がディレクトリのジャンクションを拒否するとともに、対象を維持することを確認する。"""
     app_root = tmp_path / "app"
     external = write_file(tmp_path / "outside/article.txt")
     runtime = app_root / "runtime/wordpress-preview"
@@ -115,6 +127,7 @@ def test_cleanup_refuses_directory_junctions_and_preserves_targets(tmp_path: Pat
 
 
 def test_links_inside_the_app_are_not_treated_as_owned_runtime_data(tmp_path: Path) -> None:
+    """リンク内のアプリがしないの扱われるのとしてのアプリ所有の実行環境のデータであることを確認する。"""
     target = write_file(tmp_path / "app/data/user/article.txt")
     link = tmp_path / "app/runtime/wordpress-preview"
     directory_link(link, target.parent)
@@ -127,12 +140,14 @@ def test_links_inside_the_app_are_not_treated_as_owned_runtime_data(tmp_path: Pa
 
 
 def test_targets_are_rechecked_after_confirmation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """利用者が確認した後、対象を改めて検証することを確認する。"""
     app_root = tmp_path / "app"
     data = write_file(app_root / "runtime/wordpress-preview/wordpress.zip")
     external = write_file(tmp_path / "outside/keep.txt")
     link = data.parent / "late-junction"
 
     def confirm(prompt: str) -> str:
+        """確認ダイアログへの利用者の応答をテスト用に代用する。"""
         directory_link(link, external.parent)
         return "DELETE"
 
@@ -146,9 +161,11 @@ def test_targets_are_rechecked_after_confirmation(tmp_path: Path, monkeypatch: p
 
 
 def test_locked_files_report_incomplete_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    """ロックされたファイルの報告の未完了の整理を確認する。"""
     data = write_file(tmp_path / "runtime/wordpress-preview/wordpress.zip")
 
     def fail(path: Path) -> None:
+        """処理が失敗する場合をテスト用に発生させる。"""
         raise PermissionError("fixture file is locked")
 
     monkeypatch.setattr(cleaner.shutil, "rmtree", fail)

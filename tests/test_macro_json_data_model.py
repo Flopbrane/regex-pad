@@ -1,3 +1,5 @@
+"""マクロのJSONのデータのモデルを検証する。"""
+
 from __future__ import annotations
 
 from dataclasses import is_dataclass
@@ -9,6 +11,7 @@ from unicode_normalize import NORMALIZATION_FORMS, NormalizationForm
 
 
 def _step() -> MacroJsonStepData:
+    """マクロ手順のテスト用データを組み立てる。"""
     return MacroJsonStepData(
         step_name="insert_@@@",
         enabled=True,
@@ -23,6 +26,7 @@ def _step() -> MacroJsonStepData:
 
 
 def test_macro_json_models_are_dataclasses_with_public_properties() -> None:
+    """マクロのJSONのモデルがデータクラス（公開されたプロパティあり）であることを確認する。"""
     step = _step()
     macro = MacroJsonData(1, "WordPress本文整形", "説明", [step])
 
@@ -44,6 +48,7 @@ def test_macro_json_models_are_dataclasses_with_public_properties() -> None:
 
 
 def test_macro_json_model_setters_update_every_field() -> None:
+    """マクロのJSONのモデルの値の設定処理の更新のすべての項目を確認する。"""
     first_step = _step()
     second_step = _step()
     first_step.step_name = "normalize"
@@ -94,6 +99,7 @@ def test_macro_json_step_setters_reject_wrong_types(
     field_name: str,
     value: object,
 ) -> None:
+    """マクロのJSONの手順の値の設定処理の拒否の誤ったの型を確認する。"""
     step = _step()
 
     with pytest.raises(TypeError):
@@ -104,6 +110,7 @@ def test_macro_json_step_setters_reject_wrong_types(
 def test_unicode_normalize_form_accepts_only_registered_literal_values(
     normalization_form: NormalizationForm,
 ) -> None:
+    """Unicodeの正規化のフォームがだけの登録済みのリテラルの値を受け入れることを確認する。"""
     step = _step()
 
     step.unicode_normalize_form = normalization_form
@@ -112,6 +119,7 @@ def test_unicode_normalize_form_accepts_only_registered_literal_values(
 
 
 def test_unicode_normalize_form_rejects_unknown_string() -> None:
+    """Unicodeの正規化のフォームが未登録の文字列を拒否することを確認する。"""
     step = _step()
 
     with pytest.raises(ValueError, match="NFC, NFD, NFKC, NFKD"):
@@ -119,6 +127,7 @@ def test_unicode_normalize_form_rejects_unknown_string() -> None:
 
 
 def test_macro_json_data_rejects_wrong_types_and_step_contents() -> None:
+    """マクロのJSONのデータが誤ったの型と手順の内容を拒否することを確認する。"""
     macro = MacroJsonData(1, "名前", "説明", [])
 
     with pytest.raises(TypeError):
@@ -134,6 +143,7 @@ def test_macro_json_data_rejects_wrong_types_and_step_contents() -> None:
 
 
 def test_macro_json_data_copies_input_steps_to_an_immutable_tuple() -> None:
+    """マクロのJSONのデータが入力欄の手順のへの変更不可のタプルをコピーすることを確認する。"""
     step = _step()
     source_steps = [step]
     macro = MacroJsonData(1, "名前", "説明", source_steps)

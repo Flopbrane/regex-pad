@@ -1,3 +1,5 @@
+"""エディターとルーラーを組み合わせたタブを提供する。"""
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
@@ -7,7 +9,9 @@ from editor.text_editor import TextEditor
 
 
 class EditorTab(QWidget):
+    """文書編集欄とルーラーを持つタブのコンテナ。"""
     def __init__(self, editor: TextEditor, parent: QWidget | None = None) -> None:
+        """編集欄とルーラーをタブ内に配置する。"""
         super().__init__(parent)
         self.editor = editor
         self.ruler = Ruler(self)
@@ -21,4 +25,5 @@ class EditorTab(QWidget):
         self.setLayout(layout)
 
     def set_ruler_visible(self, visible: bool) -> None:
+        """ルーラーの表示を切り替える。"""
         self.ruler.setVisible(visible)

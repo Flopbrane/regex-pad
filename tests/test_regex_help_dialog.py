@@ -1,3 +1,5 @@
+"""正規表現ヘルプのダイアログを検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -15,6 +17,7 @@ from localization.translator import Translator
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -23,6 +26,7 @@ def app() -> QApplication:
 
 
 def test_regex_help_loads_examples(app: QApplication) -> None:
+    """正規表現ヘルプが例を読み込むことを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = RegexHelpDialog(Path("resources/regex_help_en.json"), translator)
@@ -37,6 +41,7 @@ def test_regex_help_loads_examples(app: QApplication) -> None:
 
 
 def test_regex_help_columns_are_resizable_and_wide_enough(app: QApplication) -> None:
+    """正規表現ヘルプの列がサイズを変更できると幅の広いの十分なであることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = RegexHelpDialog(Path("resources/regex_help_ja.json"), translator)
@@ -54,6 +59,7 @@ def test_regex_help_columns_are_resizable_and_wide_enough(app: QApplication) -> 
 
 
 def test_regex_help_can_switch_between_english_and_japanese(app: QApplication) -> None:
+    """正規表現ヘルプが切り替えの間の英語と日本語が可能であることを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "ja")
     dialog = RegexHelpDialog(
@@ -80,6 +86,7 @@ def test_regex_help_can_switch_between_english_and_japanese(app: QApplication) -
 
 
 def test_help_headers_follow_help_language_not_app_language(app: QApplication) -> None:
+    """ヘルプの見出しの追従のヘルプの言語のしないのアプリの言語を確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = RegexHelpDialog(
@@ -98,6 +105,7 @@ def test_help_headers_follow_help_language_not_app_language(app: QApplication) -
 
 
 def test_regex_help_emits_selected_pattern(app: QApplication) -> None:
+    """正規表現ヘルプが選択中のパターンを通知することを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = RegexHelpDialog(Path("resources/regex_help_en.json"), translator)
@@ -111,6 +119,7 @@ def test_regex_help_emits_selected_pattern(app: QApplication) -> None:
 
 
 def test_regex_help_double_click_emits_pattern_column(app: QApplication) -> None:
+    """正規表現ヘルプの二重のクリックがパターンの列を通知することを確認する。"""
     _ = app
     translator = Translator(Path("resources"), "en")
     dialog = RegexHelpDialog(Path("resources/regex_help_en.json"), translator)

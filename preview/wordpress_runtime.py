@@ -1,4 +1,4 @@
-"""Prepare a portable, optional WordPress/PHP.wasm runtime without global installs."""
+"""システム全体へインストールせず、任意で使うポータブルなWordPressとPHP.wasmの環境を準備する。"""
 from __future__ import annotations
 
 import hashlib
@@ -25,16 +25,17 @@ CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 class PreparationCancelled(Exception):
-    """The user closed the preview while its optional environment was preparing."""
+    """任意の実行環境を準備中に、利用者がプレビューを閉じた場合に発生する。"""
 
 
 def _check_cancel(cancel: threading.Event) -> None:
+    """実行環境の準備が中止されたか確認する。"""
     if cancel.is_set():
         raise PreparationCancelled()
 
 
 def find_node(runtime_root: Path, *, include_installed: bool = True) -> Path | None:
-    """Prefer the adjacent portable Node, then an already-installed compatible Node."""
+    """同じフォルダーにあるポータブル版Nodeを優先し、次に互換性のあるインストール済みのNodeを探す。"""
     candidates = list((runtime_root / "node").glob("node-*/node.exe"))
     installed = shutil.which("node") if include_installed else None
     if installed:
@@ -54,7 +55,7 @@ def find_node(runtime_root: Path, *, include_installed: bool = True) -> Path | N
 
 
 def default_runtime_root() -> Path:
-    """Use complete bundled data directly; keep first-use downloads beside the EXE."""
+    """同梱データが揃っていれば直接使い、初回に取得したデータはEXEの横に置く。"""
     bundled_root = bundled_base_dir() / "runtime/wordpress-preview"
     if bundled_base_dir() != app_base_dir() and runtime_ready(bundled_root):
         return bundled_root
@@ -62,6 +63,7 @@ def default_runtime_root() -> Path:
 
 
 def runtime_ready(runtime_root: Path) -> bool:
+    """WordPressプレビューに必要な実行環境が揃っているか判定する。"""
     try:
         manifest = json.loads((runtime_root / "ready.json").read_text(encoding="utf-8"))
         if manifest.get("playground") != PLAYGROUND_VERSION:
@@ -75,7 +77,7 @@ def runtime_ready(runtime_root: Path) -> bool:
 
 
 def _download(url: str, save_file_path: Path, cancel: threading.Event) -> None:
-    """Write downloads atomically; an interruption never replaces a good archive."""
+    """ダウンロードした内容を安全に書き込む。中断時に正常な既存アーカイブを置き換えない。"""
     temporary_path = save_file_path.with_suffix(save_file_path.suffix + ".partial")
     try:
         _check_cancel(cancel)
@@ -93,6 +95,7 @@ def _download(url: str, save_file_path: Path, cancel: threading.Event) -> None:
 
 
 def _portable_node(runtime_root: Path, cancel: threading.Event) -> Path:
+    """同梱Nodeの実行ファイルを探す。"""
     if os.name != "nt":
         raise RuntimeError("Node.js 24.18 or later is required on this platform.")
     with urlopen("https://nodejs.org/dist/index.json", timeout=15) as response:
@@ -128,6 +131,7 @@ def _portable_node(runtime_root: Path, cancel: threading.Event) -> Path:
 
 
 def _npm_cli(node: Path) -> Path | None:
+    """Nodeからnpmを呼び出すためのスクリプトを探す。"""
     paths = [node.parent / "node_modules/npm/bin/npm-cli.js"]
     npm = shutil.which("npm")
     if npm:
@@ -136,6 +140,7 @@ def _npm_cli(node: Path) -> Path | None:
 
 
 def _run_install(command: list[str], runtime_root: Path, cancel: threading.Event) -> None:
+    """必要な依存関係を導入するコマンドを実行する。"""
     _check_cancel(cancel)
     log_path = runtime_root / "setup.log"
     with log_path.open("ab") as output, subprocess.Popen(
@@ -164,7 +169,7 @@ def _run_install(command: list[str], runtime_root: Path, cancel: threading.Event
 def prepare_runtime(
     runtime_root: Path, progress: Callable[[str], None], cancel: threading.Event,
 ) -> Path:
-    """Install only PHP 8.3, WordPress plumbing and core archives, all locally."""
+    """PHP 8.3、WordPressに必要な構成、コアアーカイブをローカルにだけ準備する。"""
     runtime_root = runtime_root.resolve()
     runtime_root.mkdir(parents=True, exist_ok=True)
     _check_cancel(cancel)

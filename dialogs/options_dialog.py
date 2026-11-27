@@ -1,3 +1,5 @@
+"""エディターとアプリの設定画面を提供する。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -101,6 +103,7 @@ EDITOR_THEME_PRESETS: tuple[tuple[str, str, str, str, str, str], ...] = (
 
 @dataclass(frozen=True)
 class OptionsDialogValues:
+    """設定画面で編集する値をまとめる。"""
     word_wrap_enabled: bool
     line_numbers_enabled: bool
     ruler_enabled: bool
@@ -147,6 +150,7 @@ class OptionsDialogValues:
 
 
 class OptionsDialog(QDialog):
+    """アプリやエディターの設定を編集する画面。"""
     def __init__(
         self,
         translator: Translator,
@@ -155,6 +159,7 @@ class OptionsDialog(QDialog):
         default_backup_folder_path: Path | None = None,
         unsaved_backup_path: Path | None = None,
     ) -> None:
+        """設定部品を用意し、現在の値を反映する。"""
         super().__init__(parent)
         self.translator = translator
         self.wordpress_mode_keys = wordpress_mode_label_keys()
@@ -238,6 +243,7 @@ class OptionsDialog(QDialog):
         self.set_values(settings)
 
     def apply_language(self) -> None:
+        """現在の言語を設定項目とボタンに反映する。"""
         self.setWindowTitle(self.translator.text("options.title"))
         for index, key in enumerate(
             (
@@ -305,6 +311,7 @@ class OptionsDialog(QDialog):
             button.setText(self.translator.text("options.choose_color"))
 
     def set_values(self, settings: EditorSettings) -> None:
+        """保存済みの設定を画面に反映する。"""
         self.line_numbers_checkbox.setChecked(settings.line_numbers_enabled)
         self.word_wrap_checkbox.setChecked(settings.word_wrap_enabled)
         self.ruler_checkbox.setChecked(settings.ruler_enabled)
@@ -436,6 +443,7 @@ class OptionsDialog(QDialog):
         )
 
     def values(self) -> OptionsDialogValues:
+        """編集後の値を入力欄から集める。"""
         return OptionsDialogValues(
             word_wrap_enabled=self.word_wrap_checkbox.isChecked(),
             line_numbers_enabled=self.line_numbers_checkbox.isChecked(),
@@ -501,6 +509,7 @@ class OptionsDialog(QDialog):
         )
 
     def _create_tabs(self) -> None:
+        """設定項目を分類したタブを作る。"""
         root_layout = QVBoxLayout()
         root_layout.addWidget(self.tabs)
         root_layout.addWidget(self.button_box)
@@ -516,6 +525,7 @@ class OptionsDialog(QDialog):
         self.resize(620, 420)
 
     def _general_tab(self) -> QWidget:
+        """一般設定のタブを組み立てる。"""
         tab = QWidget(self)
         layout = QFormLayout()
         layout.addRow(
@@ -535,6 +545,7 @@ class OptionsDialog(QDialog):
         return tab
 
     def _view_tab(self) -> QWidget:
+        """表示設定のタブを組み立てる。"""
         tab = QWidget(self)
         layout = QFormLayout()
         layout.addRow(self.line_numbers_checkbox)
@@ -554,6 +565,7 @@ class OptionsDialog(QDialog):
         return tab
 
     def _tag_insert_tab(self) -> QWidget:
+        """タグと辞書の設定タブを組み立てる。"""
         tab = QWidget(self)
         layout = QFormLayout()
         layout.addRow(
@@ -601,6 +613,7 @@ class OptionsDialog(QDialog):
         return tab
 
     def _backup_tab(self) -> QWidget:
+        """バックアップの設定タブを組み立てる。"""
         tab = QWidget(self)
         layout = QFormLayout()
         layout.addRow(
@@ -631,6 +644,7 @@ class OptionsDialog(QDialog):
         return tab
 
     def _font_tab(self) -> QWidget:
+        """フォントの設定タブを組み立てる。"""
         tab = QWidget(self)
         layout = QFormLayout()
         layout.addRow(self.translator.text("options.font_family"), self.font_family_combo)
@@ -640,6 +654,7 @@ class OptionsDialog(QDialog):
         return tab
 
     def _colors_tab(self) -> QWidget:
+        """配色の設定タブを組み立てる。"""
         tab = QWidget(self)
         layout = QFormLayout()
         self._populate_color_combo(self.editor_background_color_combo)
@@ -722,6 +737,7 @@ class OptionsDialog(QDialog):
         return tab
 
     def _search_tab(self) -> QWidget:
+        """検索と検査の設定タブを組み立てる。"""
         tab = QWidget(self)
         layout = QFormLayout()
         layout.addRow(self.regex_lint_checkbox)
@@ -731,6 +747,7 @@ class OptionsDialog(QDialog):
         return tab
 
     def _placeholder_tab(self, translation_keys: tuple[str, ...]) -> QWidget:
+        """設定項目のないタブの表示を作る。"""
         tab = QWidget(self)
         layout = QVBoxLayout()
         for translation_key in translation_keys:
@@ -740,11 +757,13 @@ class OptionsDialog(QDialog):
         return tab
 
     def _disabled_checkbox(self, translation_key: str) -> QCheckBox:
+        """無効な状態のチェック項目を作る。"""
         checkbox = QCheckBox(self.translator.text(translation_key), self)
         checkbox.setEnabled(False)
         return checkbox
 
     def _connect_signals(self) -> None:
+        """ボタンと選択欄の通知を操作に接続する。"""
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.backup_folder_button.clicked.connect(self._choose_backup_folder)
@@ -794,6 +813,7 @@ class OptionsDialog(QDialog):
         )
 
     def _choose_backup_folder(self) -> None:
+        """バックアップを保存するフォルダーを選ぶ。"""
         selected_folder = QFileDialog.getExistingDirectory(
             self,
             self.translator.text("options.backup_folder"),
@@ -803,6 +823,7 @@ class OptionsDialog(QDialog):
             self.backup_folder_edit.setText(selected_folder)
 
     def _choose_user_dictionary_folder(self) -> None:
+        """ユーザー辞書のフォルダーを選ぶ。"""
         selected_folder = QFileDialog.getExistingDirectory(
             self,
             self.translator.text("options.item.user_dictionary"),
@@ -812,6 +833,7 @@ class OptionsDialog(QDialog):
             self.user_dictionary_folder_edit.setText(selected_folder)
 
     def _set_language_combo(self, current_language_code: str) -> None:
+        """言語の選択肢と現在値を設定する。"""
         self.language_combo.clear()
         self.language_combo.addItem(self.translator.text("language.japanese"), "ja")
         self.language_combo.addItem(self.translator.text("language.english"), "en")
@@ -824,6 +846,7 @@ class OptionsDialog(QDialog):
         presets: tuple[tuple[str, str], ...],
         current_value: str,
     ) -> None:
+        """プリセットの選択肢と現在値を設定する。"""
         combo_box.clear()
         for label, value in presets:
             combo_box.addItem(label, value)
@@ -841,6 +864,7 @@ class OptionsDialog(QDialog):
         *,
         allow_custom: bool = False,
     ) -> None:
+        """翻訳キーが付いた選択肢を表示する。"""
         combo_box.clear()
         for label_key, value in presets:
             combo_box.addItem(self.translator.text(label_key), value)
@@ -854,9 +878,11 @@ class OptionsDialog(QDialog):
         combo_box.setCurrentIndex(current_index)
 
     def _editor_theme_options(self) -> tuple[tuple[str, str], ...]:
+        """エディターテーマの選択肢を返す。"""
         return tuple((label_key, value) for label_key, value, *_ in EDITOR_THEME_PRESETS)
 
     def _apply_editor_theme_preset(self) -> None:
+        """選択したテーマの配色を設定欄に反映する。"""
         theme_value = str(self.editor_theme_combo.currentData())
         for (
             _label_key,
@@ -878,6 +904,7 @@ class OptionsDialog(QDialog):
             return
 
     def _set_frame_display_description(self) -> None:
+        """選択された枠表示の説明を更新する。"""
         display_value = str(self.frame_display_combo.currentData())
         key_suffix = display_value.replace("-", "_")
         self.frame_display_description_label.setText(
@@ -885,6 +912,7 @@ class OptionsDialog(QDialog):
         )
 
     def _set_font_families(self, current_font_family: str) -> None:
+        """選択できるフォント名を設定する。"""
         font_families = sorted(QFontDatabase.families())
         self.font_family_combo.clear()
         self.font_family_combo.addItems(font_families)
@@ -895,11 +923,13 @@ class OptionsDialog(QDialog):
         self.font_family_combo.setCurrentIndex(font_index)
 
     def _populate_color_combo(self, combo_box: QComboBox) -> None:
+        """色選択欄に候補を登録する。"""
         combo_box.clear()
         for label, color_code in COLOR_PRESETS:
             combo_box.addItem(_color_icon(color_code), f"{label} ({color_code})", color_code)
 
     def _set_color_combo(self, combo_box: QComboBox, color_code: str) -> None:
+        """指定色を色選択欄に反映する。"""
         color_index = combo_box.findData(color_code)
         if color_index == -1:
             combo_box.insertItem(0, _color_icon(color_code), color_code, color_code)
@@ -907,6 +937,7 @@ class OptionsDialog(QDialog):
         combo_box.setCurrentIndex(color_index)
 
     def _color_picker_row(self, combo_box: QComboBox, button: QPushButton) -> QWidget:
+        """色選択欄と編集ボタンを持つ行を作る。"""
         widget = QWidget(self)
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -916,6 +947,7 @@ class OptionsDialog(QDialog):
         return widget
 
     def _choose_color_for_combo(self, combo_box: QComboBox) -> None:
+        """色の選択画面を開き、確定した色を反映する。"""
         current_color_code = str(combo_box.currentData())
         initial_color = QColor(current_color_code)
         if not initial_color.isValid():
@@ -930,6 +962,7 @@ class OptionsDialog(QDialog):
         self._set_color_combo(combo_box, selected_color.name())
 
     def _color_buttons(self) -> tuple[QPushButton, ...]:
+        """設定画面で使う色編集ボタンを列挙する。"""
         return (
             self.editor_background_color_button,
             self.editor_text_color_button,
@@ -946,6 +979,7 @@ class OptionsDialog(QDialog):
 
 
 def _color_icon(color_code: str) -> QIcon:
+    """指定色を示す小さなアイコンを作る。"""
     pixmap = QPixmap(16, 16)
     color = QColor(color_code)
     pixmap.fill(color if color.isValid() else QColor("#ffffff"))

@@ -1,2 +1,2 @@
-"""WordPress block builders used by the embedded conversion core."""
+"""同梱の変換処理が使うWordPressブロックの生成機能をまとめる。"""
 

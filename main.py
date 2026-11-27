@@ -1,6 +1,6 @@
 # pylint: disable=C0302,C0301,C0411,C0413,C0116
 # ruff: noqa:E402,RUF100
-"""Main window class for the Regex Pad application."""
+"""Regex Padのメインウインドウを提供する。"""
 #########################
 # Author: F.Kurokawa
 # Description:
@@ -242,11 +242,12 @@ BASE_DIR = Path(__file__).resolve().parent
 ICON_PATH = BASE_DIR / "assets" / "icons" / "regex_pad_icon.png"
 
 def _split_style_parts(style_text: str) -> list[str]:
+    """CSS宣言を、引用符や括弧内のセミコロンを保って分割する。"""
     return [part.strip() for part in style_text.split(";") if part.strip()]
 
 
 class MainWindow(QMainWindow):
-    """Main window class for the Regex Pad application."""
+    """Regex Padのメインウインドウを表す。"""
     def __init__(
         self,
         settings_path: Path | None = None,
@@ -254,6 +255,7 @@ class MainWindow(QMainWindow):
         restore_unsaved_backup: bool = True,
         window_id: str | None = None,
     ) -> None:
+        """設定と復元データを読み、メニュー、タブ、編集処理を初期化する。"""
         super().__init__()
         self.window_id: str = window_id or str(uuid.uuid4())
         self.setObjectName(f"main-window-{self.window_id}")
@@ -424,7 +426,7 @@ class MainWindow(QMainWindow):
         self._update_wordpress_status_label()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # pylint: disable=invalid-name
-        """Handle the close event for the main window."""
+        """メインウインドウを閉じるイベントを処理する。"""
         for tab_index in range(self.tab_widget.count()):
             editor: TextEditor | None = self._editor_at(tab_index)
             if editor is None:
@@ -447,7 +449,7 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def _create_actions(self) -> None:
-        """Create actions for the main window."""
+        """メインウインドウで使うアクションを作る。"""
         self.new_action = QAction("&New", self)
         self.new_action.setShortcut("Ctrl+N")
         self.new_action.triggered.connect(self.new_file)
@@ -694,7 +696,7 @@ class MainWindow(QMainWindow):
         self.language_action_group.addAction(self.japanese_action)
 
     def _collect_shortcut_actions(self) -> dict[str, ShortcutActionInfo]:
-        """Capture original shortcuts before loading portable overrides."""
+        """ポータブル設定で上書きする前に、既定のショートカットを記録する。"""
         actions = {
             "new": self.new_action, "open": self.open_action,
             "save": self.save_action, "save_as": self.save_as_action,
@@ -731,7 +733,7 @@ class MainWindow(QMainWindow):
         }
 
     def _apply_shortcut_settings(self) -> None:
-        """Apply saved keys and rebuild actions for plain-text snippets."""
+        """保存済みのキーを適用し、定型文の挿入アクションを作り直す。"""
         for identifier, info in self._shortcut_action_info.items():
             primary = (
                 info.defaults[0] if info.locked else
@@ -755,7 +757,7 @@ class MainWindow(QMainWindow):
         self.custom_snippet_menu.setEnabled(bool(self._custom_shortcut_actions))
 
     def _create_menus(self) -> None:
-        """Create menus for the main window."""
+        """メインウインドウのメニューを作る。"""
         menu_bar = self.menuBar()
 
         self.file_menu = QMenu(self)
@@ -843,7 +845,7 @@ class MainWindow(QMainWindow):
         menu_bar.addMenu(self.help_menu)
 
     def _create_status_bar(self) -> None:
-        """Create the status bar for the main window."""
+        """メインウインドウのステータスバーを作る。"""
         self.setStatusBar(QStatusBar(self))
         self.wordpress_status_label = QLabel(self)
         self.wordpress_status_label.setTextFormat(Qt.TextFormat.PlainText)
@@ -857,7 +859,7 @@ class MainWindow(QMainWindow):
         encoding: str | None = None,
         modified: bool = False,
     ) -> TextEditor:
-        """Create a new editor tab with the specified parameters."""
+        """指定された設定と内容でエディターのタブを作る。"""
         editor = TextEditor()
         editor.setPlainText(text)
         editor.document().setModified(modified)
@@ -958,7 +960,7 @@ class MainWindow(QMainWindow):
         encoding: str | None = None,
         modified: bool = False,
     ) -> TextEditor:
-        """Create an editor tab for external window operations."""
+        """別ウインドウから利用できるエディターのタブを作る。"""
         return self._create_editor_tab(
             text=text,
             save_file_path=save_file_path,
@@ -967,7 +969,7 @@ class MainWindow(QMainWindow):
         )
 
     def _handle_current_tab_changed(self, index: int) -> None:
-        """Handle the event when the current tab is changed."""
+        """現在のタブが変わったときの切り替え処理を行う。"""
         editor = self._editor_at(index)
         if editor is None:
             return
@@ -997,7 +999,7 @@ class MainWindow(QMainWindow):
         self._refresh_grammar_dialog_for_current_tab()
 
     def _sync_current_tab_state(self) -> None:
-        """Synchronize the state of the current tab with the main window."""
+        """現在のタブの状態をメインウインドウに反映する。"""
         self.current_save_file_path = self.tab_file_paths.get(self.editor)
         self.current_encoding = self.tab_encodings.get(
             self.editor,
@@ -1009,7 +1011,7 @@ class MainWindow(QMainWindow):
         save_file_path: Path | None,
         encoding: str | None = None,
     ) -> None:
-        """Set the current file state, including the save file path and encoding."""
+        """保存先と文字コードを含む、現在のファイルの状態を設定する。"""
         self.current_save_file_path = save_file_path
         self.tab_file_paths[self.editor] = save_file_path
         self._apply_inline_color_preview(self.editor)
@@ -1021,41 +1023,41 @@ class MainWindow(QMainWindow):
             self.find_replace_dialog.set_target_file_name(self._find_replace_target_name())
 
     def _tab_title(self, editor: TextEditor) -> str:
-        """Get the title for the tab corresponding to the given editor."""
+        """指定エディターのタブのタイトルを返す。"""
         save_file_path = self.tab_file_paths.get(editor)
         title = save_file_path.name if save_file_path is not None else self._draft_title(editor)
         return f"*{title}" if editor.document().isModified() else title
 
     def _draft_title(self, editor: TextEditor) -> str:
-        """Get the draft title for the given editor based on its content."""
+        """指定エディターの本文から未保存タブのタイトルを取得する。"""
         first_line = editor.document().firstBlock().text().strip()
         if not first_line:
             return self.translator.text("document.untitled")
         return first_line[:30]
 
     def _update_tab_titles(self) -> None:
-        """Update the titles of all tabs based on their current state."""
+        """現在の状態を全タブのタイトルに反映する。"""
         for index in range(self.tab_widget.count()):
             editor = self._editor_at(index)
             if editor is not None:
                 self.tab_widget.setTabText(index, self._tab_title(editor))
 
     def _update_tab_title(self, editor: TextEditor) -> None:
-        """Update one tab's title after its own text or modified state changes."""
+        """本文または変更状態が変わったタブのタイトルを更新する。"""
         for index in range(self.tab_widget.count()):
             if self._editor_at(index) is editor:
                 self.tab_widget.setTabText(index, self._tab_title(editor))
                 return
 
     def _set_current_word_wrap_enabled(self, enabled: bool) -> None:
-        """Enable or disable word wrap for all open editors."""
+        """開いている全エディターの行折り返しを切り替える。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None:
                 editor.set_word_wrap_enabled(enabled)
 
     def _set_current_line_numbers_enabled(self, enabled: bool) -> None:
-        """Enable or disable line numbers for all open editors."""
+        """開いている全エディターの行番号表示を切り替える。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None:
@@ -1065,21 +1067,21 @@ class MainWindow(QMainWindow):
                 editor_tab.ruler.update()
 
     def _set_ruler_enabled(self, enabled: bool) -> None:
-        """Enable or disable the character ruler."""
+        """文字位置を示すルーラーの表示を切り替える。"""
         for tab_index in range(self.tab_widget.count()):
             editor_tab = self._editor_tab_at(tab_index)
             if editor_tab is not None:
                 editor_tab.set_ruler_visible(enabled)
 
     def _set_fixed_wrap_column_from_ruler(self, column: int) -> None:
-        """Set the fixed wrap column from a ruler click."""
+        """クリックしたルーラーの桁を固定折り返し位置に設定する。"""
         self.fixed_column_wrap_column = max(1, column)
         if self.fixed_column_wrap_enabled:
             self._apply_fixed_column_wrap_options_to_all_tabs()
         self._save_settings()
 
     def _show_tab_context_menu(self, position: QPoint) -> None:
-        """Show the context menu for the tab at the given position."""
+        """指定位置にあるタブのコンテキストメニューを開く。"""
         tab_index = self.tab_widget.tabBar().tabAt(position)
         if tab_index < 0:
             return
@@ -1097,7 +1099,7 @@ class MainWindow(QMainWindow):
             self.move_tab_to_new_window(tab_index)
 
     def close_tab(self, tab_index: int) -> bool:
-        """Close the tab at the given index, prompting to save if necessary."""
+        """指定番号のタブを閉じ、必要なら保存を確認する。"""
         editor = self._editor_at(tab_index)
         if editor is None:
             return False
@@ -1114,7 +1116,7 @@ class MainWindow(QMainWindow):
         return True
 
     def duplicate_tab(self, tab_index: int) -> TextEditor | None:
-        """Duplicate the tab at the given index, creating a new editor with the same content."""
+        """指定番号のタブを、同じ本文を持つ新しいタブに複製する。"""
         editor = self._editor_at(tab_index)
         if editor is None:
             return None
@@ -1130,7 +1132,7 @@ class MainWindow(QMainWindow):
         return duplicate_editor
 
     def move_tab_to_new_window(self, tab_index: int) -> MainWindow | None:
-        """Move the tab at the given index to a new window."""
+        """指定番号のタブを新しいウインドウに移す。"""
         editor = self._editor_at(tab_index)
         if editor is None:
             return None
@@ -1165,41 +1167,41 @@ class MainWindow(QMainWindow):
         return new_window
 
     def _editor_at(self, tab_index: int) -> TextEditor | None:
-        """Return the editor widget at the given tab index, or None if it doesn't exist."""
+        """指定番号のタブのエディターを返す。存在しない場合はNoneを返す。"""
         widget = self.tab_widget.widget(tab_index)
         if isinstance(widget, EditorTab):
             return widget.editor
         return widget if isinstance(widget, TextEditor) else None
 
     def _editor_tab_at(self, tab_index: int) -> EditorTab | None:
-        """Return the editor tab container at the given tab index, if it exists."""
+        """指定番号のタブのコンテナを返す。存在しない場合はNoneを返す。"""
         widget = self.tab_widget.widget(tab_index)
         return widget if isinstance(widget, EditorTab) else None
 
     def _current_editor(self) -> TextEditor | None:
-        """Return the editor widget in the current tab, or None if it doesn't exist."""
+        """現在のタブのエディターを返す。存在しない場合はNoneを返す。"""
         return self._editor_at(self.tab_widget.currentIndex())
 
     def _undo_current_editor(self) -> None:
-        """Undo in the current editor tab if one exists."""
+        """エディターがある場合に、現在のタブの操作を元に戻す。"""
         editor = self._current_editor()
         if editor is not None:
             editor.undo()
 
     def _redo_current_editor(self) -> None:
-        """Redo in the current editor tab if one exists."""
+        """エディターがある場合に、現在のタブで元に戻した操作をやり直す。"""
         editor = self._current_editor()
         if editor is not None:
             editor.redo()
 
     def _select_all_current_editor(self) -> None:
-        """Select all text in the current editor tab if one exists."""
+        """エディターがある場合に、現在のタブの全文を選択する。"""
         editor = self._current_editor()
         if editor is not None:
             editor.selectAll()
 
     def copy_rectangular_selection(self) -> None:
-        """Copy the current multi-line selection as a rectangular text block."""
+        """現在の複数行選択を矩形としてコピーする。"""
         cursor = self.editor.textCursor()
         if not cursor.hasSelection():
             self.statusBar().showMessage(
@@ -1230,7 +1232,7 @@ class MainWindow(QMainWindow):
         )
 
     def _remove_tab(self, tab_index: int) -> None:
-        """Remove the tab at the given index and clean up its associated resources."""
+        """指定番号のタブを外し、関連する情報やウィジェットを片付ける。"""
         widget = self.tab_widget.widget(tab_index)
         editor = self._editor_at(tab_index)
         if editor is self._find_replace_target and self.find_replace_dialog is not None:
@@ -1256,11 +1258,11 @@ class MainWindow(QMainWindow):
             widget.deleteLater()
 
     def remove_tab(self, tab_index: int) -> None:
-        """Remove a tab without prompting to save."""
+        """保存確認を行わずに指定タブを外す。"""
         self._remove_tab(tab_index)
 
     def _restore_settings(self, settings: EditorSettings) -> None:
-        """Restore the main window and editor settings from the given EditorSettings object."""
+        """EditorSettingsからメインウインドウとエディターの設定を復元する。"""
         self.line_numbers_action.setChecked(settings.line_numbers_enabled)
         self.word_wrap_action.setChecked(settings.word_wrap_enabled)
         self.ruler_action.setChecked(settings.ruler_enabled)
@@ -1299,7 +1301,7 @@ class MainWindow(QMainWindow):
             self.resize(settings.window_width, settings.window_height)
 
     def _save_settings(self) -> None:
-        """Save the current main window and editor settings to the settings manager."""
+        """メインウインドウとエディターの現在の設定を保存する。"""
         if self.macro_editor_window is not None and self.macro_editor_controller is not None:
             self.macro_folder = str(self.macro_editor_controller.session.macro_folder)
             self.macro_editor_geometry = bytes(self.macro_editor_window.saveGeometry().toBase64().data()).decode("ascii")
@@ -1356,7 +1358,7 @@ class MainWindow(QMainWindow):
         )
 
     def set_language(self, language_code: str) -> None:
-        """Set the application's language and update the UI accordingly."""
+        """アプリの表示言語を設定し、画面を更新する。"""
         self.translator.set_language(language_code)
         self.english_action.setChecked(language_code == "en")
         self.japanese_action.setChecked(language_code == "ja")
@@ -1364,7 +1366,7 @@ class MainWindow(QMainWindow):
         self._save_settings()
 
     def _apply_language(self) -> None:
-        """Apply the current language to all UI elements."""
+        """現在の言語を画面全体に適用する。"""
         self.preset_menu.setTitle(self.translator.text("preset.menu"))
         self.preset_new_action.setText(self.translator.text("preset.new"))
         self.preset_run_action.setText(self.translator.text("preset.run"))
@@ -1490,14 +1492,14 @@ class MainWindow(QMainWindow):
         self._update_window_title()
 
     def _rebuild_insert_tag_menu(self) -> None:
-        """Rebuild the insert tag menu based on the current language and available tag snippets."""
+        """現在の言語と使用可能な定型項目からタグ挿入メニューを作り直す。"""
         self.insert_tag_menu.clear()
         self.insert_tag_menu.setTitle(self.translator.text("action.insert_tag"))
         self._set_tag_menu_tooltips_visible(self.insert_tag_menu)
         self._populate_insert_tag_menu(self.insert_tag_menu)
 
     def _populate_insert_tag_menu(self, root_menu: QMenu) -> None:
-        """Populate the insert tag menu with tag snippet groups."""
+        """タグ挿入メニューに定型項目のグループを追加する。"""
         self._set_tag_menu_tooltips_visible(root_menu)
         for group in ordered_tag_snippet_groups(
             self.current_save_file_path,
@@ -1520,7 +1522,7 @@ class MainWindow(QMainWindow):
         group_menu: QMenu,
         group: TagSnippetGroup,
     ) -> None:
-        """Populate the WordPress tag mode submenus within the insert tag menu."""
+        """タグ挿入メニューにWordPressのモード別サブメニューを追加する。"""
         mode_label_keys = sorted(
             wordpress_mode_label_keys(),
             key=lambda mode_label_key: (
@@ -1543,7 +1545,7 @@ class MainWindow(QMainWindow):
         group_label_key: str,
         snippets: tuple[TagSnippet, ...],
     ) -> None:
-        """Populate a tag category menu with the given tag snippets."""
+        """指定した定型項目をタグ分類メニューに追加する。"""
         category_menus: dict[str, QMenu] = {}
         for snippet in snippets:
             category_key = tag_snippet_category_key(group_label_key, snippet)
@@ -1556,10 +1558,11 @@ class MainWindow(QMainWindow):
             category_menu.addAction(self._create_tag_snippet_action(snippet))
 
     def _set_tag_menu_tooltips_visible(self, menu: QMenu) -> None:
+        """タグメニューの説明をマウス位置に応じて表示するか設定する。"""
         menu.setToolTipsVisible(self.hover_hints_enabled)
 
     def _create_tag_snippet_action(self, snippet: TagSnippet) -> QAction:
-        """Create a QAction for the given tag snippet, including its label, hint, and triggered behavior."""
+        """定型項目のラベル、ヒント、挿入処理を持つQActionを作る。"""
         label = self.translator.text(snippet.label_key)
         hint = self.translator.text(snippet.hint_key)
         action = QAction(label, self)
@@ -1575,14 +1578,14 @@ class MainWindow(QMainWindow):
         return action
 
     def _show_editor_context_menu(self, position: QPoint) -> None:
-        """Show the context menu for the editor at the given position."""
+        """指定位置にエディターのコンテキストメニューを開く。"""
         if not self.editor.textCursor().hasSelection():
             self.editor.setTextCursor(self.editor.cursorForPosition(position))
         context_menu = self._create_editor_context_menu()
         context_menu.exec(self.editor.mapToGlobal(position))
 
     def _create_editor_context_menu(self) -> QMenu:
-        """Create and return the context menu for the editor, including standard actions and the insert tag menu."""
+        """標準の操作とタグ挿入を含むエディター用メニューを作って返す。"""
         context_menu = self.editor.createStandardContextMenu()
         context_menu.addSeparator()
         paragraph_split_menu = QMenu(
@@ -1629,7 +1632,7 @@ class MainWindow(QMainWindow):
         return context_menu
 
     def show_macro_editor(self) -> None:
-        """Open or raise the independent structured macro editor."""
+        """独立したマクロエディターを開く。開いていれば前面に出す。"""
         if self.macro_editor_window is None:
             self.macro_editor_window = MacroEditorWindow(self.translator, self)
             self.macro_editor_window.dictionary_requested.connect(self.show_dictionary_editor)
@@ -1658,7 +1661,7 @@ class MainWindow(QMainWindow):
         self.macro_editor_window.activateWindow()
 
     def show_dictionary_editor(self) -> None:
-        """Open the editable insertion dictionaries from the preset editor."""
+        """プリセットエディターから編集可能な挿入辞書を開く。"""
         user_folder = (
             self._resolve_user_dictionary_folder(self.user_dictionary_folder)
             if self.user_dictionary_folder else None
@@ -1672,7 +1675,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _dictionary_saved(self, save_file_path: Path) -> None:
-        """Activate validated user copies after a dictionary is saved."""
+        """検証済みのユーザー辞書を保存後に有効化する。"""
         default_user_folder = app_base_dir() / "user_dictionaries"
         self.user_dictionary_folder = (
             "user_dictionaries"
@@ -1683,24 +1686,26 @@ class MainWindow(QMainWindow):
         self._save_settings()
 
     def new_search_preset(self) -> None:
+        """新しい検索・置換プリセットの編集を始める。"""
         self.show_macro_editor()
         if self.macro_editor_controller is not None:
             self.macro_editor_controller.new_document()
             self.macro_editor_window.macro_name.setFocus()  # type: ignore[union-attr]
 
     def run_search_preset(self) -> None:
-        """Open a saved preset for inspection before its Run Preview action."""
+        """保存済みのプリセットを開き、実行プレビューの前に内容を確認できるようにする。"""
         self.show_macro_editor()
         if self.macro_editor_controller is not None:
             self.macro_editor_controller.open_document()
 
     def edit_search_preset(self) -> None:
+        """選択した検索・置換プリセットを編集画面で開く。"""
         self.run_search_preset()
 
     def capture_search_preset(
         self, find_text: str, replacement_text: str, options: SearchOptions
     ) -> None:
-        """Capture conditions into an open preset, or start a new one."""
+        """検索条件を開いているプリセットに追加し、必要なら新規定義を開く。"""
         editor_was_open = (
             self.macro_editor_window is not None and self.macro_editor_window.isVisible()
         )
@@ -1735,7 +1740,7 @@ class MainWindow(QMainWindow):
             self.macro_editor_window.macro_name.setFocus()  # type: ignore[union-attr]
 
     def delete_search_preset(self) -> None:
-        """Remove a validated preset from the picker with a reversible move."""
+        """検証済みのプリセットを復元可能な場所へ移動し、選択一覧から外す。"""
         folder = (
             self.macro_editor_controller.session.macro_folder
             if self.macro_editor_controller is not None
@@ -1784,6 +1789,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _preset_selected_scope(editor: TextEditor) -> tuple[int, int] | None:
+        """プリセット実行時に使う現在の選択範囲を取得する。"""
         cursor = editor.textCursor()
         if not cursor.hasSelection():
             return None
@@ -1793,7 +1799,7 @@ class MainWindow(QMainWindow):
         )
 
     def show_tag_insert_dialog(self) -> None:
-        """Show the tag insert dialog, allowing the user to select and insert a tag snippet."""
+        """タグの定型項目を選んで挿入するダイアログを開く。"""
         if self.tag_insert_dialog is None:
             self.tag_insert_dialog = TagInsertDialog(self.translator, self)
 
@@ -1813,7 +1819,7 @@ class MainWindow(QMainWindow):
             self.insert_tag_snippet(selected_snippet)
 
     def show_shortcut_settings_dialog(self) -> None:
-        """Edit portable shortcut bindings and user-defined text snippets."""
+        """ポータブルなショートカットとユーザー定義の定型文を編集する。"""
         if self.shortcut_settings_error:
             QMessageBox.warning(
                 self, self.translator.text("shortcut.title"),
@@ -1837,7 +1843,7 @@ class MainWindow(QMainWindow):
         self._apply_shortcut_settings()
 
     def show_options_dialog(self) -> None:
-        """Show the options dialog, allowing the user to modify editor and application settings."""
+        """エディターとアプリの設定を変更するオプション画面を開く。"""
         settings = EditorSettings(
             word_wrap_enabled=self.word_wrap_action.isChecked(),
             line_numbers_enabled=self.line_numbers_action.isChecked(),
@@ -1968,6 +1974,7 @@ class MainWindow(QMainWindow):
         user_dictionary_folder: str,
         dictionary_check_enabled: bool,
     ) -> bool:
+        """ユーザー辞書を検証し、問題があれば利用者に知らせる。"""
         if not dictionary_check_enabled or not user_dictionary_folder:
             return True
         try:
@@ -1991,36 +1998,37 @@ class MainWindow(QMainWindow):
         return True
 
     def _tag_dictionaries_path(self) -> Path | None:
+        """タグ挿入に使う辞書の場所を返す。"""
         if not self.user_dictionary_folder:
             return None
         return self._resolve_user_dictionary_folder(self.user_dictionary_folder)
 
     @staticmethod
     def _resolve_user_dictionary_folder(folder: str) -> Path:
-        """Resolve a portable relative user dictionary folder beside the app."""
+        """ユーザー辞書の相対パスをアプリのフォルダーを基準に解決する。"""
         candidate = Path(folder)
         return candidate if candidate.is_absolute() else app_base_dir() / candidate
 
     def _internal_data_folder(self) -> Path:
-        """Return the app-owned internal data folder for portable runtime files."""
+        """ポータブル実行データ用のアプリ内部フォルダーを返す。"""
         return app_base_dir() / "_internal"
 
     def _unsaved_backup_path(self) -> Path:
-        """Return the path to the unsaved session restore file."""
+        """未保存セッションを復元するファイルのパスを返す。"""
         return self._internal_data_folder() / "autosave" / "unsaved_backup.json"
 
     def _file_backup_folder_for_folder(self, backup_folder: str) -> Path:
-        """Return the folder for saved-file generation backups."""
+        """保存済みファイルの世代バックアップを置くフォルダーを返す。"""
         if backup_folder:
             return Path(backup_folder)
         return self._internal_data_folder() / "backup"
 
     def _set_auto_save_timer_interval(self, interval_minutes: int) -> None:
-        """Set the interval of the recovery-only history timer."""
+        """復旧用履歴バックアップの実行間隔を設定する。"""
         self.auto_save_timer.setInterval(max(1, interval_minutes) * 60 * 1000)
 
     def _apply_editor_font_to_all_tabs(self) -> None:
-        """Apply the current editor font settings to all open tabs."""
+        """現在のフォント設定を全タブに適用する。"""
         editor_font = QFont(self.font_family, self.font_size)
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
@@ -2035,7 +2043,7 @@ class MainWindow(QMainWindow):
                 editor_tab.ruler.update()
 
     def _apply_editor_colors_to_all_tabs(self) -> None:
-        """Apply the current editor theme colors to all open tabs."""
+        """現在のテーマの配色を全タブに適用する。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None:
@@ -2047,12 +2055,12 @@ class MainWindow(QMainWindow):
                 )
 
     def _set_editor_tab_width(self, editor: TextEditor) -> None:
-        """Apply the configured TAB width to one editor."""
+        """指定エディターに設定済みのタブ幅を適用する。"""
         space_width = editor.fontMetrics().horizontalAdvance(" ")
         editor.setTabStopDistance(space_width * self.tab_width)
 
     def _apply_search_marker_colors_to_all_tabs(self) -> None:
-        """Apply the current search marker colors to all open tabs."""
+        """現在の検索マーカー色を全タブに適用する。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None:
@@ -2062,7 +2070,7 @@ class MainWindow(QMainWindow):
                 )
 
     def _apply_visible_whitespace_options_to_all_tabs(self) -> None:
-        """Apply visible whitespace option flags to all open tabs."""
+        """空白類の表示設定を全タブに適用する。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None:
@@ -2074,6 +2082,7 @@ class MainWindow(QMainWindow):
                 )
 
     def _apply_inline_color_preview(self, editor: TextEditor) -> None:
+        """指定エディターに色見本の設定とファイル種別を反映する。"""
         path = self.tab_file_paths.get(editor)
         editor.set_inline_color_preview(
             self.inline_color_preview_enabled,
@@ -2093,6 +2102,7 @@ class MainWindow(QMainWindow):
         dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         def apply_color() -> None:
+            """対象文書と元の値を再照合して、選んだ色を適用する。"""
             if (
                 editor not in self.tab_file_paths or self.editor is not editor
                 or editor.document() is not document or document.revision() != revision
@@ -2110,7 +2120,7 @@ class MainWindow(QMainWindow):
         dialog.open()
 
     def _apply_visible_whitespace_marker_colors_to_all_tabs(self) -> None:
-        """Apply visible whitespace marker colors to all open tabs."""
+        """空白類のマーカー色を全タブに適用する。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None:
@@ -2121,7 +2131,7 @@ class MainWindow(QMainWindow):
                 )
 
     def _apply_fixed_column_wrap_options_to_all_tabs(self) -> None:
-        """Apply fixed-column wrap options to all open tabs."""
+        """固定桁での折り返し設定を全タブに適用する。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is None:
@@ -2135,7 +2145,7 @@ class MainWindow(QMainWindow):
                 editor_tab.ruler.update()
 
     def _apply_regex_lint_option_to_find_dialog(self) -> None:
-        """Apply the regex lint display option to the existing Find/Replace dialog."""
+        """既存の検索・置換ダイアログに正規表現の診断表示設定を適用する。"""
         if self.find_replace_dialog is not None:
             self.find_replace_dialog.set_regex_lint_enabled(self.regex_lint_enabled)
             self.find_replace_dialog.set_reduced_error_check_enabled(
@@ -2143,7 +2153,7 @@ class MainWindow(QMainWindow):
             )
 
     def show_wordpress_preview(self) -> None:
-        """Render the current source, export a neutral page, then stop WordPress."""
+        """現在の原稿をレンダリングし、簡易表示用のページを書き出してWordPressを停止する。"""
         self._ensure_simple_wordpress_preview()
         assert self.wordpress_preview is not None
         source_text = self.editor.toPlainText()
@@ -2156,6 +2166,7 @@ class MainWindow(QMainWindow):
         self.wordpress_preview.show_preview(title, source_text)
 
     def _ensure_simple_wordpress_preview(self) -> None:
+        """簡易WordPressプレビューのコントローラーを用意する。"""
         if self.wordpress_preview is None:
             preview = WordPressPreview(
                 default_runtime_root(),
@@ -2172,7 +2183,7 @@ class MainWindow(QMainWindow):
             self.wordpress_preview = preview
 
     def show_wordpress_theme_preview(self) -> None:
-        """Keep a Twenty Twenty-Five preview alive until explicitly stopped."""
+        """Twenty Twenty-Fiveのプレビューを、停止操作が行われるまで維持する。"""
         if self.wordpress_preview is not None and self.wordpress_preview.warming_up:
             self.wordpress_preview.stop()
         if self.wordpress_theme_preview is None:
@@ -2195,12 +2206,14 @@ class MainWindow(QMainWindow):
         self.wordpress_theme_preview.show_preview(title, source_text)
 
     def _update_wordpress_stop_action(self, _running: bool) -> None:
+        """プレビューの状態に合わせて停止アクションを更新する。"""
         self.stop_wordpress_preview_action.setEnabled(any(
             preview is not None and preview.running
             for preview in (self.wordpress_preview, self.wordpress_theme_preview)
         ))
 
     def _update_wordpress_status_label(self, _state: str = "") -> None:
+        """WordPressプレビューの状態をステータス欄に表示する。"""
         entries: list[str] = []
         details: list[str] = []
         for preview in (self.wordpress_preview, self.wordpress_theme_preview):
@@ -2221,25 +2234,32 @@ class MainWindow(QMainWindow):
         self.wordpress_status_label.setToolTip(f"<qt>{tooltip}</qt>")
 
     def _wordpress_preview_progress(self, stage: str) -> None:
+        """WordPressプレビューの準備や描画の進捗を表示する。"""
         self.statusBar().showMessage(self.translator.text(f"wordpress_preview.stage.{stage}"))
 
     def _wordpress_preview_failed(self, message: str) -> None:
+        """プレビューの失敗を利用者へ知らせる。"""
         self.statusBar().showMessage(self.translator.text("wordpress_preview.failed"))
         QMessageBox.warning(self, self.translator.text("wordpress_preview.title"), message)
 
     def _wordpress_preview_rendered(self, version: str, _url: str) -> None:
+        """簡易プレビューの描画完了を画面に反映する。"""
         self.statusBar().showMessage(self.translator.text("wordpress_preview.rendered", version=version))
 
     def _wordpress_theme_preview_rendered(self, version: str, _url: str) -> None:
+        """テーマ付きプレビューの描画完了を画面に反映する。"""
         self.statusBar().showMessage(self.translator.text("wordpress_preview.theme_rendered", version=version))
 
     def _wordpress_preview_feedback(self, _request_id: int, status: int, warnings: str) -> None:
+        """簡易プレビューの実行結果を受け取る。"""
         self._apply_wordpress_preview_feedback(self.wordpress_preview_snapshot, status, warnings)
 
     def _wordpress_theme_preview_feedback(self, _request_id: int, status: int, warnings: str) -> None:
+        """テーマ付きプレビューの実行結果を受け取る。"""
         self._apply_wordpress_preview_feedback(self.wordpress_theme_preview_snapshot, status, warnings)
 
     def _apply_wordpress_preview_feedback(self, snapshot: tuple[TextEditor, str] | None, status: int, warnings: str) -> None:
+        """元原稿との対応を確認し、プレビューの実行結果を表示する。"""
         if snapshot is None or snapshot[0] is not self.editor:
             return
         if snapshot[1] != self._source_hash(self.editor.toPlainText()):
@@ -2255,6 +2275,7 @@ class MainWindow(QMainWindow):
         self.grammar_check_dialog.set_runtime_feedback(text)
 
     def stop_wordpress_preview(self) -> None:
+        """このウインドウのWordPressプレビューを停止する。"""
         if self.wordpress_preview is not None:
             self.wordpress_preview.stop()
         if self.wordpress_theme_preview is not None:
@@ -2272,7 +2293,7 @@ class MainWindow(QMainWindow):
         )
 
     def run_grammar_check(self) -> None:
-        """Run the CSS or HTML / WordPress grammar check for the current document."""
+        """現在の文書についてCSSまたはHTML・WordPressの文法を検査する。"""
         source_text = self.editor.toPlainText()
         messages = self._lint_document(source_text)
         if not messages:
@@ -2326,9 +2347,11 @@ class MainWindow(QMainWindow):
         )
 
     def _source_hash(self, source_text: str) -> str:
+        """文書の現時点の内容を識別するハッシュを返す。"""
         return sha256(source_text.encode("utf-8")).hexdigest()
 
     def _lint_document(self, source_text: str) -> list[GrammarLintMessage]:
+        """文書の形式に応じて文法チェッカーを実行する。"""
         messages: list[GrammarLintMessage] = []
         if (
             self.current_save_file_path is not None
@@ -2343,7 +2366,7 @@ class MainWindow(QMainWindow):
         self,
         messages: list[GrammarLintMessage],
     ) -> list[GrammarLintMessage]:
-        """Show more serious grammar findings first, then keep line order."""
+        """診断を重大度の高い順に並べ、同じ重大度では行順に並べる。"""
         return sorted(
             messages,
             key=lambda message: (
@@ -2354,6 +2377,7 @@ class MainWindow(QMainWindow):
         )
 
     def _grammar_result_path_for_editor(self, editor: TextEditor) -> Path:
+        """文書に対応する文法チェック結果の保存先を取得する。"""
         result_path = self.tab_grammar_result_paths.get(editor)
         if result_path is None:
             result_path = self.grammar_lint_result_store.create_result_path(
@@ -2372,6 +2396,7 @@ class MainWindow(QMainWindow):
         rows: list[tuple[int, str]],
         issue_lines: list[int],
     ) -> None:
+        """本文と対応付けて文法チェックの結果を保存する。"""
         result_path = self._grammar_result_path_for_editor(editor)
         self.grammar_lint_result_store.save(
             result_path,
@@ -2387,6 +2412,7 @@ class MainWindow(QMainWindow):
         )
 
     def _load_current_grammar_lint_result(self) -> GrammarLintResult | None:
+        """現在の文書と一致する文法チェック結果を読み込む。"""
         editor = self._current_editor()
         if editor is None:
             return None
@@ -2401,6 +2427,7 @@ class MainWindow(QMainWindow):
         return result
 
     def _invalidate_grammar_lint_result(self, editor: TextEditor) -> None:
+        """本文が変更された文書の文法チェック結果を無効にする。"""
         self._delete_grammar_lint_result(editor)
         if editor is self._current_editor() and self.grammar_check_dialog is not None:
             self._set_grammar_check_dialog_document_label(editor)
@@ -2410,11 +2437,13 @@ class MainWindow(QMainWindow):
             )
 
     def _delete_grammar_lint_result(self, editor: TextEditor) -> None:
+        """指定文書の文法チェック結果を削除する。"""
         result_path = self.tab_grammar_result_paths.get(editor)
         if result_path is not None:
             self.grammar_lint_result_store.delete(result_path)
 
     def _clear_grammar_lint_results_on_window_close(self) -> None:
+        """ウインドウの終了時に一時的な文法チェック結果を片付ける。"""
         for result_path in list(self.tab_grammar_result_paths.values()):
             self.grammar_lint_result_store.delete(result_path)
         self.tab_grammar_result_paths.clear()
@@ -2423,6 +2452,7 @@ class MainWindow(QMainWindow):
             self.grammar_lint_result_store.clear_result_folder()
 
     def _other_main_windows_are_open(self) -> bool:
+        """ほかに開いているメインウインドウがあるか確認する。"""
         application = QApplication.instance()
         if not isinstance(application, QApplication):
             return False
@@ -2432,6 +2462,7 @@ class MainWindow(QMainWindow):
         )
 
     def _refresh_grammar_dialog_for_current_tab(self) -> None:
+        """現在のタブに合わせて診断結果の表示を更新する。"""
         if self.grammar_check_dialog is None or not self.grammar_check_dialog.isVisible():
             return
 
@@ -2452,12 +2483,14 @@ class MainWindow(QMainWindow):
         self.grammar_check_dialog.set_result(result.summary, result.rows)
 
     def _grammar_document_label(self, editor: TextEditor) -> str:
+        """文法チェックの対象となる文書の表示名を返す。"""
         save_file_path = self.tab_file_paths.get(editor)
         if save_file_path is not None:
             return save_file_path.name
         return self._draft_title(editor)
 
     def _set_grammar_check_dialog_document_label(self, editor: TextEditor) -> None:
+        """文法チェック画面に対象文書の名前を表示する。"""
         if self.grammar_check_dialog is not None:
             self.grammar_check_dialog.set_document_label(
                 self._grammar_document_label(editor)
@@ -2469,6 +2502,7 @@ class MainWindow(QMainWindow):
         summary: str,
         rows: list[tuple[int, str]],
     ) -> None:
+        """指定エディターの結果を文法チェック画面に表示する。"""
         self._show_grammar_check_dialog(summary, rows)
         self._set_grammar_check_dialog_document_label(editor)
 
@@ -2477,6 +2511,7 @@ class MainWindow(QMainWindow):
         summary: str,
         rows: list[tuple[int, str]],
     ) -> None:
+        """文法チェック画面を開き、要約と結果の一覧を表示する。"""
         if self.grammar_check_dialog is None:
             self.grammar_check_dialog = GrammarCheckDialog(self.translator, self)
             self.grammar_check_dialog.line_selected.connect(self._set_cursor_to_line)
@@ -2490,6 +2525,7 @@ class MainWindow(QMainWindow):
         self.grammar_check_dialog.activateWindow()
 
     def _confirm_save_after_grammar_check(self, save_data: str) -> bool:
+        """保存前の文法診断を確認し、保存を続けるか決める。"""
         if not self.html_typo_lint_enabled:
             return True
 
@@ -2523,11 +2559,13 @@ class MainWindow(QMainWindow):
         self,
         messages: list[GrammarLintMessage],
     ) -> None:
+        """文法上の指摘がある行にマーカーを付ける。"""
         self.editor.set_grammar_issue_lines(
             [message.line_number for message in messages]
         )
 
     def _clear_grammar_issue_highlights(self) -> None:
+        """文法チェックによる行マーカーを消す。"""
         self.editor.clear_grammar_issue_lines()
 
     def _grammar_check_summary(
@@ -2535,6 +2573,7 @@ class MainWindow(QMainWindow):
         messages: list[GrammarLintMessage],
         limit: int = 20,
     ) -> str:
+        """文法チェック結果の要約を表示用にまとめる。"""
         shown_messages = messages[:limit]
         rows = [
             self.translator.text(
@@ -2563,6 +2602,7 @@ class MainWindow(QMainWindow):
         return "\n".join(rows)
 
     def _grammar_lint_message_text(self, message: GrammarLintMessage) -> str:
+        """文法診断の重大度と内容を表示用に整える。"""
         severity_label = self.translator.text(
             f"grammar_check.severity.{message.severity}"
         )
@@ -2580,6 +2620,7 @@ class MainWindow(QMainWindow):
         self,
         messages: list[GrammarLintMessage],
     ) -> str:
+        """文法診断を重大度ごとに数えて表示文字列にする。"""
         counts = {"error": 0, "warning": 0, "info": 0}
         for message in messages:
             if message.severity in counts:
@@ -2592,6 +2633,7 @@ class MainWindow(QMainWindow):
         )
 
     def _html_typo_lint_message_text(self, message: GrammarLintMessage) -> str:
+        """HTMLやWordPressの診断を翻訳し、詳細を埋め込む。"""
         values = message.values or {}
         if message.message_key == "html_typo_lint.unknown_wordpress_block":
             suggestion = values.get("suggestion")
@@ -2662,7 +2704,7 @@ class MainWindow(QMainWindow):
         return self.translator.text(message.message_key, **values)
 
     def _set_cursor_to_line(self, line_number: int) -> None:
-        """Move the cursor to the start of the given one-based line number."""
+        """1始まりで指定された行の先頭にカーソルを移動する。"""
         block = self.editor.document().findBlockByNumber(max(0, line_number - 1))
         if not block.isValid():
             return
@@ -2672,7 +2714,7 @@ class MainWindow(QMainWindow):
         self.editor.setFocus()
 
     def insert_tag_snippet(self, snippet: TagSnippet) -> None:
-        """Insert the given tag snippet into the current editor at the cursor position."""
+        """指定されたタグ定型文を現在のエディターのカーソル位置に挿入する。"""
         cursor = self.editor.textCursor()
         insert_start = cursor.selectionStart()
         selected_text = cursor.selectedText().replace("\u2029", "\n")
@@ -2686,7 +2728,7 @@ class MainWindow(QMainWindow):
         self.editor.setFocus()
 
     def insert_shortcut_template(self, key: str, value: str = "") -> None:
-        """Insert a shortcut template from the active paragraph dictionary."""
+        """使用中の段落辞書からショートカット用テンプレートを挿入する。"""
         cursor = self.editor.textCursor()
         selected_text = cursor.selectedText().replace("\u2029", "\n")
         try:
@@ -2703,7 +2745,7 @@ class MainWindow(QMainWindow):
         self.insert_text_at_cursor(insert_text, cursor_offset)
 
     def insert_paragraph_split_spacer(self) -> None:
-        """Split the current paragraph and insert a WordPress spacer block."""
+        """現在の段落を分割し、WordPressのスペーサーブロックを挿入する。"""
         self._apply_paragraph_split_operation(
             lambda text, start, _end: split_paragraph_insert_spacer(
                 text,
@@ -2713,7 +2755,7 @@ class MainWindow(QMainWindow):
         )
 
     def insert_paragraph_split_html(self) -> None:
-        """Split the current paragraph and wrap the selection as an HTML code block."""
+        """現在の段落を分割し、選択部分をHTMLコードブロックで囲む。"""
         self._apply_paragraph_split_operation(
             lambda text, start, end: wrap_selection_as_code_block(
                 text,
@@ -2724,7 +2766,7 @@ class MainWindow(QMainWindow):
         )
 
     def wrap_paragraph_split_decorated_block(self) -> None:
-        """Split the current paragraph and wrap the selection as a decorated block."""
+        """現在の段落を分割し、選択部分を装飾ブロックで囲む。"""
         self._apply_paragraph_split_operation(
             lambda text, start, end: wrap_selection_as_decorated_block(
                 text,
@@ -2738,6 +2780,7 @@ class MainWindow(QMainWindow):
         self,
         operation: Callable[[str, int, int], ParagraphReplacement],
     ) -> None:
+        """段落を分割する操作を検証し、現在の文書に適用する。"""
         cursor = self.editor.textCursor()
         text = self.editor.toPlainText()
         selection_start = cursor.selectionStart()
@@ -2767,6 +2810,7 @@ class MainWindow(QMainWindow):
         snippet: TagSnippet,
         selected_text: str,
     ) -> tuple[str, int]:
+        """選択本文にタグ定型文を当てはめ、挿入する内容を作る。"""
         if snippet.label_key not in FRAME_BLOCK_LABEL_KEYS:
             return snippet.render(selected_text)
 
@@ -2780,6 +2824,7 @@ class MainWindow(QMainWindow):
         ).render(selected_text)
 
     def _frame_block_template_for_settings(self, template: str) -> str:
+        """現在の設定に合わせて枠ブロックのテンプレートを選ぶ。"""
         style_marker = '<div style="'
         div_start = template.find(style_marker)
         if div_start == -1:
@@ -2812,6 +2857,7 @@ class MainWindow(QMainWindow):
         )
 
     def _frame_inner_style(self, original_style: str) -> str:
+        """枠の内側に設定するCSSを組み立てる。"""
         display_style = FRAME_DISPLAY_STYLES.get(
             self.frame_display,
             FRAME_DISPLAY_STYLES["inline-block"],
@@ -2831,21 +2877,25 @@ class MainWindow(QMainWindow):
         return "; ".join(style_parts) + ";"
 
     def _frame_alignment_value(self) -> str:
+        """設定から枠の配置に使う値を取得する。"""
         if self.frame_alignment in FRAME_ALIGNMENT_VALUES:
             return self.frame_alignment
         return "left"
 
     def _frame_outer_spacing_value(self) -> str:
+        """設定から枠の外側の余白を取得する。"""
         if self.frame_outer_spacing.strip():
             return self.frame_outer_spacing.strip()
         return DEFAULT_FRAME_OUTER_SPACING
 
     def _frame_background_color_value(self) -> str:
+        """設定から枠内の背景色を取得する。"""
         if self.frame_background_color.strip():
             return self.frame_background_color.strip()
         return "#fffaf0"
 
     def _frame_text_color_value(self) -> str:
+        """設定から枠内の文字色を取得する。"""
         if self.frame_text_color.strip():
             return self.frame_text_color.strip()
         return "#333333"
@@ -2855,7 +2905,7 @@ class MainWindow(QMainWindow):
         insert_text: str,
         cursor_offset: int | None = None,
     ) -> None:
-        """Insert fixed text into the current editor at the cursor position."""
+        """現在のエディターのカーソル位置に指定文字列を挿入する。"""
         cursor = self.editor.textCursor()
         insert_start = cursor.selectionStart()
         cursor.beginEditBlock()
@@ -2867,7 +2917,7 @@ class MainWindow(QMainWindow):
         self.editor.setFocus()
 
     def insert_style_attribute_at_cursor(self) -> None:
-        """Insert style="" inside the nearest opening tag when possible."""
+        """可能な場合、最寄りの開始タグの内側に `style=""` を挿入する。"""
         source_text = self.editor.toPlainText()
         cursor = self.editor.textCursor()
         tag_bounds = self._opening_tag_bounds_near_cursor(source_text, cursor.position())
@@ -2890,7 +2940,7 @@ class MainWindow(QMainWindow):
         declaration_text: str,
         cursor_offset: int,
     ) -> None:
-        """Insert a CSS declaration in the nearest style attribute when possible."""
+        """可能な場合、最寄りのstyle属性にCSS宣言を挿入する。"""
         source_text = self.editor.toPlainText()
         cursor = self.editor.textCursor()
         cursor_position = cursor.position()
@@ -2933,7 +2983,7 @@ class MainWindow(QMainWindow):
         self.insert_text_at_cursor(declaration_text, cursor_offset)
 
     def insert_background_color_at_cursor(self) -> None:
-        """Insert an editable background color declaration and show recommended colors."""
+        """編集可能な背景色宣言を挿入し、推奨の色を表示する。"""
         self.insert_css_declaration_at_cursor(
             "background-color: ;",
             len("background-color: "),
@@ -2941,12 +2991,12 @@ class MainWindow(QMainWindow):
         self._show_background_color_preset_menu()
 
     def insert_text_color_at_cursor(self) -> None:
-        """Insert an editable text color declaration and show text color choices."""
+        """編集可能な文字色宣言を挿入し、色の選択肢を表示する。"""
         self.insert_css_declaration_at_cursor("color: ;", len("color: "))
         self._show_text_color_preset_menu()
 
     def _show_background_color_preset_menu(self) -> None:
-        """Show recommended WordPress background colors below the current cursor."""
+        """現在のカーソルの下にWordPress向けの推奨背景色を表示する。"""
         menu = QMenu(self.editor)
         for preset in self.color_presets.background_colors:
             action = QAction(
@@ -2966,7 +3016,7 @@ class MainWindow(QMainWindow):
         menu.popup(self.editor.viewport().mapToGlobal(cursor_rect.bottomLeft()))
 
     def _show_text_color_preset_menu(self) -> None:
-        """Show the same text colors used by the Ctrl+Alt inline shortcuts."""
+        """Ctrl+Altのインライン色ショートカットと同じ文字色を表示する。"""
         menu = QMenu(self.editor)
         for preset in self.color_presets.text_colors:
             action = QAction(
@@ -2987,7 +3037,7 @@ class MainWindow(QMainWindow):
         menu.popup(self.editor.viewport().mapToGlobal(cursor_rect.bottomLeft()))
 
     def _inline_color_action_text(self, preset: ColorPreset) -> str:
-        """Return a localized inline-color action label from the editable JSON."""
+        """編集可能なJSONから、インライン色のアクション名を現在の言語で取得する。"""
         color_name = preset.display_name(self.translator.language_code)
         return (
             f"{color_name} Text <span>"
@@ -2997,17 +3047,17 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _background_color_swatch_icon(color_value: str) -> QIcon:
-        """Create a small color swatch for a recommended background color."""
+        """推奨背景色の小さな色見本を作る。"""
         pixmap = QPixmap(16, 16)
         pixmap.fill(QColor(color_value))
         return QIcon(pixmap)
 
     def _replace_background_color_value(self, color_value: str) -> None:
-        """Replace the background-color value containing the editor cursor."""
+        """エディターのカーソル位置にあるbackground-colorの値を置き換える。"""
         self._replace_css_color_value("background-color", color_value)
 
     def _replace_css_color_value(self, property_name: str, color_value: str) -> None:
-        """Replace the current CSS color property value without altering its semicolon."""
+        """既存のセミコロンを保持して、現在のCSS色プロパティの値を置き換える。"""
         source_text = self.editor.toPlainText()
         cursor = self.editor.textCursor()
         cursor_position = cursor.position()
@@ -3031,7 +3081,7 @@ class MainWindow(QMainWindow):
         insert_text: str,
         cursor_offset: int | None = None,
     ) -> None:
-        """Insert fixed text at an absolute editor position."""
+        """エディターの絶対位置へ指定文字列を挿入する。"""
         cursor = self.editor.textCursor()
         cursor.beginEditBlock()
         cursor.setPosition(insert_position)
@@ -3047,7 +3097,7 @@ class MainWindow(QMainWindow):
         source_text: str,
         cursor_position: int,
     ) -> tuple[int, int] | None:
-        """Return the nearest same-line opening tag around the cursor."""
+        """カーソルに最も近い同一行の開始タグの範囲を返す。"""
         line_start = source_text.rfind("\n", 0, cursor_position) + 1
         line_end = source_text.find("\n", cursor_position)
         if line_end == -1:
@@ -3065,7 +3115,7 @@ class MainWindow(QMainWindow):
         source_text: str,
         cursor_position: int,
     ) -> tuple[int, int] | None:
-        """Return value bounds for a style attribute in the nearest opening tag."""
+        """カーソルに最も近い開始タグのstyle属性値の範囲を返す。"""
         tag_bounds = self._opening_tag_bounds_near_cursor(
             source_text,
             cursor_position,
@@ -3089,7 +3139,7 @@ class MainWindow(QMainWindow):
         value_end: int,
         declaration_text: str,
     ) -> str:
-        """Return a CSS declaration with spacing suited to the target style value."""
+        """挿入先のstyle値に合う空白を付けたCSS宣言を返す。"""
         if value_start == value_end:
             return declaration_text
         needs_leading_space = (
@@ -3107,19 +3157,20 @@ class MainWindow(QMainWindow):
         )
 
     def escape_selected_html(self) -> None:
-        """HTML-escape only the selected text, preserving quote characters."""
+        """引用符を保持したまま、選択した文字列だけをHTMLエスケープする。"""
         self._replace_selected_text(
             lambda selected_text: escape(selected_text, quote=False)
         )
 
     def unescape_selected_html(self) -> None:
-        """HTML-unescape only the selected text."""
+        """選択した文字列だけのHTMLエスケープを解除する。"""
         self._replace_selected_text(unescape)
 
     def wrap_selected_as_wordpress_code_block(self) -> None:
-        """Wrap the selected text in a WordPress custom HTML code block."""
+        """選択した文字列をWordPressのカスタムHTMLコードブロックで囲む。"""
 
         def build_wordpress_code_block(selected_text: str) -> str:
+            """選択本文からWordPress向けのコードブロックを組み立てる。"""
             escaped_text = escape(selected_text, quote=False)
             return (
                 "<!-- wp:html -->\n"
@@ -3135,25 +3186,25 @@ class MainWindow(QMainWindow):
         self._replace_selected_text(build_wordpress_code_block)
 
     def convert_selected_markdown_blocks_to_wordpress_blocks(self) -> None:
-        """Convert selected Markdown table/list blocks to WordPress blocks."""
+        """選択したMarkdownの表とリストをWordPressのブロックに変換する。"""
         self._convert_selected_markdown_to_wordpress(
             convert_complex_markdown_blocks_to_wordpress_html
         )
 
     def convert_selected_markdown_tables_to_wordpress_tables(self) -> None:
-        """Convert selected Markdown table blocks to WordPress table blocks."""
+        """選択したMarkdownの表をWordPressの表に変換する。"""
         self._convert_selected_markdown_to_wordpress(
             convert_markdown_tables_to_wordpress_html
         )
 
     def convert_selected_markdown_lists_to_wordpress_lists(self) -> None:
-        """Convert selected Markdown list blocks to WordPress list blocks."""
+        """選択したMarkdownのリストをWordPressのリストに変換する。"""
         self._convert_selected_markdown_to_wordpress(
             convert_markdown_lists_to_wordpress_html
         )
 
     def convert_selected_list_to_wordpress_frame(self) -> None:
-        """Convert selected Markdown or WordPress list content to one HTML frame."""
+        """選択したMarkdownまたはWordPressのリストを1つのHTML枠に変換する。"""
         self._convert_selected_markdown_to_wordpress(
             lambda source_text: convert_list_to_wordpress_frame_html(
                 source_text,
@@ -3167,7 +3218,7 @@ class MainWindow(QMainWindow):
         self,
         converter: Callable[[str], str],
     ) -> None:
-        """Convert the current Markdown selection to WordPress block HTML."""
+        """現在のMarkdown選択範囲をWordPressのブロックHTMLに変換する。"""
         try:
             self._replace_selected_markdown_text(converter)
         except WordPressMarkdownConversionError as error:
@@ -3179,7 +3230,7 @@ class MainWindow(QMainWindow):
             )
 
     def _replace_selected_markdown_text(self, transform: Callable[[str], str]) -> None:
-        """Replace selected Markdown, avoiding nested WordPress paragraph blocks."""
+        """WordPress段落が入れ子にならないように、選択したMarkdownを置き換える。"""
         cursor = self.editor.textCursor()
         if not cursor.hasSelection():
             self.statusBar().showMessage(self.translator.text("status.select_text"))
@@ -3223,7 +3274,7 @@ class MainWindow(QMainWindow):
         selection_start: int,
         selection_end: int,
     ) -> tuple[int, int] | None:
-        """Return a whole paragraph block range when the content is fully selected."""
+        """段落の中身全体が選択されている場合は、ブロック全体の範囲を返す。"""
         if selection_end <= selection_start:
             return None
         if (
@@ -3239,7 +3290,7 @@ class MainWindow(QMainWindow):
         return paragraph_block.block_start, paragraph_block.block_end
 
     def _replace_selected_text(self, transform: Callable[[str], str]) -> None:
-        """Replace the current selection with transformed text if text is selected."""
+        """選択範囲がある場合に、変換後の文字列で置き換える。"""
         cursor = self.editor.textCursor()
         if not cursor.hasSelection():
             self.statusBar().showMessage(self.translator.text("status.select_text"))
@@ -3254,7 +3305,7 @@ class MainWindow(QMainWindow):
         self.editor.setFocus()
 
     def _update_status_bar(self) -> None:
-        """Update the status bar with the current cursor position and character count."""
+        """現在のカーソル位置と文字数をステータスバーに反映する。"""
         cursor = self.editor.textCursor()
         line_number = cursor.blockNumber() + 1
         column_number = cursor.positionInBlock() + 1
@@ -3269,7 +3320,7 @@ class MainWindow(QMainWindow):
         )
 
     def _update_window_title(self) -> None:
-        """Update the main window title to reflect the current document name and modification status."""
+        """現在の文書名と変更状態をメインウインドウのタイトルに反映する。"""
         load_file_path = self.current_save_file_path
         document_name = self.translator.text("document.untitled")
         if load_file_path is not None:
@@ -3284,13 +3335,13 @@ class MainWindow(QMainWindow):
         )
 
     def _confirm_discard_changes(self) -> bool:
-        """Autosave unsaved changes before continuing with a risky operation."""
+        """内容を失う可能性がある操作の前に、未保存の変更を自動保存する。"""
         if not self.editor.document().isModified():
             return True
         return self._autosave_before_risky_operation()
 
     def _confirm_reload_current_file(self) -> bool:
-        """Confirm reloading when it would replace unsaved editor text."""
+        """未保存の本文が置き換わる場合に、ファイルを再読込するか確認する。"""
         if not self.editor.document().isModified():
             return True
         if not self._autosave_before_risky_operation():
@@ -3306,7 +3357,7 @@ class MainWindow(QMainWindow):
         return result == QMessageBox.StandardButton.Yes
 
     def _confirm_save_or_discard_editor(self, editor: TextEditor) -> bool:
-        """Autosave tab changes before allowing the tab to be closed."""
+        """タブを閉じる前に変更内容を自動保存する。"""
         if not editor.document().isModified():
             return True
 
@@ -3316,12 +3367,12 @@ class MainWindow(QMainWindow):
         return self._autosave_before_risky_operation()
 
     def new_file(self) -> None:
-        """Create a new editor tab with an untitled document."""
+        """無題の文書を持つエディターのタブを作る。"""
         self._create_editor_tab()
         self._update_window_title()
 
     def open_file(self, encoding: str | None = None) -> None:
-        """Open a file dialog to select and load a text file into a new editor tab."""
+        """ファイル選択画面を開き、選ばれたテキストファイルを新しいタブに読み込む。"""
         if not self._autosave_before_risky_operation():
             return
         selected_path, _ = QFileDialog.getOpenFileName(
@@ -3365,7 +3416,7 @@ class MainWindow(QMainWindow):
         self._set_encoding_status()
 
     def reload_file(self, encoding: str | None = None) -> None:
-        """Reload the current file from disk, optionally using a specified encoding."""
+        """必要に応じて文字コードを指定し、現在のファイルをディスクから読み直す。"""
         if self.current_save_file_path is None:
             self._set_search_error(
                 self.translator.text("dialog.reload_no_file"), clear_results=False
@@ -3411,13 +3462,13 @@ class MainWindow(QMainWindow):
         self._set_encoding_status()
 
     def save_file(self) -> bool:
-        """Save the current file, returning True if successful."""
+        """現在のファイルを保存し、成功した場合はTrueを返す。"""
         if self.current_save_file_path is None:
             return self.save_file_as()
         return self._save_to_path(self.current_save_file_path)
 
     def save_file_as(self) -> bool:
-        """Prompt the user to select a save location and save the current file, returning True if successful."""
+        """保存先を選ぶ画面を開いて現在のファイルを保存し、成功した場合はTrueを返す。"""
         selected_save_file_path, selected_encoding = self._get_save_file_path()
         if selected_save_file_path is None:
             return False
@@ -3425,7 +3476,7 @@ class MainWindow(QMainWindow):
         return self._save_to_path(selected_save_file_path)
 
     def _suggest_unsaved_file_name(self) -> str:
-        """Turn the unsaved tab's first-line title into a safe save suggestion."""
+        """未保存タブの1行目から安全なファイル名候補を作る。"""
         draft_title = self._draft_title(self.editor)
         name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", draft_title).strip(" .")
         if not name:
@@ -3439,7 +3490,7 @@ class MainWindow(QMainWindow):
         return name if Path(name).suffix else f"{name}.md"
 
     def _get_save_file_path(self) -> tuple[Path | None, str]:
-        """Show the save file dialog and return the selected file path and encoding."""
+        """保存先の画面を表示し、選択されたパスと文字コードを返す。"""
         dialog = QFileDialog(self, self.translator.text("dialog.save_as.title"))
         dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         dialog.setFileMode(QFileDialog.FileMode.AnyFile)
@@ -3478,7 +3529,7 @@ class MainWindow(QMainWindow):
         return Path(selected_files[0]), str(encoding_combo_box.currentData())
 
     def _save_to_path(self, save_file_path: Path) -> bool:
-        """Save the current editor content to the specified file path, returning True if successful."""
+        """現在の本文を指定パスに保存し、成功した場合はTrueを返す。"""
         save_data = self.editor.toPlainText()
         if not self._confirm_save_after_grammar_check(save_data):
             return False
@@ -3519,7 +3570,7 @@ class MainWindow(QMainWindow):
         return True
 
     def restore_file_backup(self) -> None:
-        """Restore a saved-file backup or unsaved auto-backup snapshot."""
+        """保存済みファイルのバックアップまたは未保存のスナップショットを復元する。"""
         restore_choices: list[tuple[str, Path, str]] = []
         if self.current_save_file_path is not None:
             for backup_path in self.file_backup_manager.backups_for_file(
@@ -3640,7 +3691,7 @@ class MainWindow(QMainWindow):
         )
 
     def _file_backup_label(self, backup_path: Path) -> str:
-        """Return a user-facing label for a saved-file backup."""
+        """保存済みファイルのバックアップを画面に表示する名前を返す。"""
         modified_at = datetime.fromtimestamp(
             backup_path.stat().st_mtime,
             timezone.utc,
@@ -3652,7 +3703,7 @@ class MainWindow(QMainWindow):
         )
 
     def _unsaved_backup_label(self, backup_path: Path, label_key: str) -> str:
-        """Return a user-facing label for an unsaved auto-backup snapshot."""
+        """未保存の自動バックアップを画面に表示する名前を返す。"""
         modified_at = datetime.fromtimestamp(
             backup_path.stat().st_mtime,
             timezone.utc,
@@ -3664,7 +3715,7 @@ class MainWindow(QMainWindow):
         )
 
     def _autosave_before_risky_operation(self) -> bool:
-        """Autosave modified tabs before an operation that may discard editor state."""
+        """タブの状態を失う可能性がある操作の前に、変更済みタブを自動保存する。"""
         if not self._has_modified_tabs():
             return True
         if self._save_unsaved_backup_snapshot():
@@ -3677,7 +3728,7 @@ class MainWindow(QMainWindow):
         return False
 
     def _has_modified_tabs(self) -> bool:
-        """Return True if any editor tab has unsaved modifications."""
+        """未保存の変更があるタブが1つでもあればTrueを返す。"""
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None and editor.document().isModified():
@@ -3685,7 +3736,7 @@ class MainWindow(QMainWindow):
         return False
 
     def _save_unsaved_backup(self) -> bool:
-        """Save a restorable session of all modified editor tabs."""
+        """変更済みタブを復元可能なセッションとして保存する。"""
         if not self.unsaved_backup_enabled or self.restoring_unsaved_backup:
             return True
         session = self._build_unsaved_backup_session()
@@ -3695,7 +3746,7 @@ class MainWindow(QMainWindow):
         return self.unsaved_backup_manager.save_session(session)
 
     def _save_unsaved_backup_snapshot(self) -> bool:
-        """Save the latest unsaved backup and an additional history snapshot."""
+        """最新の未保存バックアップと履歴用のスナップショットを保存する。"""
         if not self.unsaved_backup_enabled or self.restoring_unsaved_backup:
             return True
         session = self._build_unsaved_backup_session()
@@ -3707,7 +3758,7 @@ class MainWindow(QMainWindow):
         return self.unsaved_backup_manager.save_history_snapshot(session) is not None
 
     def _build_unsaved_backup_session(self) -> UnsavedBackupSession | None:
-        """Build a restorable session for all modified editor tabs."""
+        """変更済みタブをまとめて復元できるセッションを作る。"""
         tabs: list[UnsavedBackup] = []
         current_backup_index = 0
         current_editor = self._current_editor()
@@ -3735,7 +3786,7 @@ class MainWindow(QMainWindow):
         )
 
     def _restore_unsaved_backup_if_available(self) -> None:
-        """Restore an unsaved backup if available and prompt the user for confirmation."""
+        """未保存バックアップがある場合に、復元するかを確認して読み込む。"""
         if not self.unsaved_backup_enabled:
             return
         session = self.unsaved_backup_manager.load_session()
@@ -3755,7 +3806,7 @@ class MainWindow(QMainWindow):
         self._restore_unsaved_backup_session(session)
 
     def _restore_unsaved_backup_session(self, session: UnsavedBackupSession) -> None:
-        """Restore an unsaved backup session into editor tabs."""
+        """未保存バックアップのセッションをエディターのタブに復元する。"""
         self.restoring_unsaved_backup = True
         try:
             while self.tab_widget.count():
@@ -3778,12 +3829,12 @@ class MainWindow(QMainWindow):
             self.restoring_unsaved_backup = False
 
     def _clear_unsaved_backup(self) -> None:
-        """Clear the unsaved backup if it exists and unsaved backups are enabled."""
+        """未保存バックアップが有効でファイルが存在する場合に削除する。"""
         if self.unsaved_backup_enabled:
             self.unsaved_backup_manager.clear()
 
     def _find_replace_target_name(self) -> str:
-        """Return the captured tab's current display name."""
+        """検索窓を開いた元のタブの現在の表示名を返す。"""
         target = self._find_replace_target
         if target is None:
             return ""
@@ -3791,7 +3842,7 @@ class MainWindow(QMainWindow):
         return save_file_path.name if save_file_path is not None else self._draft_title(target)
 
     def _activate_find_replace_target(self) -> bool:
-        """Show the captured tab before a dialog action; never use a fallback tab."""
+        """検索窓からの操作前に元のタブを表示する。別のタブへは切り替えない。"""
         target = self._find_replace_target
         if target is None:
             return False
@@ -3809,12 +3860,12 @@ class MainWindow(QMainWindow):
         return False
 
     def _run_bound_find_replace(self, action: Callable[..., object], *args: object) -> None:
-        """Route a Find/Replace dialog event only to its original editor."""
+        """検索・置換ダイアログの操作を元のエディターにだけ渡す。"""
         if self._activate_find_replace_target():
             action(*args)
 
     def show_find_replace_dialog(self) -> None:
-        """Show the find and replace dialog, initializing it with the current selection if available."""
+        """検索・置換ダイアログを開く。初回は本文の選択文字列があれば検索欄に入れる。"""
         first_open = self.find_replace_dialog is None
         if self.find_replace_dialog is None:
             self.find_replace_dialog = FindReplaceDialog(self.translator, self)
@@ -3893,7 +3944,7 @@ class MainWindow(QMainWindow):
         self.find_replace_dialog.activateWindow()
 
     def _on_find_replace_dialog_closed(self, _result: int) -> None:
-        """Discard search decorations without changing the editor selection."""
+        """本文の選択を保ったまま検索の表示マーカーを破棄する。"""
         self._preview_source = None
         self._find_replace_target = None
         if self.find_replace_dialog is not None:
@@ -3908,11 +3959,11 @@ class MainWindow(QMainWindow):
                 editor.clear_search_matches()
 
     def _clear_preview_source(self) -> None:
-        """Forget the preview's document when its rows are cleared."""
+        """プレビューの行を消すときに、元文書への参照も破棄する。"""
         self._preview_source = None
 
     def reset_search_scope_reference(self) -> None:
-        """Forget the old search scope and capture the editor's current selection."""
+        """古い検索範囲を破棄し、エディターの現在の選択範囲を取り直す。"""
         self.search_scope = None
         self._scope_selection_to_ignore = None
         self._search_highlights_suspended = False
@@ -3924,7 +3975,7 @@ class MainWindow(QMainWindow):
         )
 
     def find_next(self, search_text: str, options: SearchOptions) -> None:
-        """Find the next occurrence of the search text using the specified search options.""" 
+        """指定された検索条件で次の一致箇所を探す。"""
         if not search_text:
             self._set_search_error(self.translator.text("search.empty"))
             return
@@ -3963,10 +4014,9 @@ class MainWindow(QMainWindow):
             )
         )
         self._set_search_status(self.translator.text("search.match_found"))
-        self._clear_search_results_after_operation()
 
     def find_previous(self, search_text: str, options: SearchOptions) -> None:
-        """Find the previous occurrence of the search text using the specified search options."""
+        """指定された検索条件で前の一致箇所を探す。"""
         if not search_text:
             self._set_search_error(self.translator.text("search.empty"))
             return
@@ -4009,7 +4059,6 @@ class MainWindow(QMainWindow):
             )
         )
         self._set_search_status(self.translator.text("search.match_found"))
-        self._clear_search_results_after_operation()
 
     def replace_current(
         self,
@@ -4017,7 +4066,7 @@ class MainWindow(QMainWindow):
         replace_text: str,
         options: SearchOptions,
     ) -> None:
-        """Replace the currently selected occurrence of the search text with the replacement text using the specified search options."""
+        """現在選択されている一致箇所を、指定された文字列と条件で置き換える。"""
         if not search_text:
             self._set_search_error(self.translator.text("search.empty"))
             return
@@ -4108,7 +4157,7 @@ class MainWindow(QMainWindow):
         *,
         confirm: bool = False,
     ) -> None:
-        """Replace all occurrences of the search text with the replacement text using the specified search options."""
+        """指定された条件で一致するすべての箇所を置換する。"""
         if not search_text:
             self._set_search_error(self.translator.text("search.empty"))
             return
@@ -4181,6 +4230,7 @@ class MainWindow(QMainWindow):
         replace_text: str,
         options: SearchOptions,
     ) -> None:
+        """検索窓の条件で全置換を開始する。"""
         self.replace_all(search_text, replace_text, options, confirm=False)
 
     def _confirm_replace_all(
@@ -4192,6 +4242,7 @@ class MainWindow(QMainWindow):
         options: SearchOptions,
         scope_offset: int,
     ) -> bool:
+        """全置換の範囲と件数を確認して続行を決める。"""
         rows = self._preview_rows(
             target_text,
             matches,
@@ -4233,7 +4284,7 @@ class MainWindow(QMainWindow):
         replace_text: str,
         options: SearchOptions,
     ) -> None:
-        """Replace all marked occurrences of the search text with the replacement text using the specified search options."""
+        """指定された条件で、マーカーのあるすべての一致箇所を置換する。"""
         if not search_text:
             self._set_search_error(self.translator.text("search.empty"))
             return
@@ -4302,6 +4353,7 @@ class MainWindow(QMainWindow):
         self._focus_find_text_after_replace_all()
 
     def apply_regex_normalise_operation(self, operation_id: str) -> None:
+        """指定された正規化操作を対象文書に適用する。"""
         if self.find_replace_dialog is None:
             return
 
@@ -4337,12 +4389,12 @@ class MainWindow(QMainWindow):
         search_text: str,
         options: SearchOptions,
     ) -> None:
-        """Resume marker calculation after the user changes search conditions."""
+        """利用者が検索条件を変更したときに、マーカーの再計算を再開する。"""
         self._search_highlights_suspended = False
         self.refresh_search_highlights(search_text, options)
 
     def _clear_search_results_after_operation(self) -> None:
-        """Discard result markers, preview, and the previous selected scope."""
+        """古い結果マーカー、プレビュー、選択範囲の参照を破棄する。"""
         self._search_highlights_suspended = True
         self._marked_source = None
         self._marked_editor = None
@@ -4365,7 +4417,7 @@ class MainWindow(QMainWindow):
         search_text: str,
         options: SearchOptions,
     ) -> None:
-        """Recalculate markers for the current explicit search event."""
+        """現在の明示的な検索操作に応じてマーカーを再計算する。"""
         if (
             self.reduced_error_check_enabled
             or self._search_highlights_suspended
@@ -4379,9 +4431,11 @@ class MainWindow(QMainWindow):
         self.update_search_highlights(search_text, options)
 
     def _focus_find_text_after_replace_all(self) -> None:
+        """全置換後に検索欄へフォーカスを戻す。"""
         self._focus_find_text_after_replace_all_now()
 
     def _focus_find_text_after_replace_all_now(self) -> None:
+        """検索欄へフォーカスを移して入力内容を編集できるようにする。"""
         if self.find_replace_dialog is None or not self.find_replace_dialog.isVisible():
             return
         dialog = self.find_replace_dialog
@@ -4397,7 +4451,7 @@ class MainWindow(QMainWindow):
         search_text: str,
         options: SearchOptions,
     ) -> None:
-        """Update the search highlights in the editor based on the current search text and options."""
+        """現在の検索文字列と検索条件からエディターのマーカーを更新する。"""
         self._marked_source = None
         self._marked_editor = None
         if not search_text:
@@ -4465,7 +4519,7 @@ class MainWindow(QMainWindow):
     def _editor_contents_changed_for_search(
         self, editor: TextEditor, qt_position: int, removed: int, added: int
     ) -> None:
-        """Update literal markers around one edit; discard unsupported scopes safely."""
+        """編集箇所の周辺だけで単純検索のマーカーを更新し、局所更新できない条件では古いマーカーを破棄する。"""
         if self._preview_source is not None and editor is self._preview_source[0]:
             self._preview_source = None
             if (
@@ -4553,7 +4607,7 @@ class MainWindow(QMainWindow):
     def _editor_contents_changed_for_structure(
         self, editor: TextEditor, qt_position: int, removed: int, added: int
     ) -> None:
-        """Check known WordPress comment pairs around one document edit."""
+        """文書の編集箇所の周辺にあるWordPressコメントの対応を検査する。"""
         source = self._structure_sources.get(editor)
         if source is None:
             block = editor.document().findBlock(qt_position)
@@ -4628,7 +4682,7 @@ class MainWindow(QMainWindow):
         replace_text: str,
         options: SearchOptions,
     ) -> None:
-        """Preview the matches for the current search and replacement settings in the find and replace dialog."""
+        """現在の検索・置換条件で見つかる箇所をダイアログにプレビューする。"""
         if self.find_replace_dialog is None:
             return
         if not search_text:
@@ -4665,14 +4719,14 @@ class MainWindow(QMainWindow):
     def _set_search_preview(
         self, rows: list[tuple[int, str, str]], summary: str
     ) -> None:
-        """Associate displayed preview lines with the current document revision."""
+        """表示したプレビュー行を現在の文書リビジョンと対応付ける。"""
         if self.find_replace_dialog is None:
             return
         self._preview_source = (self.editor, self.editor.document().revision())
         self.find_replace_dialog.set_preview_rows(rows, summary)
 
     def _jump_to_preview_line(self, line_number: int) -> None:
-        """Open the preview's original tab and place the cursor at that line."""
+        """プレビュー元のタブを表示し、指定行にカーソルを置く。"""
         if self._preview_source is None or self.find_replace_dialog is None:
             return
         preview_editor, revision = self._preview_source
@@ -4699,6 +4753,7 @@ class MainWindow(QMainWindow):
         preview_editor.setFocus()
 
     def _replacement_preview_summary(self, match_count: int, shown_count: int) -> str:
+        """置換プレビューの件数や制限を要約する。"""
         if match_count == 0:
             return self.translator.text("search.preview.no_matches")
         if shown_count < match_count:
@@ -4710,7 +4765,7 @@ class MainWindow(QMainWindow):
         return self.translator.text("search.preview.matches", count=match_count)
 
     def show_regex_help_dialog(self) -> None:
-        """Show the regex help dialog, initializing it if necessary."""
+        """必要なら作成して正規表現ヘルプを開く。"""
         if self.regex_help_dialog is None:
             regex_help_paths = {
                 "EN_Ver.": self.resources_path / "regex_help_en.json",
@@ -4730,7 +4785,7 @@ class MainWindow(QMainWindow):
         self.regex_help_dialog.activateWindow()
 
     def show_user_help_dialog(self) -> None:
-        """Show the user help dialog, initializing it if necessary."""
+        """必要なら作成して操作ヘルプを開く。"""
         if self.user_help_dialog is None:
             self.user_help_dialog = UserHelpDialog(self.translator, self)
 
@@ -4739,7 +4794,7 @@ class MainWindow(QMainWindow):
         self.user_help_dialog.activateWindow()
 
     def show_schema_reference_dialog(self) -> None:
-        """Show modeless HTML and WordPress schema tables beside the editor."""
+        """HTMLやWordPressなどの参考表をエディターの横にモードレスで表示する。"""
         is_new_dialog = self.schema_reference_dialog is None
         if self.schema_reference_dialog is None:
             self.schema_reference_dialog = SchemaReferenceDialog(
@@ -4771,14 +4826,14 @@ class MainWindow(QMainWindow):
         self.unicode_character_info_dialog.activateWindow()
 
     def _insert_regex_pattern(self, pattern: str) -> None:
-        """Insert the given regex pattern into the find text field of the find and replace dialog."""
+        """検索・置換ダイアログの検索欄に指定の正規表現パターンを挿入する。"""
         if self.find_replace_dialog is None:
             self.show_find_replace_dialog()
         if self.find_replace_dialog is not None:
             self.find_replace_dialog.insert_find_text(pattern)
 
     def _search_scope_text(self, options: SearchOptions) -> tuple[str | None, int]:
-        """Determine the text and offset for the current search scope based on the search options."""
+        """検索条件から現在の対象範囲の文字列と文書内の開始位置を求める。"""
         if not options.selected_only and not options.visible_only:
             return None, 0
 
@@ -4813,7 +4868,7 @@ class MainWindow(QMainWindow):
         return source_text[scope_start:scope_end], scope_start
 
     def _selected_search_bounds(self, source_length: int) -> tuple[int, int] | None:
-        """Determine the start and end bounds of the selected text for searching, or return None if no valid selection exists."""
+        """検索対象となる選択範囲の両端を求め、有効な選択がなければNoneを返す。"""
         if self.search_scope is None:
             cursor = self.editor.textCursor()
             if not cursor.hasSelection():
@@ -4833,7 +4888,7 @@ class MainWindow(QMainWindow):
         return scope_start, scope_end
 
     def _visible_search_bounds(self, source_length: int) -> tuple[int, int] | None:
-        """Determine the start and end bounds of the visible text for searching, or return None if no valid visible text exists."""
+        """検索対象となる表示範囲の両端を求め、有効な表示範囲がなければNoneを返す。"""
         first_block = self.editor.firstVisibleBlock()
         if not first_block.isValid():
             return None
@@ -4876,7 +4931,7 @@ class MainWindow(QMainWindow):
         scope_offset: int,
         scope_length: int,
     ) -> bool:
-        """Check if the given match is entirely within the specified search scope."""
+        """一致箇所全体が指定の検索範囲に収まるかを確認する。"""
         return scope_offset <= match.start and match.end <= scope_offset + scope_length
 
     def _preview_rows(
@@ -4888,7 +4943,7 @@ class MainWindow(QMainWindow):
         options: SearchOptions,
         scope_offset: int,
     ) -> list[tuple[int, str, str]]:
-        """Generate a preview of the replacement results for the given matches within the specified search scope."""
+        """対象範囲内の一致箇所から置換プレビューを生成する。"""
         rows: list[tuple[int, str, str]] = []
         preview_options = replace(options, exclusion_text="")
         full_source_text = self.editor.toPlainText()
@@ -4937,6 +4992,7 @@ class MainWindow(QMainWindow):
         options: SearchOptions,
         allowed_matches: list[SearchMatch],
     ) -> str:
+        """置換後の文字列を含む行の表示用情報を返す。"""
         line_start = source_text.rfind("\n", 0, match.start) + 1
         line_end = source_text.find("\n", match.end)
         if line_end == -1:
@@ -4964,7 +5020,7 @@ class MainWindow(QMainWindow):
         return result.text if result.count else match.text
 
     def _line_context(self, source_text: str, match: SearchMatch) -> str:
-        """Extract the context of the line containing the given match, highlighting the match itself."""
+        """一致した箇所を含む行の前後を取り出し、一致部分を区別する。"""
         line_start = source_text.rfind("\n", 0, match.start) + 1
         line_end = source_text.find("\n", match.end)
         if line_end == -1:
@@ -4980,7 +5036,7 @@ class MainWindow(QMainWindow):
         match: SearchMatch,
         replacement_text: str,
     ) -> str:
-        """Extract the context of the line containing the given match, showing the replacement text in place of the match."""
+        """一致箇所を置換後の文字列にした場合の行の前後を取り出す。"""
         line_start = source_text.rfind("\n", 0, match.start) + 1
         line_end = source_text.find("\n", match.end)
         if line_end == -1:
@@ -4990,14 +5046,14 @@ class MainWindow(QMainWindow):
         return self._visible_preview_text(f"{prefix}{replacement_text}{suffix}")
 
     def _visible_preview_text(self, text: str) -> str:
-        """Convert the given text into a visible preview by escaping tabs and newlines, and truncating if necessary."""
+        """タブと改行を見える表記にし、必要なら省略してプレビュー文字列を作る。"""
         visible_text = text.replace("\t", "\\t").replace("\n", "\\n")
         if len(visible_text) > 140:
             return f"{visible_text[:137]}..."
         return visible_text
 
     def _replace_document_text(self, text: str) -> None:
-        """Replace the entire text of the document in the editor with the given text."""
+        """エディターの文書全体を指定文字列で置き換える。"""
         cursor = self.editor.textCursor()
         self._search_internal_text_change = True
         try:
@@ -5009,24 +5065,27 @@ class MainWindow(QMainWindow):
             self._search_internal_text_change = False
 
     def _select_match(self, match: SearchMatch) -> None:
-        """Select the text corresponding to the given match in the editor and focus the editor."""
+        """一致箇所の先頭を基準に、現在の検索結果をエディターの中央付近に表示する。"""
         cursor = self.editor.textCursor()
-        cursor.setPosition(self.editor.text_position_to_cursor_position(match.start))
+        cursor.setPosition(self.editor.text_position_to_cursor_position(match.end))
         cursor.setPosition(
-            self.editor.text_position_to_cursor_position(match.end),
+            self.editor.text_position_to_cursor_position(match.start),
             QTextCursor.MoveMode.KeepAnchor,
         )
         self.editor.setTextCursor(cursor)
         self.editor.setFocus()
+        self.editor.centerCursor()
+        self._clear_search_results_after_operation()
+        self.editor.mark_current_search_match()
 
     def _set_cursor_position(self, position: int) -> None:
-        """Set the cursor position in the editor to the specified text position."""
+        """指定された本文位置へエディターのカーソルを移動する。"""
         cursor = self.editor.textCursor()
         cursor.setPosition(self.editor.text_position_to_cursor_position(position))
         self.editor.setTextCursor(cursor)
 
     def _set_search_error(self, message: str, *, clear_results: bool = True) -> None:
-        """Display the given search error message in the find and replace dialog and the status bar."""
+        """指定された検索エラーを検索・置換ダイアログとステータスバーに表示する。"""
         if clear_results:
             self._clear_search_results_after_operation()
         if self.find_replace_dialog is not None:
@@ -5034,20 +5093,20 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def _set_search_status(self, message: str) -> None:
-        """Display the given search status message in the status bar and clear any error in the find and replace dialog."""
+        """検索状況をステータスバーに表示し、検索・置換ダイアログのエラーを消す。"""
         if self.find_replace_dialog is not None:
             self.find_replace_dialog.clear_error()
         self.statusBar().showMessage(message)
 
     def _set_encoding_status(self) -> None:
-        """Display the current encoding status in the status bar."""
+        """現在の文字コードをステータスバーに表示する。"""
         self.statusBar().showMessage(
             self.translator.text("status.encoding", encoding=self.current_encoding)
         )
 
 
 def main() -> int:
-    """Entry point for the application."""
+    """アプリケーションを起動する。"""
     install_exception_hooks(LOGGER)
     LOGGER.info("Regex Pad started", action="application_start")
     app = QApplication(sys.argv)

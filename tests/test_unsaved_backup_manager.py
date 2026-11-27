@@ -1,3 +1,5 @@
+"""未保存バックアップの管理処理を検証する。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +12,7 @@ from fileio.unsaved_backup_manager import (
 
 
 def test_unsaved_backup_manager_saves_and_loads_backup(tmp_path: Path) -> None:
+    """未保存バックアップの管理処理が保存するとともに、バックアップを読み込むことを確認する。"""
     manager = UnsavedBackupManager(tmp_path / "autosave" / "unsaved_backup.json")
 
     manager.save(
@@ -28,6 +31,7 @@ def test_unsaved_backup_manager_saves_and_loads_backup(tmp_path: Path) -> None:
 
 
 def test_unsaved_backup_manager_returns_none_for_broken_json(tmp_path: Path) -> None:
+    """未保存バックアップの管理処理がなしの用の壊れたのJSONを返すことを確認する。"""
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     backup_path.parent.mkdir(parents=True)
     backup_path.write_text("{", encoding="utf-8")
@@ -38,6 +42,7 @@ def test_unsaved_backup_manager_returns_none_for_broken_json(tmp_path: Path) -> 
 
 
 def test_unsaved_backup_manager_saves_and_loads_session(tmp_path: Path) -> None:
+    """未保存バックアップの管理処理が保存するとともに、セッションを読み込むことを確認する。"""
     manager = UnsavedBackupManager(tmp_path / "autosave" / "unsaved_backup.json")
 
     saved = manager.save_session(
@@ -69,6 +74,7 @@ def test_unsaved_backup_manager_saves_and_loads_session(tmp_path: Path) -> None:
 
 
 def test_unsaved_backup_manager_saves_history_snapshot(tmp_path: Path) -> None:
+    """未保存バックアップの管理処理が履歴のスナップショットを保存することを確認する。"""
     manager = UnsavedBackupManager(tmp_path / "autosave" / "unsaved_backup.json")
     session = UnsavedBackupSession(
         tabs=[UnsavedBackup(text="history draft", encoding="utf-8")],
@@ -85,6 +91,7 @@ def test_unsaved_backup_manager_saves_history_snapshot(tmp_path: Path) -> None:
 
 
 def test_unsaved_backup_manager_loads_history_snapshot_session(tmp_path: Path) -> None:
+    """未保存バックアップの管理処理が履歴のスナップショットのセッションを読み込むことを確認する。"""
     manager = UnsavedBackupManager(tmp_path / "autosave" / "unsaved_backup.json")
     snapshot_path = manager.save_history_snapshot(
         UnsavedBackupSession(
@@ -100,6 +107,7 @@ def test_unsaved_backup_manager_loads_history_snapshot_session(tmp_path: Path) -
 
 
 def test_unsaved_backup_manager_clears_backup(tmp_path: Path) -> None:
+    """未保存バックアップの管理処理がバックアップを消すことを確認する。"""
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     manager = UnsavedBackupManager(backup_path)
     manager.save(UnsavedBackup(text="draft text", encoding="utf-8"))
@@ -113,10 +121,12 @@ def test_unsaved_backup_manager_ignores_replace_permission_error(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
+    """未保存バックアップの管理処理が置換のアクセス権限エラーを無視することを確認する。"""
     backup_path = tmp_path / "autosave" / "unsaved_backup.json"
     manager = UnsavedBackupManager(backup_path)
 
     def deny_replace(self: Path, target: Path) -> Path:
+        """バックアップを置き換えられない権限状態を再現する。"""
         _ = self, target
         raise PermissionError("locked")
 

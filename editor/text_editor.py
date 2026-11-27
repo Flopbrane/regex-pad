@@ -52,6 +52,7 @@ class InlineColorData(QTextBlockUserData):
     """行内の色コードとUTF-16での開始位置を保持する。"""
 
     def __init__(self, colors: list[tuple[int, str]]) -> None:
+        """行内で検出した色コードとQtの文字位置を保持する。"""
         super().__init__()
         self.colors = colors
 
@@ -69,6 +70,7 @@ class HtmlSyntaxHighlighter(QSyntaxHighlighter):
     WORDPRESS_COMMENT_START: re.Pattern[str] = re.compile(r"<!--\s*/?wp:")
 
     def __init__(self, document: QTextDocument) -> None:
+        """HTMLのタグとコメントを色付けする書式を初期化する。"""
         super().__init__(document)
         self.enabled = True
         self.inline_color_enabled = False
@@ -193,6 +195,7 @@ class TextEditor(QPlainTextEdit):
     inline_color_clicked = Signal(int, str)
 
     def __init__(self) -> None:
+        """編集欄、左右の補助欄、検索や表示のイベントを初期化する。"""
         super().__init__()
         self.line_number_area = LineNumberArea(self)
         self.search_marker_area = SearchMarkerArea(self)
@@ -202,6 +205,7 @@ class TextEditor(QPlainTextEdit):
         self.search_matches: list[SearchMatch] = []
         self.search_exclusion_matches: list[SearchMatch] = []
         self.search_scope_bounds: tuple[int, int] | None = None
+        self.current_search_match_bounds: tuple[int, int] | None = None
         self._search_position_map: dict[int, int] | None = None
         self._highlight_selection_bounds: tuple[int, int] | None = None
         self.search_marker_color = "#ffff00"
@@ -231,6 +235,9 @@ class TextEditor(QPlainTextEdit):
         self.blockCountChanged.connect(self.update_line_number_area_width)
         self.updateRequest.connect(self.update_line_number_area)
         self.cursorPositionChanged.connect(self._apply_search_highlights)
+        self.selectionChanged.connect(self._discard_departed_search_match)
+        self.cursorPositionChanged.connect(self._discard_departed_search_match)
+        self.textChanged.connect(self._clear_current_search_match)
         self.update_editor_margins()
 
     def set_word_wrap_enabled(self, enabled: bool) -> None:
@@ -401,7 +408,7 @@ class TextEditor(QPlainTextEdit):
         )
 
     def event(self, event: QEvent) -> bool:
-        """Scroll over the blank margin created by fixed-column wrapping."""
+        """固定桁折り返しでできた余白の上でもスクロールできるようにする。"""
         if (
             event.type() == QEvent.Type.Wheel
             and getattr(self, "fixed_column_wrap_enabled", False)
@@ -414,7 +421,7 @@ class TextEditor(QPlainTextEdit):
         return super().event(event)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        """Allow wheel scrolling while the pointer is on either side area."""
+        """ポインターが左右いずれかの欄にあるときもホイールでスクロールできるようにする。"""
         if (
             watched in (self.line_number_area, self.search_marker_area)
             and event.type() == QEvent.Type.Wheel
@@ -554,6 +561,7 @@ class TextEditor(QPlainTextEdit):
         self.search_matches = matches
         self.search_exclusion_matches = exclusion_matches or []
         self.search_scope_bounds = scope_bounds
+        self.current_search_match_bounds = None
         self._search_position_map = position_map
         self._apply_extra_selections()
         self.search_marker_area.update()
@@ -561,6 +569,28 @@ class TextEditor(QPlainTextEdit):
     def clear_search_matches(self) -> None:
         """検索マッチをクリアするメソッド"""
         self.set_search_matches([], [], None)
+
+    def mark_current_search_match(self) -> None:
+        """今の検索結果を、置換対象のマーカー一覧とは別に表示する。"""
+        cursor = self.textCursor()
+        self.current_search_match_bounds = cursor.selectionStart(), cursor.selectionEnd()
+        self._apply_extra_selections()
+        self.search_marker_area.update()
+
+    def _discard_departed_search_match(self) -> None:
+        """カーソルまたは選択範囲が一致箇所から離れたらマーカーを消す。"""
+        if self.current_search_match_bounds is None:
+            return
+        cursor = self.textCursor()
+        if self.current_search_match_bounds != (cursor.selectionStart(), cursor.selectionEnd()):
+            self._clear_current_search_match()
+
+    def _clear_current_search_match(self) -> None:
+        """今回の検索結果のマーカーを消し、表示を更新する。"""
+        if self.current_search_match_bounds is not None:
+            self.current_search_match_bounds = None
+            self._apply_extra_selections()
+            self.search_marker_area.update()
 
     def set_search_marker_colors(
         self,
@@ -803,10 +833,23 @@ class TextEditor(QPlainTextEdit):
         if scope_selection is not None:
             selections.append(scope_selection)
         selections.extend(self._search_match_selections(position_map))
+        if (
+            self.current_search_match_bounds is not None
+            and self.current_search_match_bounds[1] < self.document().characterCount()
+        ):
+            start, end = self.current_search_match_bounds
+            current = QTextEdit.ExtraSelection()
+            current.cursor = QTextCursor(self.document())
+            current.cursor.setPosition(start)
+            current.cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+            current.format.setBackground(QColor(self.current_match_marker_color))
+            if start == end:
+                current.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
+            selections.append(current)
         self.setExtraSelections(selections)
 
     def _search_cursor_positions(self) -> dict[int, int]:
-        """Convert marker offsets to Qt UTF-16 positions in one document pass."""
+        """文書を1回たどって、マーカーの位置をQtのUTF-16位置に変換する。"""
         if self._search_position_map is not None:
             return self._search_position_map
         positions: set[int] = set()
@@ -832,7 +875,7 @@ class TextEditor(QPlainTextEdit):
     def _search_scope_selection(
         self, position_map: dict[int, int]
     ) -> QTextEdit.ExtraSelection | None:
-        """Create the retained selected-range highlight used during scoped search."""
+        """範囲限定検索で保持している選択範囲を表示するハイライトを作る。"""
         if self.search_scope_bounds is None:
             return None
         scope_start, scope_end = self.search_scope_bounds
@@ -972,7 +1015,7 @@ class TextEditor(QPlainTextEdit):
         """検索マーカーエリアを描画するメソッド"""
         painter = QPainter(self.search_marker_area)
         painter.fillRect(event.rect(), QColor("#f7f7f7"))
-        if not self.search_matches:
+        if not self.search_matches and self.current_search_match_bounds is None:
             return
 
         painter.setPen(Qt.PenStyle.NoPen)
@@ -988,6 +1031,11 @@ class TextEditor(QPlainTextEdit):
         }
         for line_number in marked_lines:
             marker_y: int = round((line_number / block_count) * area_height)
+            painter.drawRect(2, marker_y, area_width - 4, 3)
+        if self.current_search_match_bounds is not None:
+            line_number = self.document().findBlock(self.current_search_match_bounds[0]).blockNumber()
+            marker_y = min(max(0, area_height - 3), round((line_number / block_count) * area_height))
+            painter.setBrush(QColor(self.current_match_marker_color))
             painter.drawRect(2, marker_y, area_width - 4, 3)
 
 

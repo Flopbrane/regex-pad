@@ -1,3 +1,5 @@
+"""HTML変換を検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -15,6 +17,7 @@ from search.search_engine import SearchOptions
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -23,6 +26,7 @@ def app() -> QApplication:
 
 
 def select_text(window: MainWindow, start: int, end: int) -> None:
+    """テスト対象の文字列をエディターで選択する。"""
     cursor = window.editor.textCursor()
     cursor.setPosition(start)
     cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
@@ -32,6 +36,7 @@ def select_text(window: MainWindow, start: int, end: int) -> None:
 def test_html_escape_selected_text_preserves_quotes_and_japanese(
     app: QApplication,
 ) -> None:
+    """HTMLのエスケープの選択文字列が引用符と日本語を維持することを確認する。"""
     _ = app
     window = MainWindow()
     source_text = '前 <h1 class="title">タイトル & 本文</h1> 後'
@@ -46,6 +51,7 @@ def test_html_escape_selected_text_preserves_quotes_and_japanese(
 
 
 def test_html_unescape_selected_text(app: QApplication) -> None:
+    """HTMLのエスケープ解除の選択文字列を確認する。"""
     _ = app
     window = MainWindow()
     source_text = "前 &lt;h1&gt;タイトル&lt;/h1&gt; 後"
@@ -60,6 +66,7 @@ def test_html_unescape_selected_text(app: QApplication) -> None:
 def test_html_escape_changes_only_selection_and_can_be_undone(
     app: QApplication,
 ) -> None:
+    """選択範囲だけがHTMLエスケープされ、Undoで復元できることを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "keep <p>本文</p> keep"
@@ -78,6 +85,7 @@ def test_html_escape_changes_only_selection_and_can_be_undone(
 def test_wordpress_code_block_escapes_multiline_indented_html(
     app: QApplication,
 ) -> None:
+    """WordPressのコードブロックが複数行のインデント付きのHTMLをエスケープすることを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "before\n  <h2>タイトル</h2>\n  <p>本文です。</p>\nafter"
@@ -108,6 +116,7 @@ def test_wordpress_complex_blocks_converts_selected_markdown_table(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """WordPressの複雑ながに変換するの選択中のMarkdownの表を拒否することを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "before\n| Purpose | AI |\n|---|---|\n| B-roll | Runway |\nafter"
@@ -117,6 +126,7 @@ def test_wordpress_complex_blocks_converts_selected_markdown_table(
     select_text(window, start, start + len(selected_text))
 
     def fake_convert(load_data: str) -> str:
+        """Markdown変換の結果や失敗をテスト用に再現する。"""
         assert load_data == selected_text
         return "<!-- wp:table -->\n<table></table>\n<!-- /wp:table -->"
 
@@ -135,6 +145,7 @@ def test_wordpress_complex_blocks_converts_selected_markdown_table(
 def test_wordpress_table_transform_converts_selected_markdown_table(
     app: QApplication,
 ) -> None:
+    """選択したMarkdownの表がWordPressのテーブルブロックに変換されることを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "before\n| Purpose | AI |\n|---|---|\n| B-roll | Runway |\nafter"
@@ -154,6 +165,7 @@ def test_wordpress_table_transform_converts_selected_markdown_table(
 def test_wordpress_table_transform_replaces_whole_paragraph_block(
     app: QApplication,
 ) -> None:
+    """WordPressの表の変換が段落ブロック全体を置き換えることを確認する。"""
     _ = app
     window = MainWindow()
     source_text = (
@@ -179,6 +191,7 @@ def test_wordpress_table_transform_replaces_whole_paragraph_block(
 def test_wordpress_table_transform_rejects_partial_paragraph_selection(
     app: QApplication,
 ) -> None:
+    """WordPressの表の変換が一部の段落の選択範囲を拒否することを確認する。"""
     _ = app
     window = MainWindow()
     source_text = (
@@ -200,6 +213,7 @@ def test_wordpress_table_transform_rejects_partial_paragraph_selection(
 def test_wordpress_complex_blocks_converts_selected_markdown_list(
     app: QApplication,
 ) -> None:
+    """WordPressの複雑ながに変換するの選択中のMarkdownのリストを拒否することを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "before\n- Runway\n- Kling\nafter"
@@ -218,6 +232,7 @@ def test_wordpress_complex_blocks_converts_selected_markdown_list(
 def test_wordpress_list_transform_converts_selected_markdown_list(
     app: QApplication,
 ) -> None:
+    """WordPressのリストの変換が選択中のMarkdownのリストに変換することを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "before\n1. Runway\n2. Kling\nafter"
@@ -237,6 +252,7 @@ def test_wordpress_list_transform_converts_selected_markdown_list(
 def test_wordpress_list_frame_transform_uses_current_frame_settings(
     app: QApplication,
 ) -> None:
+    """WordPressのリストの枠の変換が現在の枠の設定を使うことを確認する。"""
     _ = app
     window = MainWindow()
     window.frame_alignment = "right"
@@ -267,6 +283,7 @@ def test_wordpress_complex_blocks_failure_keeps_selection_text(
     app: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """WordPressの複雑なが失敗の保持するの選択範囲の文字列を拒否することを確認する。"""
     _ = app
     window = MainWindow()
     source_text = "before\nplain text\nafter"
@@ -276,6 +293,7 @@ def test_wordpress_complex_blocks_failure_keeps_selection_text(
     select_text(window, start, start + len(selected_text))
 
     def fake_convert(load_data: str) -> str:
+        """Markdown変換の結果や失敗をテスト用に再現する。"""
         assert load_data == selected_text
         from editor.wordpress_markdown_converter import WordPressMarkdownConversionError
 
@@ -293,6 +311,7 @@ def test_wordpress_complex_blocks_failure_keeps_selection_text(
 
 
 def test_html_transform_does_nothing_without_selection(app: QApplication) -> None:
+    """HTML変換のの何もない（選択範囲なし）を確認する。"""
     _ = app
     window = MainWindow()
     source_text = "<h1>タイトル</h1>"
@@ -306,6 +325,7 @@ def test_html_transform_does_nothing_without_selection(app: QApplication) -> Non
 
 
 def test_html_transform_context_menu_is_available(app: QApplication) -> None:
+    """HTML変換のコンテキストメニューが利用できることを確認する。"""
     _ = app
     window = MainWindow()
     context_menu = window._create_editor_context_menu()
@@ -344,6 +364,7 @@ def test_html_transform_context_menu_is_available(app: QApplication) -> None:
 
 
 def test_html_transform_does_not_break_regex_search(app: QApplication) -> None:
+    """HTML変換の行わないの区切りの正規表現の検索を確認する。"""
     _ = app
     window = MainWindow()
     window.editor.setPlainText("<h1>タイトル</h1>")

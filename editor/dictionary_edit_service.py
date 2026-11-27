@@ -1,4 +1,4 @@
-"""Safely edit user copies of insertion dictionaries, excluding Linter references."""
+"""挿入辞書のユーザー用コピーを安全に編集する。Linterの参照辞書は対象外。"""
 
 from __future__ import annotations
 
@@ -17,13 +17,14 @@ EDITABLE_DICTIONARIES = (*TAG_DICTIONARIES, "paragraph_insert_dict.json")
 
 
 class DictionaryEditError(ValueError):
-    """Raised when a dictionary cannot be loaded, validated, or saved."""
+    """辞書を読み込み、検証、保存できない場合に発生する。"""
 
 
 class DictionaryEditService:
-    """Keep bundled definitions intact and write validated user copies."""
+    """同梱辞書を保ち、検証済みのユーザー用コピーを書き込む。"""
 
     def __init__(self, user_folder: Path | None = None) -> None:
+        """同梱辞書とユーザー用辞書の場所を設定する。"""
         self.bundled_folder = bundled_base_dir() / "dictionaries"
         target = user_folder or app_base_dir() / "user_dictionaries"
         self.user_folder = (
@@ -33,7 +34,7 @@ class DictionaryEditService:
         )
 
     def load(self, name: str) -> object:
-        """Load one allowlisted dictionary from the user folder or bundle."""
+        """編集対象の辞書1件をユーザーフォルダーまたは同梱辞書から読み込む。"""
         self._check_name(name)
         load_file_path = self.user_folder / name
         if not load_file_path.is_file():
@@ -44,7 +45,7 @@ class DictionaryEditService:
             raise DictionaryEditError(f"Cannot read {load_file_path}: {error}") from error
 
     def validate(self, name: str, data: object) -> None:
-        """Apply the same dictionary checks as insertion, before any write."""
+        """書き込む前に、挿入時と同じ検証を辞書に適用する。"""
         self._check_name(name)
         if name in TAG_DICTIONARIES and not isinstance(data, list):
             raise DictionaryEditError("Tag dictionary root must be an array.")
@@ -74,7 +75,7 @@ class DictionaryEditService:
             raise DictionaryEditError(str(error)) from error
 
     def save(self, name: str, data: object) -> Path:
-        """Validate, create missing user copies, and atomically replace one file."""
+        """辞書を検証し、必要ならユーザー用コピーの場所を用意して、ファイルを安全に置き換える。"""
         self.validate(name, data)
         save_file_path = self.user_folder / name
         temporary_path: Path | None = None
@@ -105,5 +106,6 @@ class DictionaryEditService:
 
     @staticmethod
     def _check_name(name: str) -> None:
+        """指定された辞書名が編集対象かを確認する。"""
         if name not in EDITABLE_DICTIONARIES:
             raise DictionaryEditError(f"Dictionary is not editable: {name}")

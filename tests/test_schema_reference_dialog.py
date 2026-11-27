@@ -1,3 +1,5 @@
+"""スキーマの参照資料のダイアログを検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -20,6 +22,7 @@ STANDARDS_PATH = PROJECT_ROOT / "dictionaries" / "standards"
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -30,6 +33,7 @@ def app() -> QApplication:
 def test_schema_reference_dialog_is_modeless_and_has_separate_tables(
     app: QApplication,
 ) -> None:
+    """スキーマの参照資料のダイアログがモードレスのになるとともに、別々の表を持つことを確認する。"""
     _ = app
     translator = Translator(PROJECT_ROOT / "resources", "ja")
     dialog = SchemaReferenceDialog(STANDARDS_PATH, translator)
@@ -49,6 +53,7 @@ def test_schema_reference_dialog_is_modeless_and_has_separate_tables(
 
 
 def test_schema_reference_dialog_follows_language_change(app: QApplication) -> None:
+    """スキーマの参照資料のダイアログが言語の変更に従うことを確認する。"""
     _ = app
     translator = Translator(PROJECT_ROOT / "resources", "ja")
     dialog = SchemaReferenceDialog(STANDARDS_PATH, translator)
@@ -75,6 +80,7 @@ def test_schema_reference_dialog_follows_language_change(app: QApplication) -> N
 def test_main_window_opens_reference_without_disabling_editor(
     app: QApplication,
 ) -> None:
+    """無効化のエディターを省いた場合、メインウインドウが参照資料を開くことを確認する。"""
     _ = app
     window = MainWindow()
     window.show()

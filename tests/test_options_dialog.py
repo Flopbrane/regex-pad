@@ -1,3 +1,5 @@
+"""設定画面を検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -16,6 +18,7 @@ from settings.settings_manager import EditorSettings
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -24,6 +27,7 @@ def app() -> QApplication:
 
 
 def test_options_dialog_groups_items_by_tabs(app: QApplication) -> None:
+    """設定画面のグループの項目によるのタブを確認する。"""
     _ = app
     dialog = OptionsDialog(Translator(Path("resources"), "ja"), EditorSettings())
 
@@ -93,6 +97,7 @@ def test_options_dialog_groups_items_by_tabs(app: QApplication) -> None:
 
 
 def test_options_dialog_returns_editable_values(app: QApplication) -> None:
+    """設定画面が編集可能な値を返すことを確認する。"""
     _ = app
     dialog = OptionsDialog(
         Translator(Path("resources"), "ja"),
@@ -188,6 +193,7 @@ def test_options_dialog_returns_editable_values(app: QApplication) -> None:
 def test_options_dialog_shows_default_backup_folder_hint(
     app: QApplication,
 ) -> None:
+    """設定画面が既定のバックアップ先のヒントを表示することを確認する。"""
     _ = app
     dialog = OptionsDialog(Translator(Path("resources"), "en"), EditorSettings())
 

@@ -5051,3 +5051,9 @@ Canonical propagation and final concentrated-test results:
 
 - 主記録は`SCRIPT_STEPS.md`。段落の`fontSize`/クラスの静的疑義、`<u style>`のVS Code拡張機能由来の注意、編集上のInfo、壊れた`<u>`の構文Errorを分離。原稿の自動修正なし。
 - canonical project `D:\PC\Python\regex_pad_project` でpytest 1040件成功、Ruff・Pyright成功。Gutenberg本体の検証器、実機GUI、EXEは未確認。
+
+## 2026-11-28 PythonのDocstringを日本語で整備
+
+- `D:\PC\Python\regex_pad_project` でGit管理下のPython 177ファイルを確認し、165ファイルを更新した。モジュール、クラス、メソッド、内部関数、テストを対象に、未記載の1,682件を追加し、英語の436件を翻訳した。既存の日本語の295件は維持した。
+- 全2,413箇所の日本語Docstringと、全ファイルの構文・コンパイルを検証した。Docstringの追加・翻訳時は、編集前後でDocstringを除いた抽象構文木が一致した。その後、テスト用の説明文を推敲し、Docstringの追加で冗長になったテスト内の `pass` 1行を削除した。
+- 指定のPython 3.12環境で全体pytest 1,071件成功。RuffとPyrightは指摘なし。`git diff --check` 成功。GUIテストはオフスクリーンで実行した。

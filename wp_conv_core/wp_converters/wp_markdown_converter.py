@@ -1,4 +1,4 @@
-"""Convert selected complex Markdown blocks to WordPress Gutenberg HTML."""
+"""選択された複雑なMarkdownブロックをWordPressのGutenberg HTMLに変換する。"""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ WPComplexMarkdownBlockType = Literal["table", "list"]
 
 @dataclass(frozen=True)
 class WPComplexMarkdownBlock:
-    """Parsed complex Markdown block."""
+    """解析済みの複雑なMarkdownブロックを表す。"""
 
     block_type: WPComplexMarkdownBlockType
     lines: list[str]
@@ -30,11 +30,11 @@ class WPComplexMarkdownBlock:
 
 
 class WPComplexMarkdownConversionError(ValueError):
-    """Raised when the selection has no supported complex Markdown blocks."""
+    """選択範囲に対応する複雑なMarkdownブロックがない場合に発生する。"""
 
 
 def wp_convert_complex_markdown_blocks_to_wordpress(markdown_text: str) -> str:
-    """Convert Markdown table/list selections to WordPress block HTML."""
+    """選択したMarkdownの表・リストをWordPressのブロックHTMLに変換する。"""
     source_text = _wp_normalize_escaped_pipe_table(markdown_text)
     blocks = wp_parse_complex_markdown_blocks(source_text)
     if not blocks:
@@ -47,20 +47,20 @@ def wp_convert_complex_markdown_blocks_to_wordpress(markdown_text: str) -> str:
 
 
 def wp_convert_markdown_tables_to_wordpress(markdown_text: str) -> str:
-    """Convert only Markdown table blocks in the selection to WordPress HTML."""
+    """選択範囲内のMarkdownの表だけをWordPressのHTMLに変換する。"""
     blocks = _wp_supported_blocks_of_type(markdown_text, "table", "Markdown table")
     return "\n\n".join(_wp_render_complex_block(block) for block in blocks)
 
 
 def wp_convert_markdown_lists_to_wordpress(markdown_text: str) -> str:
-    """Convert only Markdown list blocks in the selection to WordPress HTML."""
+    """選択範囲内のMarkdownのリストだけをWordPressのHTMLに変換する。"""
     blocks = _wp_supported_blocks_of_type(markdown_text, "list", "Markdown list")
     save_data = "\n\n".join(_wp_render_complex_block(block) for block in blocks)
     return wp_normalize_adjacent_list_blocks(save_data)
 
 
 def wp_parse_complex_markdown_blocks(markdown_text: str) -> list[WPComplexMarkdownBlock]:
-    """Parse supported complex Markdown blocks from the selection."""
+    """選択範囲から変換に対応する複雑なMarkdownブロックを読み取る。"""
     blocks: list[WPComplexMarkdownBlock] = []
     table_lines: list[str] = []
     list_items: list[str] = []
@@ -99,6 +99,7 @@ def _wp_supported_blocks_of_type(
     block_type: WPComplexMarkdownBlockType,
     description: str,
 ) -> list[WPComplexMarkdownBlock]:
+    """指定種類の対応ブロックだけを抽出する。"""
     source_text = _wp_normalize_escaped_pipe_table(markdown_text)
     blocks = [
         block
@@ -113,6 +114,7 @@ def _wp_supported_blocks_of_type(
 
 
 def _wp_render_complex_block(block: WPComplexMarkdownBlock) -> str:
+    """解析済みの複雑なブロックをWordPressのHTMLに変換する。"""
     if block.block_type == "table":
         headers = _wp_split_table_row(block.lines[0])
         rows = [_wp_split_table_row(row) for row in block.lines[2:]]
@@ -135,6 +137,7 @@ def _wp_flush_table_blocks(
     blocks: list[WPComplexMarkdownBlock],
     table_lines: list[str],
 ) -> None:
+    """蓄積したMarkdown表の行をブロックにまとめる。"""
     if not table_lines:
         return
     if len(table_lines) >= 2 and WP_MARKDOWN_TABLE_SEPARATOR_PATTERN.match(table_lines[1]):
@@ -147,12 +150,14 @@ def _wp_flush_list_blocks(
     list_items: list[str],
     ordered: bool,
 ) -> None:
+    """蓄積したMarkdownリストの項目をブロックにまとめる。"""
     if list_items:
         blocks.append(WPComplexMarkdownBlock("list", list_items[:], ordered=ordered))
         list_items.clear()
 
 
 def _wp_is_table_row(stripped_line: str) -> bool:
+    """指定された行がMarkdown表に属するか判定する。"""
     return bool(
         WP_MARKDOWN_TABLE_ROW_PATTERN.match(
             _wp_normalize_escaped_table_delimiters(stripped_line)
@@ -161,6 +166,7 @@ def _wp_is_table_row(stripped_line: str) -> bool:
 
 
 def _wp_match_list_item(line: str) -> tuple[str, bool] | None:
+    """指定された行がMarkdownのリスト項目に一致するか調べる。"""
     ordered_match = WP_MARKDOWN_ORDERED_LIST_PATTERN.match(line)
     if ordered_match is not None:
         return ordered_match.group(1), True
@@ -171,6 +177,7 @@ def _wp_match_list_item(line: str) -> tuple[str, bool] | None:
 
 
 def _wp_split_table_row(row: str) -> list[str]:
+    """Markdown表の行を区切り位置でセルに分ける。"""
     normalized_row = _wp_normalize_escaped_table_delimiters(row)
     stripped_row = normalized_row.strip()
     stripped_row = stripped_row.removeprefix("|")
@@ -203,7 +210,7 @@ def _wp_normalize_table_width(
     headers: list[str],
     rows: list[list[str]],
 ) -> tuple[list[str], list[list[str]]]:
-    """Pad simple Markdown tables so all WordPress rows have the same width."""
+    """欠けたセルを補い、単純なMarkdown表の各行の列数をそろえる。"""
     column_count = max(
         [len(headers), *(len(row) for row in rows)],
         default=0,
@@ -219,7 +226,7 @@ def _wp_normalize_table_width(
 
 
 def _wp_normalize_escaped_table_delimiters(markdown_line: str) -> str:
-    """Accept web-copied tables where structural pipes are escaped."""
+    """Webからコピーした表で、区切り用の縦棒がエスケープされていても扱えるようにする。"""
     stripped_line = markdown_line.strip()
     if stripped_line.startswith(r"\|") and stripped_line.endswith(r"\|"):
         return stripped_line.replace(r"\|", "|")
@@ -227,4 +234,5 @@ def _wp_normalize_escaped_table_delimiters(markdown_line: str) -> str:
 
 
 def _wp_normalize_escaped_pipe_table(markdown_text: str) -> str:
+    """エスケープされた縦棒を含む表を変換できる表記に整える。"""
     return markdown_text.strip()

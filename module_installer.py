@@ -1,4 +1,4 @@
-"""Prepare the portable runtime folder for regex-pad."""
+"""Regex Padのポータブル実行環境を準備する。"""
 from __future__ import annotations
 
 import argparse
@@ -25,20 +25,24 @@ REQUIREMENT_CANDIDATES = (
 
 
 def now_text() -> str:
+    """記録用の現在時刻を文字列で返す。"""
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 def project_root() -> Path:
+    """プロジェクトの基準フォルダーを返す。"""
     return Path(__file__).resolve().parent
 
 
 def default_app_root() -> Path:
+    """ポータブルアプリの既定フォルダーを返す。"""
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return project_root() / "dist" / APP_NAME
 
 
 def app_paths(app_root: Path) -> dict[str, Path]:
+    """実行環境の準備に使う各パスを求める。"""
     return {
         "app_root": app_root,
         "runtime": app_root / "runtime",
@@ -56,17 +60,20 @@ def app_paths(app_root: Path) -> dict[str, Path]:
 
 
 def ensure_portable_folders(app_root: Path) -> None:
+    """ポータブル実行に必要なフォルダーを用意する。"""
     for folder_path in app_paths(app_root).values():
         folder_path.mkdir(parents=True, exist_ok=True)
 
 
 def venv_python_path(venv_path: Path) -> Path:
+    """仮想環境のPython実行ファイルのパスを求める。"""
     if os.name == "nt":
         return venv_path / "Scripts" / "python.exe"
     return venv_path / "bin" / "python"
 
 
 def resolve_requirements(requirements_path: str | None) -> Path | None:
+    """インストールに使う依存関係ファイルを探す。"""
     if requirements_path:
         path = Path(requirements_path).resolve()
         return path if path.exists() else None
@@ -81,6 +88,7 @@ def resolve_requirements(requirements_path: str | None) -> Path | None:
 
 
 def list_pip_packages(python_path: Path) -> list[str]:
+    """pipに登録されたパッケージの一覧を取得する。"""
     if not python_path.exists():
         return []
 
@@ -97,6 +105,7 @@ def list_pip_packages(python_path: Path) -> list[str]:
 
 
 def classify_path(file_path: Path, app_root: Path) -> tuple[str, str]:
+    """インストール記録でのパスの種類を判定する。"""
     lower_path = str(file_path).lower()
     if "site-packages" in lower_path:
         return "module", "pip"
@@ -110,6 +119,7 @@ def classify_path(file_path: Path, app_root: Path) -> tuple[str, str]:
 
 
 def snapshot_files(app_root: Path) -> list[dict[str, Any]]:
+    """指定フォルダー内のファイルを記録する。"""
     if not app_root.exists():
         return []
 
@@ -135,6 +145,7 @@ def snapshot_files(app_root: Path) -> list[dict[str, Any]]:
 
 
 def build_snapshot(app_root: Path) -> dict[str, Any]:
+    """インストール状態のスナップショットを作る。"""
     paths = app_paths(app_root)
     python_path = venv_python_path(paths["venv"])
     return {
@@ -153,15 +164,18 @@ def build_snapshot(app_root: Path) -> dict[str, Any]:
 
 
 def save_json(path: Path, data: dict[str, Any]) -> None:
+    """指定先にJSONを保存する。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_json(path: Path) -> dict[str, Any]:
+    """指定先からJSONを読み込む。"""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def build_diff(before: dict[str, Any], after: dict[str, Any], app_root: Path) -> dict[str, Any]:
+    """スナップショットを比較してインストール差分を作る。"""
     before_files = {item["path"] for item in before.get("files", [])}
     app_root_text = str(app_root.resolve())
     added_files = []
@@ -186,6 +200,7 @@ def build_diff(before: dict[str, Any], after: dict[str, Any], app_root: Path) ->
 
 
 def create_venv_if_needed(venv_path: Path) -> None:
+    """ローカルの仮想環境がなければ作る。"""
     python_path = venv_python_path(venv_path)
     if python_path.exists():
         return
@@ -193,6 +208,7 @@ def create_venv_if_needed(venv_path: Path) -> None:
 
 
 def install_requirements(app_root: Path, requirements_path: Path) -> None:
+    """指定された依存関係を仮想環境に導入する。"""
     paths = app_paths(app_root)
     create_venv_if_needed(paths["venv"])
     python_path = venv_python_path(paths["venv"])
@@ -211,6 +227,7 @@ def install_requirements(app_root: Path, requirements_path: Path) -> None:
 
 
 def main() -> int:
+    """ポータブル実行環境を準備するコマンドライン入口。"""
     parser = argparse.ArgumentParser(description="Prepare portable runtime folders.")
     parser.add_argument("--app-root", default=str(default_app_root()))
     parser.add_argument("--requirements", default=None)

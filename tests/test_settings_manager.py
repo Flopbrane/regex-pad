@@ -1,3 +1,5 @@
+"""設定の管理処理を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -6,6 +8,7 @@ from settings.settings_manager import SettingsManager
 
 
 def test_load_returns_defaults_when_settings_file_does_not_exist(tmp_path) -> None:
+    """設定のファイルの行わないの存在するの場合、読み込みがを既定値にするを返すことを確認する。"""
     settings_manager = SettingsManager(tmp_path / "settings.json")
 
     settings = settings_manager.load()
@@ -56,6 +59,7 @@ def test_load_returns_defaults_when_settings_file_does_not_exist(tmp_path) -> No
 
 
 def test_save_and_load_settings(tmp_path) -> None:
+    """保存と読み込みの設定を確認する。"""
     settings_manager = SettingsManager(tmp_path / "settings.json")
 
     settings_manager.save(
@@ -151,6 +155,7 @@ def test_save_and_load_settings(tmp_path) -> None:
 
 
 def test_load_uses_defaults_for_invalid_setting_value_types(tmp_path) -> None:
+    """読み込みがを既定値にするの用の不正な設定の値の型を使うことを確認する。"""
     settings_path = tmp_path / "settings.json"
     settings_path.write_text(
         json.dumps(
@@ -181,6 +186,7 @@ def test_load_uses_defaults_for_invalid_setting_value_types(tmp_path) -> None:
 
 
 def test_save_creates_parent_folder(tmp_path) -> None:
+    """保存が親要素のフォルダーを作ることを確認する。"""
     settings_path = tmp_path / "portable" / "settings.json"
 
     SettingsManager(settings_path).save(

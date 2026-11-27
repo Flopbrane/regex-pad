@@ -1,3 +1,5 @@
+"""文字列のエディターの表示中の空白を検証する。"""
+
 from __future__ import annotations
 
 import os
@@ -15,6 +17,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 @pytest.fixture(scope="session")
 def app() -> QApplication:
+    """GUIテストで共用するQApplicationを用意する。"""
     application = QApplication.instance()
     if application is None:
         application = QApplication(sys.argv)
@@ -23,6 +26,7 @@ def app() -> QApplication:
 
 
 def test_visible_whitespace_marks_are_empty_by_default(app: QApplication) -> None:
+    """表示中の空白が空の既定でにマーカーを付けることを確認する。"""
     _ = app
     editor = TextEditor()
     editor.setPlainText("a b\tc\n")
@@ -33,6 +37,7 @@ def test_visible_whitespace_marks_are_empty_by_default(app: QApplication) -> Non
 def test_visible_whitespace_marks_follow_individual_options(
     app: QApplication,
 ) -> None:
+    """表示中の空白が追従の個別のオプションにマーカーを付けることを確認する。"""
     _ = app
     editor = TextEditor()
     editor.setPlainText("a b\tc\nwide　space")
@@ -53,6 +58,7 @@ def test_visible_whitespace_marks_follow_individual_options(
 
 
 def test_visible_whitespace_options_do_not_modify_text(app: QApplication) -> None:
+    """表示中の空白のオプションの行わないの変更の文字列を確認する。"""
     _ = app
     editor = TextEditor()
     source_text = "a b\tc\n"
@@ -77,6 +83,7 @@ def test_visible_whitespace_options_do_not_modify_text(app: QApplication) -> Non
 def test_visible_whitespace_marker_colors_are_configurable(
     app: QApplication,
 ) -> None:
+    """表示中の空白のマーカーの色が設定できるであることを確認する。"""
     _ = app
     editor = TextEditor()
 
@@ -95,6 +102,7 @@ def test_visible_whitespace_marker_colors_are_configurable(
 def test_editor_colors_apply_to_stylesheet_and_html_highlighter(
     app: QApplication,
 ) -> None:
+    """エディターの色の適用のへのスタイルシートとHTMLの構文の色付け処理を確認する。"""
     _ = app
     editor = TextEditor()
 
@@ -114,6 +122,7 @@ def test_editor_colors_apply_to_stylesheet_and_html_highlighter(
 
 
 def test_visible_whitespace_paint_path_renders(app: QApplication) -> None:
+    """表示中の空白の描画のパスが描画することを確認する。"""
     editor = TextEditor()
     source_text = "a b\tc\n"
     editor.setPlainText(source_text)
@@ -138,6 +147,7 @@ def test_visible_whitespace_paint_path_renders(app: QApplication) -> None:
 def test_visible_whitespace_paint_uses_local_utf16_positions(
     app: QApplication, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """表示中の空白の描画がローカルのUTF-16の位置を使うことを確認する。"""
     editor = TextEditor()
     editor.resize(320, 160)
     editor.setPlainText("😀 a\nβ\tc\n")
@@ -154,6 +164,7 @@ def test_visible_whitespace_paint_uses_local_utf16_positions(
         painter: QPainter, event_rect: QRect, cursor_position: int,
         marker: str, character: str,
     ) -> None:
+        """空白記号を描画したQt位置を記録する。"""
         positions.add((cursor_position, character))
         original_paint(painter, event_rect, cursor_position, marker, character)
 
@@ -174,6 +185,7 @@ def test_visible_whitespace_paint_uses_local_utf16_positions(
 def test_fixed_column_wrap_overrides_wrap_mode_without_modifying_text(
     app: QApplication,
 ) -> None:
+    """固定桁での折り返しの上書き設定の折り返しのモード（変更するの文字列なし）を確認する。"""
     _ = app
     editor = TextEditor()
     source_text = "abcdefghijklmnopqrstuvwxyz"
@@ -196,6 +208,7 @@ def test_fixed_column_wrap_overrides_wrap_mode_without_modifying_text(
 def test_fixed_wrap_scrolls_with_wheel_on_blank_margin_and_side_areas(
     app: QApplication,
 ) -> None:
+    """固定のの折り返しのをスクロールする（ホイールでの空の余白と側の領域あり）を確認する。"""
     editor = TextEditor()
     source_text = ("x" * 120 + "\n") * 80
     editor.resize(1000, 300)
@@ -228,6 +241,7 @@ def test_fixed_wrap_scrolls_with_wheel_on_blank_margin_and_side_areas(
 
 
 def test_line_number_area_click_selects_line(app: QApplication) -> None:
+    """行番号の領域のクリックが行を選択することを確認する。"""
     editor = TextEditor()
     editor.setPlainText("first\nsecond\nthird")
     editor.resize(320, 160)
@@ -252,6 +266,7 @@ def test_line_number_area_click_selects_line(app: QApplication) -> None:
 def test_line_head_click_selects_line_when_line_numbers_hidden(
     app: QApplication,
 ) -> None:
+    """行番号の非表示のの場合、行の先頭のクリックが行を選択することを確認する。"""
     editor = TextEditor()
     editor.setPlainText("first\nsecond\nthird")
     editor.resize(320, 160)
@@ -275,6 +290,7 @@ def test_line_head_click_selects_line_when_line_numbers_hidden(
 
 
 def _block_center_y(editor: TextEditor, block_number: int) -> float:
+    """指定行の描画領域の縦の中心を求める。"""
     block = editor.document().findBlockByNumber(block_number)
     block_geometry = editor.blockBoundingGeometry(block).translated(
         editor.contentOffset()

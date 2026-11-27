@@ -1,4 +1,4 @@
-"""Preview approval, source binding and one-step Undo in the real main window."""
+"""メインウインドウでプレビュー承認、元文書の照合、1回のUndoを検証する。"""
 
 from pathlib import Path
 
@@ -13,6 +13,7 @@ from main import MainWindow
 
 @pytest.fixture
 def window(tmp_path: Path, monkeypatch):
+    """テスト用の設定パスを持つメインウインドウを用意する。"""
     app = QApplication.instance() or QApplication([])
     main = MainWindow(
         settings_path=tmp_path / "settings.json", restore_unsaved_backup=False
@@ -34,6 +35,7 @@ def window(tmp_path: Path, monkeypatch):
 
 
 def macro():
+    """テストで実行するマクロ定義を作る。"""
     return MacroJsonData(
         1,
         "two steps",
@@ -50,6 +52,7 @@ def macro():
 def test_toolbar_runs_once_and_approval_applies_exact_preview_with_one_undo(
     window, monkeypatch
 ):
+    """ツールバーからの実行が1回で、承認するとプレビューどおりに適用され、1回のUndoで戻せることを確認する。"""
     controller = window.macro_execution_controller
     editor_controller = window.macro_editor_controller
     assert controller is not None and editor_controller is not None
@@ -59,12 +62,14 @@ def test_toolbar_runs_once_and_approval_applies_exact_preview_with_one_undo(
     original_run = controller.manager.runner.run
 
     def run_once(*args):
+        """マクロの実行回数を記録して本来の処理を呼ぶ。"""
         calls.append(True)
         return original_run(*args)
 
     monkeypatch.setattr(controller.manager.runner, "run", run_once)
 
     def approve(dialog):
+        """プレビュー画面で適用の承認を再現する。"""
         assert window.editor.toPlainText() == "a 😀"
         assert dialog.before.isReadOnly() and dialog.after.isReadOnly()
         assert dialog.after.toPlainText() == "c 😀"
@@ -84,6 +89,7 @@ def test_toolbar_runs_once_and_approval_applies_exact_preview_with_one_undo(
 
 
 def test_cancel_preserves_document_and_undo_state(window, monkeypatch):
+    """キャンセルが文書とUndoの状態を維持することを確認する。"""
     controller = window.macro_execution_controller
     assert controller is not None
     monkeypatch.setattr(
@@ -101,12 +107,14 @@ def test_cancel_preserves_document_and_undo_state(window, monkeypatch):
 def test_stale_document_or_tab_never_receives_preview_output(
     window, monkeypatch, change
 ):
+    """文書の内容やタブが変わった場合、古いプレビューの結果が適用されないことを確認する。"""
     controller = window.macro_execution_controller
     assert controller is not None
     target = window.editor
     definition = macro()
 
     def change_before_approval(dialog):
+        """プレビューを承認する前に原稿または対象タブを変更する。"""
         if change == "text":
             target.insertPlainText("edited ")
         elif change == "revision":
@@ -137,6 +145,7 @@ def test_stale_document_or_tab_never_receives_preview_output(
 def test_invalid_or_unchanged_preview_cannot_be_applied_even_if_accepted(
     window, monkeypatch
 ):
+    """不正または変更のないプレビューは、ダイアログで確定しても適用できないことを確認する。"""
     controller = window.macro_execution_controller
     assert controller is not None
     definition = macro()
@@ -144,6 +153,7 @@ def test_invalid_or_unchanged_preview_cannot_be_applied_even_if_accepted(
     definition.steps[1].regular_expression = True
 
     def try_accept(dialog):
+        """適用できないプレビューに対する確定操作を再現する。"""
         assert not dialog.apply_button.isEnabled()
         assert dialog.after.toPlainText() == "a 😀"
         return QDialog.DialogCode.Accepted
@@ -154,10 +164,12 @@ def test_invalid_or_unchanged_preview_cannot_be_applied_even_if_accepted(
 
 
 def test_unexpected_runner_error_is_reported_without_body_change(window, monkeypatch):
+    """本文の変更を省いた場合、想定外の実行処理のエラーが報告されることを確認する。"""
     controller = window.macro_execution_controller
     assert controller is not None
 
     def fail(*args):
+        """処理が失敗する場合をテスト用に発生させる。"""
         raise RuntimeError("unexpected engine failure")
 
     messages = []

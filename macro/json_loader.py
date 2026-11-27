@@ -16,6 +16,7 @@ class MacroJsonLoader:
     """設定済みのフォルダからUTF-8 JSONを読み込む。"""
 
     def __init__(self, macro_folder: Path | None = None) -> None:
+        """マクロJSONを読み込む基準フォルダーを設定する。"""
         self.macro_folder: Path = macro_folder or default_macro_folder()
 
     def load(self, load_file_path: str | Path) -> MacroJsonData:

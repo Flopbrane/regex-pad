@@ -1,3 +1,5 @@
+"""正規表現ヘルプの内容を検証する。"""
+
 from __future__ import annotations
 
 import json
@@ -23,11 +25,13 @@ SECTIONS_JA = [
 
 
 def load_items(language: str) -> list[dict[str, str]]:
+    """指定された言語の正規表現ヘルプ項目を読み込む。"""
     load_file_path = Path(f"resources/regex_help_{language}.json")
     return json.loads(load_file_path.read_text(encoding="utf-8"))
 
 
 def test_languages_have_matching_examples_and_five_sections() -> None:
+    """言語が一致するの例と5つの区分を持つことを確認する。"""
     english_items = load_items("en")
     japanese_items = load_items("ja")
     assert len(english_items) == len(japanese_items) >= 30
@@ -43,6 +47,7 @@ def test_languages_have_matching_examples_and_five_sections() -> None:
 
 
 def test_every_replacement_example_matches_actual_regex_pad_result() -> None:
+    """すべての置換の例が実際の正規表現の補うの結果に一致することを確認する。"""
     engine = SearchEngine()
     for item in load_items("en"):
         if item["mode"] != "replace":
@@ -57,6 +62,7 @@ def test_every_replacement_example_matches_actual_regex_pad_result() -> None:
 
 
 def test_invalid_replacement_and_normalization_are_explained_accurately() -> None:
+    """不正な置換と正規化が説明済みの正確にであることを確認する。"""
     items = load_items("en")
     invalid = next(item for item in items if item["mode"] == "invalid")
     with pytest.raises(re.error, match="bad escape"):
@@ -73,6 +79,7 @@ def test_invalid_replacement_and_normalization_are_explained_accurately() -> Non
 
 
 def test_capture_reuse_and_headings_are_explicit_in_both_languages() -> None:
+    """取り込みの再利用と見出しが明示的な内の両方の言語であることを確認する。"""
     english_items = load_items("en")
     japanese_items = load_items("ja")
     for items, marker in ((english_items, "reuse"), (japanese_items, "再利用")):
@@ -87,6 +94,7 @@ def test_capture_reuse_and_headings_are_explicit_in_both_languages() -> None:
 
 
 def test_unicode_normalization_guides_still_describe_the_dedicated_route() -> None:
+    """Unicodeの正規化が引き続きの説明するの専用の経路へ案内することを確認する。"""
     english_readme = Path("README.md").read_text(encoding="utf-8")
     japanese_readme = Path("README_jp.md").read_text(encoding="utf-8")
     for form in ("NFC", "NFD", "NFKC", "NFKD"):

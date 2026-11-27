@@ -1,4 +1,4 @@
-"""Dry-run-first cleaner for the regex-pad portable folder."""
+"""削除予定を先に表示するRegex Padのポータブルフォルダー整理ツール。"""
 from __future__ import annotations
 
 import argparse
@@ -19,16 +19,19 @@ WORDPRESS_DATA_DIRS = (
 
 
 def default_app_root() -> Path:
+    """ポータブルアプリの既定フォルダーを求める。"""
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent / "dist" / APP_NAME
 
 
 def records_dir(app_root: Path) -> Path:
+    """インストール時の記録を置くフォルダーを求める。"""
     return app_root / "install_records"
 
 
 def append_log(app_root: Path, message: str) -> None:
+    """整理処理のログを追記する。"""
     path = app_root / "logs" / "cleaner.log"
     path.parent.mkdir(parents=True, exist_ok=True)
     old_text = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -36,6 +39,7 @@ def append_log(app_root: Path, message: str) -> None:
 
 
 def load_install_diff(app_root: Path) -> dict[str, Any]:
+    """過去のインストール差分を読み込む。"""
     path = records_dir(app_root) / "install_diff.json"
     if not path.exists():
         return {"added_files": [], "added_pip_packages": []}
@@ -43,6 +47,7 @@ def load_install_diff(app_root: Path) -> dict[str, Any]:
 
 
 def is_inside(child_path: Path, parent_path: Path) -> bool:
+    """対象パスが基準フォルダー内に収まるか判定する。"""
     try:
         resolved_child = child_path.resolve()
         resolved_parent = parent_path.resolve()
@@ -53,7 +58,7 @@ def is_inside(child_path: Path, parent_path: Path) -> bool:
 
 
 def validate_delete_target(candidate: Path, app_root: Path) -> None:
-    """Reject the application root, escapes and reparse-point traversal."""
+    """アプリのルート、フォルダー外への脱出、再解析ポイントの経由を削除対象から除外する。"""
     if not is_inside(candidate, app_root):
         raise ValueError(f"Refusing cleanup outside the app folder: {candidate}")
     for path in (candidate, *candidate.parents):
@@ -70,6 +75,7 @@ def validate_delete_target(candidate: Path, app_root: Path) -> None:
 
 
 def delete_candidates(app_root: Path) -> list[Path]:
+    """指定された候補を再検証して削除する。"""
     app_root = app_root.resolve()
     candidates: list[Path] = []
     for item in load_install_diff(app_root).get("added_files", []):
@@ -103,6 +109,7 @@ def write_report(
     app_root: Path, mode: str, candidates: list[Path], *,
     deleted: list[Path] | None = None, errors: list[str] | None = None,
 ) -> None:
+    """整理の結果をレポートに書く。"""
     report = {
         "app_name": APP_NAME,
         "mode": mode,
@@ -121,6 +128,7 @@ def write_report(
 
 
 def scan(app_root: Path) -> int:
+    """インストール記録から整理対象を調べる。"""
     candidates = delete_candidates(app_root)
     write_report(app_root, "scan", candidates)
     print(f"App folder: {app_root}")
@@ -131,6 +139,7 @@ def scan(app_root: Path) -> int:
 
 
 def dry_run(app_root: Path) -> int:
+    """削除予定を表示する。"""
     candidates = delete_candidates(app_root)
     write_report(app_root, "dry-run", candidates)
     print("Dry-run only. No files were deleted.")
@@ -141,6 +150,7 @@ def dry_run(app_root: Path) -> int:
 
 
 def clean(app_root: Path, yes: bool) -> int:
+    """確認された整理処理を実行する。"""
     app_root = app_root.resolve()
     candidates = delete_candidates(app_root)
     write_report(app_root, "clean", candidates)
@@ -179,6 +189,7 @@ def clean(app_root: Path, yes: bool) -> int:
 
 
 def main() -> int:
+    """整理ツールのコマンドライン入口。"""
     parser = argparse.ArgumentParser(description="Review/remove recorded app additions and local WordPress preview data.")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--scan", action="store_true")
