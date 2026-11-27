@@ -1,4 +1,10 @@
 {
+  "options.item.inline_color_preview": "インライン色見本を表示",
+  "inline_color.title": "インライン色の選択",
+  "inline_color.original": "変更前の色：{code}",
+  "inline_color.apply": "適用",
+  "inline_color.cancel": "キャンセル",
+  "inline_color.stale": "対象が変わりました。色見本を選び直してください。",
   "wordpress_preview.status.download": "WPコア取得中",
   "wordpress_preview.stage.download": "WordPressコアをダウンロードしています…",
   "wordpress_preview.status.waiting": "待機中",

@@ -19,6 +19,7 @@ class EditorSettings:
     fixed_column_wrap_column: int = 80
     startup_restore_enabled: bool = True
     show_full_path_in_title: bool = True
+    inline_color_preview_enabled: bool = False
     language_code: str = "ja"
     default_encoding: str = "utf-8"
     newline_code: str = "lf"
@@ -102,6 +103,7 @@ class SettingsManager:
             show_full_path_in_title=_setting_bool(
                 load_data, "show_full_path_in_title", True
             ),
+            inline_color_preview_enabled=_setting_bool(load_data, "inline_color_preview_enabled", False),
             language_code=_setting_str(load_data, "language_code", "ja"),
             default_encoding=_setting_str(load_data, "default_encoding", "utf-8"),
             newline_code=_setting_str(load_data, "newline_code", "lf"),
@@ -188,6 +190,7 @@ class SettingsManager:
         fixed_column_wrap_column: int,
         startup_restore_enabled: bool,
         show_full_path_in_title: bool = True,
+        inline_color_preview_enabled: bool = False,
         language_code: str,
         default_encoding: str,
         newline_code: str,
@@ -237,6 +240,7 @@ class SettingsManager:
             "fixed_column_wrap_column": max(1, fixed_column_wrap_column),
             "startup_restore_enabled": startup_restore_enabled,
             "show_full_path_in_title": show_full_path_in_title,
+            "inline_color_preview_enabled": inline_color_preview_enabled,
             "language_code": language_code,
             "default_encoding": default_encoding,
             "newline_code": newline_code,

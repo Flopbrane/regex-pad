@@ -111,6 +111,7 @@ class OptionsDialogValues:
     fixed_column_wrap_column: int
     startup_restore_enabled: bool
     show_full_path_in_title: bool
+    inline_color_preview_enabled: bool
     language_code: str
     default_encoding: str
     newline_code: str
@@ -176,6 +177,7 @@ class OptionsDialog(QDialog):
         self.visible_newlines_checkbox = QCheckBox(self)
         self.startup_restore_checkbox = QCheckBox(self)
         self.show_full_path_checkbox = QCheckBox(self)
+        self.inline_color_preview_checkbox = QCheckBox(self)
         self.language_combo = QComboBox(self)
         self.default_encoding_combo = QComboBox(self)
         self.newline_combo = QComboBox(self)
@@ -273,6 +275,7 @@ class OptionsDialog(QDialog):
         self.show_full_path_checkbox.setText(
             self.translator.text("options.item.show_full_path")
         )
+        self.inline_color_preview_checkbox.setText(self.translator.text("options.item.inline_color_preview"))
         self.hover_hints_checkbox.setText(
             self.translator.text("options.hover_hints_enabled")
         )
@@ -313,6 +316,7 @@ class OptionsDialog(QDialog):
         self.visible_newlines_checkbox.setChecked(settings.visible_newlines_enabled)
         self.startup_restore_checkbox.setChecked(settings.startup_restore_enabled)
         self.show_full_path_checkbox.setChecked(settings.show_full_path_in_title)
+        self.inline_color_preview_checkbox.setChecked(settings.inline_color_preview_enabled)
         self._set_language_combo(settings.language_code)
         self._set_preset_combo(
             self.default_encoding_combo,
@@ -443,6 +447,7 @@ class OptionsDialog(QDialog):
             fixed_column_wrap_column=self.fixed_column_wrap_column_spin.value(),
             startup_restore_enabled=self.startup_restore_checkbox.isChecked(),
             show_full_path_in_title=self.show_full_path_checkbox.isChecked(),
+            inline_color_preview_enabled=self.inline_color_preview_checkbox.isChecked(),
             language_code=str(self.language_combo.currentData()),
             default_encoding=str(self.default_encoding_combo.currentData()),
             newline_code=str(self.newline_combo.currentData()),
@@ -541,6 +546,7 @@ class OptionsDialog(QDialog):
         )
         layout.addRow(self.ruler_checkbox)
         layout.addRow(self.show_full_path_checkbox)
+        layout.addRow(self.inline_color_preview_checkbox)
         layout.addRow(self.visible_spaces_checkbox)
         layout.addRow(self.visible_tabs_checkbox)
         layout.addRow(self.visible_newlines_checkbox)

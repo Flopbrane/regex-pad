@@ -1,4 +1,10 @@
 {
+  "options.item.inline_color_preview": "Show inline color swatches",
+  "inline_color.title": "Choose inline color",
+  "inline_color.original": "Original color: {code}",
+  "inline_color.apply": "Apply",
+  "inline_color.cancel": "Cancel",
+  "inline_color.stale": "The color target changed. Select its swatch again.",
   "wordpress_preview.status.download": "Downloading WP core",
   "wordpress_preview.stage.download": "Downloading WordPress core…",
   "wordpress_preview.status.waiting": "Waiting",

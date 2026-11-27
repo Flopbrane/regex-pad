@@ -80,6 +80,12 @@ Fixed rows are shown with purple text on a gray background. `Ctrl+N`, `Ctrl+O`,
 application keys and custom text shortcuts are saved in `shortcutkey_ref.json`
 beside `config.json`.
 
+## Inline color swatches (current source build)
+
+Enable **Show inline color swatches** in Options. Click a swatch after a
+`#RRGGBB` CSS value, choose a color, and press **Apply** to replace that
+occurrence. Undo restores the previous code. Swatches are editor decorations.
+
 ## Unicode character information (current source build)
 
 Select a character, then choose **View > Unicode Character Information**. The

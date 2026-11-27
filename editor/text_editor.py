@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import cast
 
 from PySide6.QtCore import (
     QEvent,
@@ -11,6 +13,7 @@ from PySide6.QtCore import (
     QRect,
     QSize,
     Qt,
+    Signal,
 )
 from PySide6.QtGui import (
     QColor,
@@ -21,15 +24,18 @@ from PySide6.QtGui import (
     QResizeEvent,
     QSyntaxHighlighter,
     QTextBlock,
+    QTextBlockUserData,
     QTextCharFormat,
     QTextCursor,
     QTextDocument,
     QTextFormat,
+    QTextLine,
     QTextOption,
     QWheelEvent,
 )
 from PySide6.QtWidgets import QApplication, QPlainTextEdit, QTextEdit
 
+from editor.inline_color import ColorContext, find_colors
 from editor.line_number_area import LineNumberArea
 from editor.search_marker_area import SearchMarkerArea
 from search.search_engine import SearchMatch
@@ -42,6 +48,14 @@ class VisibleWhitespaceMark:
     marker: str
 
 
+class InlineColorData(QTextBlockUserData):
+    """行内の色コードとUTF-16での開始位置を保持する。"""
+
+    def __init__(self, colors: list[tuple[int, str]]) -> None:
+        super().__init__()
+        self.colors = colors
+
+
 class HtmlSyntaxHighlighter(QSyntaxHighlighter):
     """HTMLの構文を強調表示するためのQSyntaxHighlighterのサブクラス"""
     NORMAL = 0
@@ -50,12 +64,15 @@ class HtmlSyntaxHighlighter(QSyntaxHighlighter):
     DOUBLE_QUOTED_ATTRIBUTE = 3
     COMMENT = 4
     WORDPRESS_COMMENT = 5
+    SWATCH_SPACE = 16
     TAG_START: re.Pattern[str] = re.compile(r"</?[A-Za-z][A-Za-z0-9:-]*(?=[\s/>]|$)")
     WORDPRESS_COMMENT_START: re.Pattern[str] = re.compile(r"<!--\s*/?wp:")
 
     def __init__(self, document: QTextDocument) -> None:
         super().__init__(document)
         self.enabled = True
+        self.inline_color_enabled = False
+        self.stylesheet = False
         self.tag_format = QTextCharFormat()
         self.tag_format.setForeground(QColor("#0b5cad"))
         self.comment_format = QTextCharFormat()
@@ -81,11 +98,42 @@ class HtmlSyntaxHighlighter(QSyntaxHighlighter):
         self.rehighlight()
 
     def highlightBlock(self, text: str) -> None:  # pylint: disable=invalid-name
+        """HTMLの色付けと、色見本用の表示幅を更新する。"""
+        previous = max(self.previousBlockState(), 0)
+        self._highlight_html(text, previous & 7)
+        if not self.inline_color_enabled:
+            if self.currentBlockUserData() is not None:
+                self.setCurrentBlockUserData(None)  # pyright: ignore[reportArgumentType]
+            return
+        colors, context, depth = find_colors(
+            text, ColorContext((previous >> 3) & 15), previous >> 7,
+            stylesheet=self.stylesheet,
+        )
+        self.setCurrentBlockState(self.currentBlockState() | (int(context) << 3) | (depth << 7))
+        offsets: list[tuple[int, str]] = []
+        if colors:
+            # 色コード間の文字だけを数え、Python位置をQtの位置へ変換する。
+            qt_position = 0
+            previous_start = 0
+            for start, code in colors:
+                qt_position += len(text[previous_start:start].encode("utf-16-le", errors="surrogatepass")) // 2
+                previous_start = start
+                offsets.append((qt_position, code))
+                last_digit = qt_position + len(code) - 1
+                char_format = self.format(last_digit)
+                char_format.setFontLetterSpacingType(QFont.SpacingType.AbsoluteSpacing)
+                char_format.setFontLetterSpacing(self.SWATCH_SPACE)
+                self.setFormat(last_digit, 1, char_format)
+        if offsets:
+            self.setCurrentBlockUserData(InlineColorData(offsets))
+        elif self.currentBlockUserData() is not None:
+            self.setCurrentBlockUserData(None)  # pyright: ignore[reportArgumentType]
+
+    def _highlight_html(self, text: str, state: int) -> None:
         """テキストブロックを強調表示するメソッド"""
         self.setCurrentBlockState(self.NORMAL)
         if not self.enabled:
             return
-        state: int = max(self.previousBlockState(), self.NORMAL)
         # QTextLayout indexes UTF-16 code units, unlike Python string indexes.
         offsets: list[int] = [0]
         for character in text:
@@ -142,6 +190,7 @@ class HtmlSyntaxHighlighter(QSyntaxHighlighter):
 class TextEditor(QPlainTextEdit):
     """テキストエディタウィジェットを提供するクラス"""
     line_head_selection_width = 8
+    inline_color_clicked = Signal(int, str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -381,9 +430,21 @@ class TextEditor(QPlainTextEdit):
         super().paintEvent(event)
         self._paint_fixed_column_wrap_guide(event)
         self._paint_visible_whitespace(event)
+        if self.html_highlighter.inline_color_enabled:
+            with QPainter(self.viewport()) as painter:
+                for rect, _, code in self._visible_inline_colors(event.rect()):
+                    painter.fillRect(rect, QColor(code))
+                    painter.setPen(self.palette().text().color())
+                    painter.drawRect(rect.adjusted(0, 0, -1, -1))
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """マウスプレスイベントを処理するメソッド"""
+        if self.html_highlighter.inline_color_enabled and event.button() == Qt.MouseButton.LeftButton:
+            point = event.position().toPoint()
+            for _, start, code in self._visible_inline_colors(QRect(point, QSize(1, 1))):
+                event.accept()
+                self.inline_color_clicked.emit(start, code)
+                return
         if (
             not self.line_numbers_enabled
             and event.button() == Qt.MouseButton.LeftButton
@@ -393,6 +454,54 @@ class TextEditor(QPlainTextEdit):
             event.accept()
             return
         super().mousePressEvent(event)
+
+    def set_inline_color_preview(self, enabled: bool, *, stylesheet: bool) -> None:
+        """設定変更とファイル形式の変更を表示に反映する。"""
+        highlighter = self.html_highlighter
+        if (highlighter.inline_color_enabled, highlighter.stylesheet) == (enabled, stylesheet):
+            return
+        highlighter.inline_color_enabled = enabled
+        highlighter.stylesheet = stylesheet
+        highlighter.rehighlight()
+        self.viewport().update()
+
+    def _visible_inline_colors(self, area: QRect) -> Iterator[tuple[QRect, int, str]]:
+        """描画とクリックで同じ座標を使用する。"""
+        block = self.firstVisibleBlock()
+        offset = self.contentOffset()
+        cursor = QTextCursor(self.document())
+        viewport = self.viewport().rect()
+        while block.isValid():
+            bounds = self.blockBoundingGeometry(block).translated(offset)
+            if bounds.top() > area.bottom():
+                break
+            data = block.userData()
+            if block.isVisible() and bounds.bottom() >= area.top() and isinstance(data, InlineColorData):
+                layout = block.layout()
+                if layout is None:
+                    block = block.next()
+                    continue
+                for relative, code in data.colors:
+                    start = block.position() + relative
+                    last_digit = relative + len(code) - 1
+                    cursor.setPosition(block.position() + last_digit)
+                    before = self.cursorRect(cursor)
+                    if before.bottom() < area.top() or before.top() > area.bottom():
+                        continue
+                    line = layout.lineForTextPosition(last_digit)
+                    if not line.isValid():
+                        continue
+                    # PySideのcursorToXは座標と補正済みカーソル位置を返す。
+                    leading, _ = cast(tuple[float, int], line.cursorToX(last_digit, QTextLine.Edge.Leading))
+                    trailing, _ = cast(tuple[float, int], line.cursorToX(last_digit, QTextLine.Edge.Trailing))
+                    advance = round(trailing - leading)
+                    if advance < HtmlSyntaxHighlighter.SWATCH_SPACE:
+                        continue
+                    size = min(12, max(0, before.height() - 2))
+                    rect = QRect(before.left() + advance - size - 2, before.center().y() - size // 2, size, size)
+                    if viewport.contains(rect) and area.intersects(rect):
+                        yield rect, start, code
+            block = block.next()
 
     def select_line_at_view_y(self, y_position: int) -> None:
         """指定されたY座標にある行を選択するメソッド"""

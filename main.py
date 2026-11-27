@@ -69,6 +69,7 @@ from config import default_config_path, migrate_legacy_settings_if_needed
 from dialogs.dictionary_editor_dialog import DictionaryEditorDialog
 from dialogs.find_replace_dialog import FindReplaceDialog
 from dialogs.grammar_check_dialog import GrammarCheckDialog
+from dialogs.inline_color_dialog import InlineColorDialog
 from dialogs.macro_editor_controller import MacroEditorController
 from dialogs.macro_editor_window import MacroEditorWindow
 from dialogs.macro_execution_controller import MacroExecutionController
@@ -342,6 +343,7 @@ class MainWindow(QMainWindow):
         self.wordpress_core_block_color = settings.wordpress_core_block_color
         self.startup_restore_enabled = settings.startup_restore_enabled
         self.show_full_path_in_title = settings.show_full_path_in_title
+        self.inline_color_preview_enabled = settings.inline_color_preview_enabled
         self.search_marker_color = settings.search_marker_color
         self.current_match_marker_color = settings.current_match_marker_color
         self.visible_space_marker_color = settings.visible_space_marker_color
@@ -925,6 +927,10 @@ class MainWindow(QMainWindow):
         editor.document().modificationChanged.connect(self._update_window_title)
 
         self.tab_file_paths[editor] = save_file_path
+        self._apply_inline_color_preview(editor)
+        editor.inline_color_clicked.connect(
+            lambda start, code: self._choose_inline_color(editor, start, code)
+        )
         self.tab_encodings[editor] = encoding or self.default_encoding
         self.tab_grammar_result_paths[editor] = (
             self.grammar_lint_result_store.create_result_path(
@@ -1001,6 +1007,7 @@ class MainWindow(QMainWindow):
         """Set the current file state, including the save file path and encoding."""
         self.current_save_file_path = save_file_path
         self.tab_file_paths[self.editor] = save_file_path
+        self._apply_inline_color_preview(self.editor)
         if encoding is not None:
             self.current_encoding = encoding
             self.tab_encodings[self.editor] = encoding
@@ -1258,6 +1265,7 @@ class MainWindow(QMainWindow):
         self._apply_fixed_column_wrap_options_to_all_tabs()
         self.startup_restore_enabled = settings.startup_restore_enabled
         self.show_full_path_in_title = settings.show_full_path_in_title
+        self.inline_color_preview_enabled = settings.inline_color_preview_enabled
         self.auto_backup_interval_minutes = settings.auto_backup_interval_minutes
         self._set_auto_save_timer_interval(self.auto_backup_interval_minutes)
         self.default_encoding = settings.default_encoding
@@ -1305,6 +1313,7 @@ class MainWindow(QMainWindow):
             fixed_column_wrap_column=self.fixed_column_wrap_column,
             startup_restore_enabled=self.startup_restore_enabled,
             show_full_path_in_title=self.show_full_path_in_title,
+            inline_color_preview_enabled=self.inline_color_preview_enabled,
             language_code=self.translator.language_code,
             default_encoding=self.default_encoding,
             newline_code=self.newline_code,
@@ -1834,6 +1843,7 @@ class MainWindow(QMainWindow):
             fixed_column_wrap_column=self.fixed_column_wrap_column,
             startup_restore_enabled=self.startup_restore_enabled,
             show_full_path_in_title=self.show_full_path_in_title,
+            inline_color_preview_enabled=self.inline_color_preview_enabled,
             language_code=self.translator.language_code,
             default_encoding=self.default_encoding,
             newline_code=self.newline_code,
@@ -1928,6 +1938,7 @@ class MainWindow(QMainWindow):
         self.fixed_column_wrap_column = values.fixed_column_wrap_column
         self.startup_restore_enabled = values.startup_restore_enabled
         self.show_full_path_in_title = values.show_full_path_in_title
+        self.inline_color_preview_enabled = values.inline_color_preview_enabled
         self._update_window_title()
         self.tab_width = values.tab_width
         self.unsaved_backup_manager = UnsavedBackupManager(
@@ -2049,11 +2060,48 @@ class MainWindow(QMainWindow):
         for tab_index in range(self.tab_widget.count()):
             editor = self._editor_at(tab_index)
             if editor is not None:
+                self._apply_inline_color_preview(editor)
                 editor.set_visible_whitespace_options(
                     spaces_enabled=self.visible_spaces_enabled,
                     tabs_enabled=self.visible_tabs_enabled,
                     newlines_enabled=self.visible_newlines_enabled,
                 )
+
+    def _apply_inline_color_preview(self, editor: TextEditor) -> None:
+        path = self.tab_file_paths.get(editor)
+        editor.set_inline_color_preview(
+            self.inline_color_preview_enabled,
+            stylesheet=path is not None and path.suffix.lower() == ".css",
+        )
+
+    def _choose_inline_color(self, editor: TextEditor, start: int, code: str) -> None:
+        """選択パネルの確定時に、クリックした色だけを更新する。"""
+        document = editor.document()
+        revision = document.revision()
+        cursor = QTextCursor(document)
+        cursor.setPosition(start)
+        cursor.setPosition(start + len(code), QTextCursor.MoveMode.KeepAnchor)
+        if cursor.selectedText() != code:
+            return
+        dialog = InlineColorDialog(code, self.translator, self)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+        def apply_color() -> None:
+            if (
+                editor not in self.tab_file_paths or self.editor is not editor
+                or editor.document() is not document or document.revision() != revision
+                or cursor.selectedText() != code
+            ):
+                self.statusBar().showMessage(self.translator.text("inline_color.stale"), 6000)
+                return
+            replacement = dialog.selectedColor().name(QColor.NameFormat.HexRgb)
+            if replacement.lower() != code.lower():
+                cursor.beginEditBlock()
+                cursor.insertText(replacement.upper())
+                cursor.endEditBlock()
+
+        dialog.accepted.connect(apply_color)
+        dialog.open()
 
     def _apply_visible_whitespace_marker_colors_to_all_tabs(self) -> None:
         """Apply visible whitespace marker colors to all open tabs."""

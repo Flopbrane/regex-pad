@@ -379,6 +379,13 @@ this local baseline. Remote browser assets still require their external URLs.
 
 ## Appearance and reference tools
 
+In the current source build, enable **Show inline color swatches** in Options
+(off by default). Swatches appear after supported six-digit hex colors in
+`.css` files, HTML `<style>` elements, and single-line `style` attributes.
+Click a swatch to open the picker at that color. **Apply** updates that one code,
+and Undo restores the original. If the target changes while the picker is open,
+select the swatch again. Only the color code is copied or saved.
+
 **View** toggles line numbers, word wrap, and the ruler. **Options > Options**
 (`Ctrl+,`) controls font, tab width, colors, search markers, visible spaces,
 tabs/newlines, fixed-column wrapping, and other settings. Visible whitespace
