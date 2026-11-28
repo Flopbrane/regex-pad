@@ -26,7 +26,14 @@ ROOT_CLASSES = {
 ATTRIBUTE = re.compile(r"""\s+([^\s=/<>"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|[^\s<>"'=`]+))?""")
 SAFE_CSS = re.compile(r"(?:-?(?:\d+(?:\.\d+)?|\.\d+)(?:px|em|rem|ch|ex|vh|vw|%)?|var\(--wp--preset--[a-z0-9-]+--[a-z0-9-]+\)|normal|italic|oblique|bold|bolder|lighter|auto)")
 PRESET = re.compile(r"var:preset\|([a-z0-9-]+)\|([a-z0-9-]+)")
+SPACING_PRESET = re.compile(r"var\(--wp--preset--spacing--([a-z0-9-]+)\)")
+REVERSE_LENGTH = re.compile(r"(?:0|[0-9]+(?:\.[0-9]+)?px)")
+SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 REPAIR_BLOCKS = ROOT_CLASSES.keys() | WORDPRESS_SERIALIZATION_RULES.keys()
+_MISSING = object()
+_JSON_DECODER = json.JSONDecoder()
+
+_Tag = tuple[int, str, str, dict[str, str]]
 
 
 @dataclass(frozen=True)
@@ -54,7 +61,8 @@ class _Block:
     name: str
     start: int
     opening: re.Match[str]
-    root: tuple[int, str, str, dict[str, str]] | None = None
+    root: _Tag | None = None
+    children: list[_Tag] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     valid: bool = True
     tables: int = 0
@@ -114,9 +122,18 @@ class _BlockScanner(HTMLParser):
         if block.root is not None:
             if not block.tags:
                 block.valid = False
-            elif tag not in VOID_TAGS:
-                block.tables += int(tag == "table")
-                block.tags.append(tag)
+            else:
+                if len(block.tags) == 1 and block.name in {"button", "accordion-heading"}:
+                    raw = self.get_starttag_text()
+                    if raw is None or len({name for name, _ in attrs}) != len(attrs):
+                        block.valid = False
+                    else:
+                        block.children.append((
+                            self._position(), tag, raw, {name: value or "" for name, value in attrs},
+                        ))
+                if tag not in VOID_TAGS:
+                    block.tables += int(tag == "table")
+                    block.tags.append(tag)
             return
         position = self._position()
         if self.source[block.start + block.opening.end():position].strip():
@@ -132,6 +149,8 @@ class _BlockScanner(HTMLParser):
         """自己終了タグを調べ、通常のタグが途中で閉じていれば対象外とする。"""
         if self.stack and (not self.stack[-1].tags or tag not in VOID_TAGS):
             self.stack[-1].valid = False
+        elif tag in VOID_TAGS:
+            self.handle_starttag(tag, attrs)
 
     def handle_endtag(self, tag: str) -> None:
         """終了タグを開始タグと照合して要素の境界を追跡する。"""
@@ -178,34 +197,92 @@ def _nested(data: dict[str, Any], path: str) -> Any:
     for key in path.split("."):
         if not isinstance(current, dict):
             return None
-        current = current.get(key)
+        current = current.get(key, _MISSING)
+        if current is _MISSING:
+            return _MISSING
     return current
 
 
-def _root_additions(
-    name: str, tag: str, attrs: dict[str, str], data: dict[str, Any],
+def _style_values(style_text: str) -> dict[str, str] | None:
+    """一意に読み取れる有効なインライン宣言を返す。"""
+    values = parse_inline_style_values(style_text)
+    names = re.findall(r"(?:^|;)\s*([\w-]+)\s*:", style_text.lower())
+    if (
+        values is None or "{cursor}" in style_text or lint_inline_style(style_text)
+        or len(names) != len(values)
+    ):
+        return None
+    return values
+
+
+def _css_value(mapping: dict[str, Any], data: dict[str, Any]) -> str | None:
+    """JSONに対応する安全なCSS値を返す。"""
+    expected = _nested(data, mapping["json_path"])
+    if isinstance(expected, bool) or not isinstance(expected, (int, float, str)):
+        return None
+    value = str(expected).strip()
+    if mapping.get("value_transform") == "wordpress_preset_variable" and (preset := PRESET.fullmatch(value)):
+        value = f"var(--wp--preset--{preset[1]}--{preset[2]})"
+    if mapping["css_property"] == "text-decoration" and value in {"underline", "line-through", "none"}:
+        return value
+    return value if SAFE_CSS.fullmatch(value) else None
+
+
+def _class_additions(
+    rule: dict[str, Any], data: dict[str, Any], existing: str, required: list[str], target: str,
+) -> list[str]:
+    """保存例で検証したクラスを、既存の指定と競合しない範囲で補う。"""
+    if "{cursor}" in existing:
+        return []
+    tokens = set(existing.split())
+    classes = dict.fromkeys(required)
+    for mapping in rule.get("attribute_class_rules", []):
+        if mapping.get("html_target", "root") != target:
+            continue
+        value = _nested(data, mapping["json_path"])
+        if "equals" in mapping:
+            if value is not mapping["equals"]:
+                continue
+        elif not isinstance(value, str) or not value.strip():
+            continue
+        templates = mapping["class_templates"]
+        generated: list[str] = []
+        for template in templates:
+            if "{value}" not in template:
+                generated.append(template)
+            elif isinstance(value, str) and SLUG.fullmatch(value):
+                name = template.format(value=value)
+                pattern = re.escape(template).replace(re.escape("{value}"), SLUG.pattern)
+                comparable = tokens - {"has-text-color", "has-link-color"}
+                if template == "has-{value}-color":
+                    comparable = {token for token in comparable if not token.endswith("-background-color")}
+                if any(token != name and re.fullmatch(pattern, token) for token in comparable):
+                    break
+                generated.append(name)
+            else:
+                break
+        else:
+            classes.update(dict.fromkeys(generated))
+    return [token for token in classes if token not in tokens]
+
+
+def _tag_additions(
+    name: str, attrs: dict[str, str], data: dict[str, Any], target: str = "root",
 ) -> tuple[list[str], dict[str, str]]:
-    """既存の指定を保持しながら追加できるクラスとCSS宣言を求める。"""
+    """ルートまたは検証済みの子要素に追加できるクラスとCSS宣言を求める。"""
     rule = WORDPRESS_SERIALIZATION_RULES.get(name, {})
-    fallback_tags, fallback_class = ROOT_CLASSES.get(name, (set(), ""))
-    if tag not in rule.get("root_tags", fallback_tags):
-        return [], {}
-    required = list(rule.get("required_classes", []))
+    target_rule = rule if target == "root" else rule["element_targets"][target]
+    required = list(target_rule.get("required_classes", []))
+    fallback_class = ROOT_CLASSES.get(name, (set(), ""))[1] if target == "root" else ""
     if fallback_class:
         required.append(fallback_class)
-    # fitText has a verified, unambiguous Boolean-to-class mapping.
-    if name == "paragraph" and data.get("fitText") is True:
-        required.append("has-fit-text")
-    classes = [] if "{cursor}" in attrs.get("class", "") else [
-        value for value in required if value not in attrs.get("class", "").split()
-    ]
-    existing_style = attrs.get("style", "")
-    style = parse_inline_style_values(existing_style)
-    if style is None or "{cursor}" in existing_style or lint_inline_style(existing_style):
+    classes = _class_additions(rule, data, attrs.get("class", ""), required, target)
+    style = _style_values(attrs.get("style", ""))
+    if style is None:
         return classes, {}
     declarations: dict[str, str] = {}
     for mapping in rule.get("style_rules", []):
-        if mapping.get("html_target", "root") != "root":
+        if mapping.get("html_target", "root") != target:
             continue
         key = mapping["css_property"]
         family = "font" if key.startswith(("font-", "line-height")) else key.split("-")[0]
@@ -214,13 +291,8 @@ def _root_additions(
             for existing in style
         ):
             continue
-        expected = _nested(data, mapping["json_path"])
-        if isinstance(expected, bool) or not isinstance(expected, (int, float, str)):
-            continue
-        value = str(expected).strip()
-        if mapping.get("value_transform") == "wordpress_preset_variable" and (preset := PRESET.fullmatch(value)):
-            value = f"var(--wp--preset--{preset[1]}--{preset[2]})"
-        if SAFE_CSS.fullmatch(value) and not lint_inline_style(f"{key}:{value}"):
+        value = _css_value(mapping, data)
+        if value is not None and not lint_inline_style(f"{key}:{value}"):
             declarations[key] = value
     return classes, declarations
 
@@ -268,6 +340,142 @@ def _tag_repairs(
     return candidates
 
 
+def _extend_json_object(raw: str, additions: dict[str, Any]) -> str:
+    """既存JSONの表記を残し、足りないキーだけを該当オブジェクトに追記する。"""
+    edits: list[tuple[int, int, str]] = []
+    missing = additions.copy()
+    cursor = 1
+    while cursor < len(raw) - 1:
+        key_start = cursor + len(raw[cursor:]) - len(raw[cursor:].lstrip())
+        if raw[key_start] == "}":
+            break
+        key, key_end = _JSON_DECODER.raw_decode(raw, key_start)
+        value_start = raw.index(":", key_end) + 1
+        value_start += len(raw[value_start:]) - len(raw[value_start:].lstrip())
+        _, value_end = _JSON_DECODER.raw_decode(raw, value_start)
+        if key in missing:
+            edits.append((value_start, value_end, _extend_json_object(raw[value_start:value_end], missing.pop(key))))
+        cursor = value_end + len(raw[value_end:]) - len(raw[value_end:].lstrip())
+        if raw[cursor] != ",":
+            break
+        cursor += 1
+    if missing:
+        closing = len(raw[:-1].rstrip())
+        comma = "," if raw[1:closing].strip() else ""
+        edits.append((closing, closing, comma + json.dumps(missing, separators=(",", ":"))[1:-1]))
+    for start, end, text in reversed(edits):
+        raw = raw[:start] + text + raw[end:]
+    return raw
+
+
+def _json_repair(block: _Block, line: int, additions: dict[str, Any], details: tuple[str, ...], reason: str) -> RepairCandidate:
+    """コメントの変更前後を、追加する属性とともに候補にまとめる。"""
+    opening = block.opening.group()
+    if raw := block.opening[3]:
+        start, end = block.opening.span(3)
+        after = opening[:start] + _extend_json_object(raw, additions) + opening[end:]
+    else:
+        start = len(opening[:-3].rstrip())
+        after = opening[:start] + " " + json.dumps(additions, separators=(",", ":")) + opening[start:]
+    return RepairCandidate(block.name, line, block.start, opening, after, details, reason)
+
+
+def _reverse_style_repair(block: _Block, line: int, attrs: dict[str, str], data: dict[str, Any]) -> RepairCandidate | None:
+    """GroupとParagraphの明示的な長さをCSSから不足JSONに戻す。"""
+    if block.name not in {"group", "paragraph"}:
+        return None
+    if block.name == "group" and "wp-block-group" not in attrs.get("class", "").split():
+        return None
+    rule = WORDPRESS_SERIALIZATION_RULES[block.name]
+    style = _style_values(attrs.get("style", ""))
+    if not style or "all" in style:
+        return None
+    families = ("border", "margin", "padding") if block.name == "group" else ("border",)
+    mappings = {mapping["css_property"]: mapping for mapping in rule["style_rules"]}
+    additions: dict[str, Any] = {}
+    details: list[str] = []
+    for family in families:
+        values = {key: value for key, value in style.items() if key.split("-")[0] == family}
+        if not values or values.keys() - mappings.keys():
+            continue
+        if "border-width" in values and any(
+            key in values for key in ("border-top-width", "border-right-width", "border-bottom-width", "border-left-width")
+        ):
+            continue
+        if any(
+            _nested(data, mappings[key]["json_path"]) is not _MISSING
+            and _css_value(mappings[key], data) != value for key, value in values.items()
+        ):
+            continue
+        if family == "border" and block.name == "paragraph":
+            sides = ("top", "right", "bottom", "left")
+            if (
+                ("border-width" in values and any(_nested(data, f"style.border.{side}.width") is not _MISSING for side in sides))
+                or ("border-width" not in values and _nested(data, "style.border.width") is not _MISSING)
+            ):
+                continue
+        for key, value in values.items():
+            path = mappings[key]["json_path"]
+            if _nested(data, path) is not _MISSING:
+                continue
+            preset = SPACING_PRESET.fullmatch(value) if family != "border" else None
+            if preset:
+                value = f"var:preset|spacing|{preset[1]}"
+            elif not REVERSE_LENGTH.fullmatch(value):
+                continue
+            target = additions
+            parts = path.split(".")
+            for part in parts[:-1]:
+                target = target.setdefault(part, {})
+            target[parts[-1]] = value
+            details.append(f"JSON: {path} = {value}")
+    if not additions:
+        return None
+    return _json_repair(block, line, additions, tuple(details), "reverse_style")
+
+
+def _element_repairs(block: _Block, line: int, attrs: dict[str, str], data: dict[str, Any]) -> list[RepairCandidate]:
+    """保存例と同じ一意の子要素を見つけ、その属性を補う。"""
+    rule = WORDPRESS_SERIALIZATION_RULES.get(block.name, {})
+    if not set(rule.get("required_classes", [])).issubset(attrs.get("class", "").split()):
+        return []
+    if len(block.children) != 1:
+        return []
+    position, tag, raw, child_attrs = block.children[0]
+    classes = child_attrs.get("class", "").split()
+    if block.name == "button" and tag in {"a", "button"} and "wp-block-button__link" in classes:
+        new_classes, styles = _tag_additions(block.name, child_attrs, data, "link")
+        additions = {}
+        if new_classes:
+            additions["class"] = " ".join(new_classes)
+        if styles:
+            additions["style"] = ";".join(f"{key}:{value}" for key, value in styles.items())
+        return _tag_repairs(block.name, line, position, raw, child_attrs, additions)
+    if (
+        block.name == "accordion-heading" and tag == "button"
+        and "wp-block-accordion-heading__toggle" in classes and "type" not in child_attrs
+    ):
+        return _tag_repairs(block.name, line, position, raw, child_attrs, {"type": "button"})
+    return []
+
+
+def _empty_style_repair(block: _Block, line: int, position: int, raw: str) -> RepairCandidate | None:
+    """Groupの空のstyle属性を、他の属性を保持したまま削除する候補を作る。"""
+    tag = re.match(r"<[^\s/>]+", raw)
+    if tag is None:
+        return None
+    cursor = tag.end()
+    while (match := ATTRIBUTE.match(raw, cursor)) is not None:
+        if match[1].lower() == "style" and (match[2] == "" or match[3] == ""):
+            start, end = match.span()
+            return RepairCandidate(
+                block.name, line, position + start, raw[start:end], "", ("style",), "empty_style",
+                preview_before=raw, preview_after=raw[:start] + raw[end:],
+            )
+        cursor = match.end()
+    return None
+
+
 def find_core_block_repairs(source: str) -> list[RepairCandidate]:
     """全文の構文診断と照合し、安全に追記できる候補だけを返す。"""
     lines = [0, *(match.end() for match in re.finditer("\n", source))]
@@ -280,7 +488,10 @@ def find_core_block_repairs(source: str) -> list[RepairCandidate]:
         return []
     if not scanner.completed:
         return []
-    errors = sorted(item.line_number for item in lint_html_typos(source) if item.severity == "error")
+    errors = sorted(
+        item.line_number for item in lint_html_typos(source)
+        if item.severity == "error" and item.message_key != "html_typo_lint.wordpress_group_empty_root_style"
+    )
     candidates: list[RepairCandidate] = []
     for block, end in scanner.completed:
         line = bisect_right(lines, block.start)
@@ -291,6 +502,9 @@ def find_core_block_repairs(source: str) -> list[RepairCandidate]:
         if data is None or block.root is None:
             continue
         position, tag, raw, attrs = block.root
+        rule = WORDPRESS_SERIALIZATION_RULES.get(block.name, {})
+        if tag not in rule.get("root_tags", ROOT_CLASSES.get(block.name, (set(), ""))[0]):
+            continue
         body = source[position + len(raw):end].rstrip()
         if not body.lower().endswith(f"</{tag}>"):
             continue
@@ -298,26 +512,28 @@ def find_core_block_repairs(source: str) -> list[RepairCandidate]:
             block.tables != 1 or re.match(r"\s*<table\b", body, re.IGNORECASE) is None
         ):
             continue
-        classes, styles = _root_additions(block.name, tag, attrs, data)
+        classes, styles = _tag_additions(block.name, attrs, data)
         additions: dict[str, str] = {}
         if classes:
             additions["class"] = " ".join(classes)
         if styles:
             additions["style"] = ";".join(f"{key}:{value}" for key, value in styles.items())
         candidates.extend(_tag_repairs(block.name, line, position, raw, attrs, additions))
+        candidates.extend(_element_repairs(block, line, attrs, data))
+        if reverse := _reverse_style_repair(block, line, attrs, data):
+            candidates.append(reverse)
+        if (
+            block.name == "group" and not styles and attrs.get("style") == ""
+            and "wp-block-group" in attrs.get("class", "").split()
+            and isinstance(data.get("layout"), dict)
+            and not any(_nested(data, mapping["json_path"]) is not _MISSING for mapping in rule["style_rules"])
+            and (empty_style := _empty_style_repair(block, line, position, raw))
+        ):
+            candidates.append(empty_style)
         if (
             block.name == "heading" and tag in {"h3", "h4", "h5", "h6"}
             and "level" not in data and "wp-block-heading" in attrs.get("class", "").split()
         ):
-            opening = block.opening.group()
-            addition = f'"level":{tag[1]}'
-            if block.opening[3]:
-                json_end = block.opening.end(3) - 1
-                after = opening[:json_end] + ("," if data else "") + addition + opening[json_end:]
-            else:
-                after = opening[:-3].rstrip() + " {" + addition + "} -->"
-            candidates.append(RepairCandidate(
-                block.name, line, block.start, opening, after, (f"JSON: {addition}",), "level",
-            ))
+            candidates.append(_json_repair(block, line, {"level": int(tag[1])}, (f'JSON: "level":{tag[1]}',), "level"))
     return sorted(candidates, key=lambda item: item.start)
 

@@ -350,7 +350,10 @@ def test_lint_checks_heading_pairs(level: int, wordpress: bool) -> None:
         ),
         ("<!-- wp:heading --><p>Body</p><!-- /wp:heading -->", "wordpress_block_html_shape"),
         (
-            '<!-- wp:paragraph --><p style="font-weight:bold">Body</p><!-- /wp:paragraph -->',
+            (
+                '<!-- wp:paragraph {"style":{"typography":{"fontWeight":"bold"}}} -->'
+                '<p>Body</p><!-- /wp:paragraph -->'
+            ),
             "wordpress_block_attribute_html_mismatch",
         ),
     ],
@@ -401,8 +404,8 @@ def test_lint_preserves_valid_html_around_reported_gaps(html: str) -> None:
     [
         ({"style": {"typography": {"fontWeight": "700"}}}, '<p style="font-weight:400">Text</p>', True),
         ({"style": {"typography": {"fontWeight": "700"}}}, "<p>Text</p>", True),
-        ({}, '<p style="font-weight:700">Text</p>', True),
-        ({}, '<p style="font-style:italic">Text</p>', True),
+        ({}, '<p style="font-weight:700">Text</p>', False),
+        ({}, '<p style="font-style:italic">Text</p>', False),
         ({}, '<p style="color:#ff0000">Text</p>', False),
         ({"style": {"color": {"text": "#ff0000"}}}, '<p style="color:#ff0000">Text</p>', False),
         ({"style": {"typography": {"lineHeight": 1.5}}}, '<p style="line-height:1.5">Text</p>', False),
@@ -412,7 +415,7 @@ def test_lint_preserves_valid_html_around_reported_gaps(html: str) -> None:
             False,
         ),
         ({"textColor": "primary"}, '<p class="has-primary-color has-text-color">Text</p>', False),
-        ({"textColor": "primary"}, '<p class="has-secondary-color has-text-color">Text</p>', True),
+        ({"textColor": "primary"}, '<p class="has-secondary-color has-text-color">Text</p>', False),
         ({"backgroundColor": "base"}, '<p class="has-base-background-color has-background">Text</p>', False),
         ({"fontSize": "large"}, '<p class="has-large-font-size">Text</p>', False),
         ({"fontSize": "large"}, '<p class="has-small-font-size">Text</p>', True),
@@ -433,6 +436,23 @@ def test_paragraph_style_and_preset_consistency(
         message.message_key == "html_typo_lint.wordpress_block_attribute_html_mismatch"
         for message in messages
     ) is mismatch
+
+
+def test_block_checks_require_known_html_tags_without_rejecting_additional_markup() -> None:
+    """JSONで指定した見出しと、Buttonの必須の子要素を確認する。"""
+    heading = '<!-- wp:heading {"level":3} --><h3 class="wp-block-heading"><u>Title</u></h3><!-- /wp:heading -->'
+    assert lint_html_typos(heading) == []
+    assert lint_html_typos(heading.replace(' {"level":3}', "")) == []
+    messages = lint_html_typos(heading.replace("h3", "h2"))
+    assert any((item.values or {}).get("attribute") == "level" for item in messages)
+
+    button = (
+        '<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button -->'
+        '<div class="wp-block-button"><span>Text</span></div>'
+        '<!-- /wp:button --></div><!-- /wp:buttons -->'
+    )
+    messages = lint_html_typos(button)
+    assert any((item.values or {}).get("attribute") == "link.tag" for item in messages)
 
 
 @pytest.mark.parametrize(
@@ -1120,7 +1140,7 @@ def test_inline_style_uses_css_dictionary_lint() -> None:
 
     assert "css_lint.known_property_typo" in message_keys
     assert "css_lint.invalid_keyword" in message_keys
-    assert "css_lint.invalid_color" not in message_keys
+    assert "css_lint.invalid_color" in message_keys
     assert all(message.line_number == 1 for message in messages)
 
 
@@ -1898,7 +1918,7 @@ def test_lint_reports_verified_quote_class_and_style_mismatches() -> None:
         and message.values
     }
 
-    assert "backgroundColor" in mismatch_attributes
+    assert "backgroundColor" not in mismatch_attributes
     assert "style.border.left.width" in mismatch_attributes
 
 
@@ -1920,7 +1940,7 @@ def test_lint_reports_verified_pullquote_class_and_style_mismatches() -> None:
         and message.values
     }
 
-    assert "backgroundColor" in mismatch_attributes
+    assert "backgroundColor" not in mismatch_attributes
     assert "style.border.width" in mismatch_attributes
 
 
@@ -1942,7 +1962,7 @@ def test_lint_reports_verified_button_link_class_and_style_mismatches() -> None:
         and message.values
     }
 
-    assert "backgroundColor" in mismatch_attributes
+    assert "backgroundColor" not in mismatch_attributes
     assert "style.border.width" in mismatch_attributes
 
 
@@ -1964,7 +1984,7 @@ def test_lint_reports_verified_group_class_and_style_mismatches() -> None:
         and message.values
     }
 
-    assert "backgroundColor" in mismatch_attributes
+    assert "backgroundColor" not in mismatch_attributes
     assert "style.spacing.margin.top" in mismatch_attributes
 
 

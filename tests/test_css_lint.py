@@ -69,16 +69,44 @@ def test_inline_style_detects_unclosed_quote_and_parenthesis() -> None:
     assert "css_lint.missing_closing_parenthesis" in message_keys
 
 
-def test_inline_style_detects_invalid_keyword_and_range_without_color_judgment() -> None:
+def test_inline_style_detects_invalid_keyword_range_and_hex_notation() -> None:
     """色の判定を省いた場合、インラインのCSSが不正なキーワードと範囲を検出することを確認する。"""
     message_keys = _message_keys(
         "display:blick; color:#zzzzzz; opacity:1.5; z-index:front"
     )
 
     assert "css_lint.invalid_keyword" in message_keys
-    assert "css_lint.invalid_color" not in message_keys
+    assert "css_lint.invalid_color" in message_keys
     assert "css_lint.value_out_of_range" in message_keys
     assert "css_lint.invalid_integer" in message_keys
+
+
+def test_stylesheet_warns_about_empty_colors_bad_hex_and_unitless_font_size() -> None:
+    """色の空欄・不正な16進カラー・文字サイズの単位抜けを警告する。"""
+    issues = lint_stylesheet(
+        "p {\n"
+        "  color: ;\n"
+        "  Background-color: ;\n"
+        "  font-size: 20;\n"
+        "  background: url(icons.svg#section-name), linear-gradient(#1234, #1234567);\n"
+        "}"
+    )
+    assert [(issue.severity, issue.message_key, issue.line_number) for issue in issues] == [
+        ("warning", "css_lint.empty_value", 2),
+        ("warning", "css_lint.empty_value", 3),
+        ("warning", "css_lint.missing_unit", 4),
+        ("warning", "css_lint.invalid_color", 5),
+    ]
+    assert issues[-1].values == {"property": "background", "value": "#1234567"}
+
+
+def test_inline_style_keeps_valid_color_formats_and_url_fragments() -> None:
+    """標準の16進カラー形式、色名、変数、URLのフラグメントを許容する。"""
+    assert not lint_inline_style(
+        'color:var(--article-color);background-color:rebeccapurple;'
+        'background:url("icons.svg#layer-name"),linear-gradient(#abc,#aabb,#AABBCC,#aabbccDD);'
+        'font-size:0'
+    )
 
 
 @pytest.mark.parametrize(

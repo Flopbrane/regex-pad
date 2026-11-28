@@ -24,6 +24,11 @@ NUMBER_WITH_UNIT_PATTERN: re.Pattern[str] = re.compile(
 )
 PROPERTY_LIKE_PATTERN: re.Pattern[str] = re.compile(r"(?:^|\s)(--?[A-Za-z][\w-]*|[A-Za-z][\w-]*)\s*:")
 AT_RULE_PATTERN: re.Pattern[str] = re.compile(r"@([A-Za-z][A-Za-z0-9-]*)")
+_CSS_QUOTED = r""""(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'"""
+CSS_COLOR_HASH_PATTERN: re.Pattern[str] = re.compile(
+    rf"""url\((?:{_CSS_QUOTED}|\\.|[^)'"\\])*\)|{_CSS_QUOTED}|\\.|(?P<hex>#[\w-]*)(?![\w\\-])""",
+    re.IGNORECASE | re.DOTALL,
+)
 CURSOR_PLACEHOLDER: str = "{cursor}"
 CURSOR_PLACEHOLDER_CSS_VALUE: str = "var(--regex-pad-cursor)"
 
@@ -352,7 +357,7 @@ def _lint_declaration(
     if not value:
         return [
             CssLintIssue(
-                "error",
+                "warning" if property_name in {"color", "background-color"} else "error",
                 "css_lint.empty_value",
                 line_number,
                 {"property": property_name},
@@ -458,6 +463,19 @@ def _lint_property_value(
         ]
 
     value_types: set[str] = set(_as_string_list(property_rule.get("value_types", [])))
+    if "color" in value_types:
+        invalid_colors = [
+            CssLintIssue(
+                "warning", "css_lint.invalid_color",
+                line_number + clean_value[:match.start()].count("\n"),
+                {"property": property_name, "value": color},
+            )
+            for match in CSS_COLOR_HASH_PATTERN.finditer(clean_value)
+            if (color := match["hex"]) is not None
+            and (len(color) not in {4, 5, 7, 9} or re.fullmatch(r"#[0-9a-fA-F]+", color) is None)
+        ]
+        if invalid_colors:
+            return invalid_colors
     if property_name == "opacity":
         opacity_issue: CssLintIssue | None = _lint_opacity(clean_value, line_number)
         if opacity_issue is not None:

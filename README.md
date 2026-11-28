@@ -152,8 +152,11 @@ has not yet been rebuilt or checked for this change.
 
 The current source build offers **Search > Core Block Check / Repair**. Review
 the before and after previews, check individual candidates, and apply your
-selection. One Undo restores the document. Available candidates cover selected
-missing heading JSON, root classes, and CSS declarations.
+selection. One Undo restores the document. Candidates include selected heading
+attributes, Group and Paragraph attributes derived from inline CSS, and
+verified classes and attributes on Button links and Accordion toggles.
+Leave the repair window open while editing and use **Recheck** to refresh
+stale results. Applying repairs refreshes the remaining candidates automatically.
 
 Choose **Search > Grammar Check** (`F7`) to see **Error**, **Warning**, and **Info**
 findings for the active tab. Click a result to visit its line, edit the source,
@@ -164,12 +167,11 @@ parent/child relationships, and JSON syntax and selected attributes inside block
 comments. It is a paste-safety aid with a bundled dictionary, rather than a full
 browser validator or the Gutenberg editor's `save()` validation.
 
-For `wp:paragraph`, the current source build also flags a `fontSize`/`<p>`
-font-size class found on only one side as a **Warning**, and notes overlapping
-paragraph and inner `<strong>` font sizes. A styled `<u>` receives a separate
-**Warning** about formatting removed in an observed VS Code WordPress extension
-action; it is not a claim that WordPress core rejects the tag. A plain `<u>`
-remains allowed. Check visual editing and re-saving in your WordPress environment.
+For verified block rules, the checker looks for HTML tags, classes, or styles
+required by the block type or by its explicit JSON attributes. Additional HTML
+formatting, including styled underlines and article-specific colors, is allowed.
+Empty `color:` or `background-color:`, malformed hex colors, and missing
+units in values such as `font-size:20` are reported as warnings.
 
 Grammar Check and Preview do not automatically repair or rewrite the article.
 Search and replacement preview also leave it unchanged. Text-changing actions

@@ -596,7 +596,7 @@ UIより先に、候補を表すGUI非依存のモデルを作る。
 
 Button / Buttons、Quote / Pullquote、Accordion一式、Columns / Column、Table以降は、初回機能が安定してから正解データ単位で追加する。
 
-## 12. 現時点で未実装のもの
+## 12. 計画作成時点で未実装だったもの
 
 この文書作成時点では、次はまだ実装していない。
 
@@ -608,4 +608,5 @@ Button / Buttons、Quote / Pullquote、Accordion一式、Columns / Column、Tabl
 - 変更プレビュー
 - 対応表スキーマの双方向化
 
-現在実装済みなのは、確認済みGroup/Paragraph対応表と、それを使った読取専用Linter検査までである。
+計画作成時の実装は、確認済みGroup/Paragraph対応表と、それを使った読取専用Linter検査までだった。
+現在の対応範囲、画面の再チェックや適用後の再計算、検証結果は [開発計画・作業記録](SCRIPT_STEPS.md) を参照。

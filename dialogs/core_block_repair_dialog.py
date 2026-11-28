@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -26,7 +26,8 @@ class CoreBlockRepairDialog(QDialog):
     ) -> None:
         """候補一覧、比較欄と確定ボタンを組み立てる。"""
         super().__init__(parent)
-        self.candidates = candidates
+        self.candidates: list[RepairCandidate] = []
+        self.fresh = False
         self.translator = translator
         self.setWindowTitle(translator.text("core_repair.title"))
         self.resize(820, 480)
@@ -35,18 +36,11 @@ class CoreBlockRepairDialog(QDialog):
         target_label.setTextFormat(Qt.TextFormat.PlainText)
         target_label.setWordWrap(True)
         layout.addWidget(target_label)
-        message = QLabel(translator.text("core_repair.instructions" if candidates else "core_repair.empty"), self)
-        message.setWordWrap(True)
-        layout.addWidget(message)
+        self.message = QLabel(self)
+        self.message.setWordWrap(True)
+        layout.addWidget(self.message)
 
         self.list = QListWidget(self)
-        for candidate in candidates:
-            item = QListWidgetItem(translator.text(
-                "core_repair.row", line=candidate.line, block=candidate.block,
-                changes=" / ".join(candidate.details),
-            ))
-            item.setCheckState(Qt.CheckState.Unchecked)
-            self.list.addItem(item)
         layout.addWidget(self.list, 1)
         self.reason = QLabel(self)
         self.reason.setWordWrap(True)
@@ -58,19 +52,53 @@ class CoreBlockRepairDialog(QDialog):
         layout.addWidget(split, 1)
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Cancel, self,
+            QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Close, self,
         )
         self.apply_button = buttons.button(QDialogButtonBox.StandardButton.Apply)
+        self.refresh_button = buttons.addButton(
+            translator.text("core_repair.refresh"), QDialogButtonBox.ButtonRole.ActionRole,
+        )
         self.apply_button.setText(translator.text("core_repair.apply"))
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(translator.text("core_repair.cancel"))
-        self.apply_button.setEnabled(False)
-        self.apply_button.clicked.connect(self.accept)
+        buttons.button(QDialogButtonBox.StandardButton.Close).setText(translator.text("core_repair.close"))
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
         self.list.itemChanged.connect(self._update_apply)
         self.list.currentRowChanged.connect(self._show_candidate)
-        if candidates:
-            self.list.setCurrentRow(0)
+        self.set_candidates(candidates)
+
+    def set_candidates(self, candidates: list[RepairCandidate], applied: bool = False) -> None:
+        """最新の候補を未選択で表示する。"""
+        self.candidates = candidates
+        self.fresh = True
+        with QSignalBlocker(self.list):
+            self.list.clear()
+            for candidate in candidates:
+                item = QListWidgetItem(self.translator.text(
+                    "core_repair.row", line=candidate.line, block=candidate.block,
+                    changes=" / ".join(candidate.details),
+                ))
+                item.setCheckState(Qt.CheckState.Unchecked)
+                self.list.addItem(item)
+            self.list.setCurrentRow(0 if candidates else -1)
+        status = self.translator.text("core_repair.instructions" if candidates else "core_repair.empty")
+        self.message.setText(self.translator.text("core_repair.applied", status=status) if applied else status)
+        self.list.setEnabled(True)
+        self.refresh_button.setEnabled(True)
+        self._show_candidate(self.list.currentRow())
+        self._update_apply()
+
+    def invalidate(self, available: bool) -> None:
+        """古い候補の選択と適用を停止し、再チェックの可否を反映する。"""
+        if not self.fresh and self.refresh_button.isEnabled() == available:
+            return
+        self.fresh = False
+        self.list.setEnabled(False)
+        self.refresh_button.setEnabled(available)
+        self.message.setText(self.translator.text(
+            "core_repair.stale" if available else "core_repair.target_unavailable",
+        ))
+        self._show_candidate(-1)
+        self._update_apply()
 
     @staticmethod
     def _preview_panel(split: QSplitter, label: str) -> QPlainTextEdit:
@@ -93,7 +121,7 @@ class CoreBlockRepairDialog(QDialog):
 
     def _update_apply(self) -> None:
         """候補が選択されている場合だけ適用ボタンを有効にする。"""
-        self.apply_button.setEnabled(bool(self.selected_repairs()))
+        self.apply_button.setEnabled(self.fresh and bool(self.selected_repairs()))
 
     def _show_candidate(self, row: int) -> None:
         """指定候補の根拠と変更前後の文字列を表示する。"""

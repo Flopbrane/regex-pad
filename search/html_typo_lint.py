@@ -1561,13 +1561,6 @@ def _lint_wordpress_block_structure(
                                             and not any(tag == "p" for tag, _ in root_collector.root_tags)),
                 )
             )
-            if root_collector is not None and root_collector.root_tags:
-                messages.extend(_lint_wordpress_paragraph_inline_compatibility(
-                    block_attributes if block_attributes_valid else {},
-                    root_collector,
-                    open_line_number,
-                    _line_number_at(open_end, line_starts) - 1,
-                ))
             paragraph_key = _paragraph_duplicate_key(own_body)
             if paragraph_key:
                 previous_line = paragraph_prefix_lines.get(paragraph_key)
@@ -1617,7 +1610,6 @@ def _lint_wordpress_block_structure(
                     own_body,
                     open_line_number,
                     root_collector,
-                    _line_number_at(open_end, line_starts) - 1,
                 )
             )
 
@@ -1905,7 +1897,6 @@ def _lint_wordpress_block_attribute_html_consistency(
     block_body: str,
     line_number: int,
     root_collector: _BlockRootCollector | None = None,
-    body_line_offset: int = 0,
 ) -> list[HtmlTypoLintMessage]:
     """WordPressコメント属性と保存HTMLの整合を検査する。"""
     if block_name == "group" and root_collector is not None:
@@ -1917,7 +1908,6 @@ def _lint_wordpress_block_attribute_html_consistency(
     if block_name == "paragraph" and root_collector is not None:
         return _lint_wordpress_paragraph_attributes(
             block_attributes, root_collector, line_number,
-            body_line_offset + (root_collector.first_content_line or 1),
         )
     if block_name in WORDPRESS_SERIALIZATION_RULES and root_collector is not None:
         return _lint_verified_wordpress_serialization(
@@ -2006,6 +1996,7 @@ def _lint_verified_wordpress_serialization(
 
     element_targets = block_rules.get("element_targets", {})
     if isinstance(element_targets, dict):
+        present_tags = {tag for tag, _ in collector.all_tags}
         for target_name, target_rule in element_targets.items():
             if not isinstance(target_name, str) or not isinstance(target_rule, dict):
                 continue
@@ -2015,6 +2006,14 @@ def _lint_verified_wordpress_serialization(
                 target_rule,
             )
             if target_attributes is None:
+                # These elements are required by the block shape in the saved examples.
+                if (block_name, target_name) in {("button", "link"), ("accordion-heading", "toggle")}:
+                    target_tags = target_rule.get("tags", [])
+                    if target_tags and present_tags.isdisjoint(target_tags):
+                        messages.append(_wordpress_attribute_html_mismatch_message(
+                            line_number, block_name, f"{target_name}.tag",
+                            " / ".join(target_tags), "(absent)",
+                        ))
                 continue
             target_classes = set(target_attributes.get("class", "").split())
             target_required_classes = target_rule.get("required_classes", [])
@@ -2040,6 +2039,8 @@ def _lint_verified_wordpress_serialization(
             json_path = class_rule.get("json_path")
             templates = class_rule.get("class_templates")
             if not isinstance(json_path, str) or not isinstance(templates, list):
+                continue
+            if json_path in {"backgroundColor", "textColor"} or "color" in json_path.split("."):
                 continue
             value = _nested_wordpress_attribute(block_attributes, json_path)
             if "equals" in class_rule:
@@ -2083,6 +2084,8 @@ def _lint_verified_wordpress_serialization(
         json_path = style_rule.get("json_path")
         css_property = style_rule.get("css_property")
         if not isinstance(json_path, str) or not isinstance(css_property, str):
+            continue
+        if css_property in {"color", "text-decoration"} or css_property.endswith("-color"):
             continue
         target_name = style_rule.get("html_target", "root")
         if not isinstance(target_name, str):
@@ -2184,7 +2187,7 @@ def _lint_wordpress_block_html_shape(
 
 def _lint_wordpress_paragraph_attributes(
     block_attributes: dict[str, Any], collector: _BlockRootCollector,
-    line_number: int, paragraph_line: int,
+    line_number: int,
 ) -> list[HtmlTypoLintMessage]:
     """Paragraphのコメント属性とルート要素のクラスやCSS宣言を照合する。"""
     if len(collector.root_tags) != 1 or collector.root_tags[0][0] != "p":
@@ -2208,7 +2211,7 @@ def _lint_wordpress_paragraph_attributes(
         "typography": {
             "fontWeight": "font-weight", "fontStyle": "font-style",
             "fontSize": "font-size", "lineHeight": "line-height",
-            "letterSpacing": "letter-spacing", "textDecoration": "text-decoration",
+            "letterSpacing": "letter-spacing",
             "textTransform": "text-transform",
         },
     }
@@ -2225,13 +2228,9 @@ def _lint_wordpress_paragraph_attributes(
             }.get(css_property)
             if preset_attribute and block_attributes.get(preset_attribute):
                 continue
-            if expected is None and actual is None:
+            if isinstance(expected, bool) or not isinstance(expected, (str, int, float)):
                 continue
-            if isinstance(expected, bool) or (
-                not isinstance(expected, (str, int, float)) and expected is not None
-            ):
-                continue
-            expected_text = str(expected) if expected is not None else "(absent)"
+            expected_text = str(expected)
             actual_text = actual if actual is not None else "(absent)"
             if _normalize_css_value(_wordpress_style_value(expected_text)) != _normalize_css_value(actual_text):
                 messages.append(_wordpress_attribute_html_mismatch_message(
@@ -2248,16 +2247,6 @@ def _lint_wordpress_paragraph_attributes(
                 line_number, "paragraph", attribute, value,
                 html_attributes.get("class", "(absent)"),
             ))
-    if not block_attributes.get("fontSize"):
-        for class_name in sorted(classes):
-            if re.fullmatch(r"has-[a-z0-9-]+-font-size", class_name):
-                messages.append(HtmlTypoLintMessage(
-                    "warning",
-                    "html_typo_lint.paragraph_font_class_without_attribute",
-                    paragraph_line,
-                    {"block_line": str(line_number), "class_name": class_name},
-                    "attribute_html_suspect",
-                ))
     messages.extend(
         _lint_verified_wordpress_serialization(
             "paragraph",
@@ -2266,58 +2255,6 @@ def _lint_wordpress_paragraph_attributes(
             line_number,
         )
     )
-    return messages
-
-
-def _lint_wordpress_paragraph_inline_compatibility(
-    block_attributes: dict[str, Any],
-    collector: _BlockRootCollector,
-    block_line: int,
-    body_line_offset: int,
-) -> list[HtmlTypoLintMessage]:
-    """段落内の書式について、確認済みの拡張機能挙動と編集上の注意を分ける。"""
-    if len(collector.root_tags) != 1 or collector.root_tags[0][0] != "p":
-        return []
-    messages: list[HtmlTypoLintMessage] = []
-    font_size = block_attributes.get("fontSize")
-    visual_noted = False
-    coexistence_noted = False
-    for tag, attrs, relative_line in collector.tag_details:
-        tag_line = body_line_offset + relative_line
-        style = attrs.get("style", "").strip()
-        if tag == "u":
-            if style:
-                messages.append(HtmlTypoLintMessage(
-                    "warning",
-                    "html_typo_lint.paragraph_u_style_extension_warning",
-                    tag_line,
-                    {"block_line": str(block_line), "style": style},
-                    "extension_unknown_inline_format",
-                ))
-            if font_size and not visual_noted:
-                messages.append(HtmlTypoLintMessage(
-                    "info",
-                    "html_typo_lint.paragraph_u_font_size_visual_caution",
-                    tag_line,
-                    {"block_line": str(block_line), "font_size": str(font_size)},
-                    "visual_edit_compatibility",
-                ))
-                visual_noted = True
-        elif tag == "strong" and font_size and not coexistence_noted:
-            css_values = parse_inline_style_values(style) if style else {}
-            if css_values and css_values.get("font-size"):
-                messages.append(HtmlTypoLintMessage(
-                    "info",
-                    "html_typo_lint.paragraph_nested_font_size_caution",
-                    tag_line,
-                    {
-                        "block_line": str(block_line),
-                        "font_size": str(font_size),
-                        "inline_size": css_values["font-size"],
-                    },
-                    "visual_edit_compatibility",
-                ))
-                coexistence_noted = True
     return messages
 
 
@@ -2336,8 +2273,6 @@ def _lint_wordpress_heading_level_consistency(
 ) -> list[HtmlTypoLintMessage]:
     """見出しのレベル属性とHTML見出しタグを照合する。"""
     level = block_attributes.get("level")
-    if level is None:
-        level = 2
     if not isinstance(level, int) or isinstance(level, bool):
         return []
     if len(collector.root_tags) != 1:
@@ -3089,7 +3024,6 @@ class _BlockRootCollector(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.root_tags: list[tuple[str, dict[str, str]]] = []
         self.all_tags: list[tuple[str, dict[str, str]]] = []
-        self.tag_details: list[tuple[str, dict[str, str], int]] = []
         self.open_tags: list[str] = []
         self.has_root_text = False
         self.first_content_line: int | None = None
@@ -3108,7 +3042,6 @@ class _BlockRootCollector(HTMLParser):
         """ルート要素を記録する。"""
         attribute_values: dict[str, str] = {name: value or "" for name, value in attrs}
         self.all_tags.append((tag, attribute_values))
-        self.tag_details.append((tag, attribute_values, self.getpos()[0]))
         if not self.open_tags:
             if self.first_content_line is None:
                 self.first_content_line = self.getpos()[0]

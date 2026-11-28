@@ -1,4 +1,4 @@
-"""段落の静的診断と拡張機能の観察結果を区別する。"""
+"""段落の構造・明示的な属性の照合と、自由な装飾の扱いを検証する。"""
 
 from __future__ import annotations
 
@@ -29,9 +29,7 @@ def test_matching_font_size_is_not_a_block_error(with_underline: bool) -> None:
     inline = "<u>本文</u>" if with_underline else "本文"
     source = paragraph('{"fontSize":"medium"}', f'<p class="extra has-medium-font-size">{inline}</p>')
     messages = lint_html_typos(source)
-    assert not [item for item in messages if item.severity in {"error", "warning"}]
-    if with_underline:
-        assert any(item.diagnostic_kind == "visual_edit_compatibility" for item in messages)
+    assert messages == []
 
 
 def test_font_size_attribute_without_class_is_only_a_suspicion() -> None:
@@ -44,14 +42,9 @@ def test_font_size_attribute_without_class_is_only_a_suspicion() -> None:
     assert finding.values and finding.values["attribute_value"] == "medium"
 
 
-def test_font_class_without_attribute_is_only_a_suspicion() -> None:
-    """属性の裏付けがないフォントのクラス指定は、疑わしい箇所として扱われることを確認する。"""
-    messages = lint_html_typos(paragraph("", '<p class="custom has-medium-font-size">本文</p>'))
-    finding = next(item for item in messages if item.message_key == "html_typo_lint.paragraph_font_class_without_attribute")
-    assert (finding.severity, finding.diagnostic_kind, finding.line_number) == (
-        "warning", "attribute_html_suspect", 2
-    )
-    assert finding.values == {"block_line": "1", "class_name": "has-medium-font-size"}
+def test_font_class_without_attribute_is_allowed() -> None:
+    """HTML側にだけある文字サイズのクラスを許容する。"""
+    assert not lint_html_typos(paragraph("", '<p class="custom has-medium-font-size">本文</p>'))
 
 
 def test_moved_size_to_strong_keeps_plain_underline_without_warning() -> None:
@@ -60,33 +53,29 @@ def test_moved_size_to_strong_keeps_plain_underline_without_warning() -> None:
     assert not lint_html_typos(source)
 
 
-def test_nested_size_is_an_editing_note() -> None:
-    """入れ子のサイズが編集中の補足になることを確認する。"""
+def test_nested_size_is_allowed() -> None:
+    """段落内の部分的な文字サイズの指定を許容する。"""
     source = paragraph('{"fontSize":"medium"}', '<p class="has-medium-font-size"><strong style="font-size:20px">本文</strong></p>')
-    messages = lint_html_typos(source)
-    assert [(item.severity, item.diagnostic_kind) for item in messages] == [
-        ("info", "visual_edit_compatibility")
-    ]
+    assert not lint_html_typos(source)
 
 
-def test_u_style_extension_warning_is_independent_of_paragraph_font_size() -> None:
-    """uタグのスタイルの拡張機能の警告が独立した段落の文字サイズになることを確認する。"""
-    for attributes, html in (
-        ("", '<p><u style="color:red">本文</u></p>'),
-        ('{"fontSize":"medium"}', '<p class="has-medium-font-size"><u style="color:red">本文</u></p>'),
-    ):
-        messages = lint_html_typos(paragraph(attributes, html))
-        finding = next(item for item in messages if item.message_key == "html_typo_lint.paragraph_u_style_extension_warning")
-        assert (finding.severity, finding.diagnostic_kind, finding.line_number) == (
-            "warning", "extension_unknown_inline_format", 2
-        )
-        assert finding.values == {"block_line": "1", "style": "color:red"}
+def test_styled_underline_is_allowed_with_and_without_paragraph_font_size() -> None:
+    """記事ごとの下線・文字色・背景色を警告しない。"""
+    inline = '<u style="color:#653C20;background-color:#E9F6D2;font-size:20px">本文</u>'
+    assert not lint_html_typos(paragraph("", f"<p>{inline}</p>"))
+    assert not lint_html_typos(paragraph('{"fontSize":"medium"}', f'<p class="has-medium-font-size">{inline}</p>'))
 
 
-def test_u_style_in_html_block_is_not_paragraph_warning() -> None:
-    """uタグのスタイル内のHTMLのブロックがしないの段落の警告になることを確認する。"""
-    messages = lint_html_typos('<!-- wp:html --><u style="color:red">本文</u><!-- /wp:html -->')
-    assert not any(item.message_key == "html_typo_lint.paragraph_u_style_extension_warning" for item in messages)
+def test_invalid_css_in_underline_is_reported_as_warning() -> None:
+    """下線の装飾でも空の色、壊れた16進カラー、単位抜けは警告する。"""
+    source = paragraph("", '<p><u style="color:;BACKGROUND-COLOR: #1234567;font-size:20">本文</u></p>')
+    assert {
+        (item.severity, item.message_key, item.line_number) for item in lint_html_typos(source)
+    } == {
+        ("warning", "css_lint.empty_value", 2),
+        ("warning", "css_lint.invalid_color", 2),
+        ("warning", "css_lint.missing_unit", 2),
+    }
 
 
 def test_unclosed_u_keeps_html_structure_diagnostic() -> None:
@@ -123,9 +112,8 @@ def test_extension_before_after_fixture_preserves_text_and_breaks() -> None:
     fixtures = Path(__file__).parent
     before = (fixtures / "paragraph_extension_before.wp_html").read_text(encoding="utf-8")
     after = (fixtures / "paragraph_extension_after.wp_html").read_text(encoding="utf-8")
-    before_messages = lint_html_typos(before)
-    assert len([item for item in before_messages if item.message_key == "html_typo_lint.paragraph_u_style_extension_warning"]) == 2
-    assert not [item for item in lint_html_typos(after) if item.message_key == "html_typo_lint.paragraph_u_style_extension_warning"]
+    assert not lint_html_typos(before)
+    assert not lint_html_typos(after)
     assert before.split("-->", 1)[0] == after.split("-->", 1)[0]
     assert '<p class="has-medium-font-size">' in before and '<p class="has-medium-font-size">' in after
     before_text, after_text = _VisibleText(), _VisibleText()
@@ -139,11 +127,13 @@ def test_extension_before_after_fixture_preserves_text_and_breaks() -> None:
 def test_new_diagnostics_have_translated_explanations(language: str) -> None:
     """新規の診断が翻訳済みの説明を持つことを確認する。"""
     translator = Translator(Path("resources"), language)
-    source = paragraph('{"fontSize":"medium"}', '<p class="has-medium-font-size"><u style="color:red">本文</u></p>')
-    for item in lint_html_typos(source):
+    source = paragraph('{"fontSize":"medium"}', '<p><u style="color:#1234567">本文</u></p>')
+    items = lint_html_typos(source)
+    assert {item.message_key for item in items} >= {"html_typo_lint.wordpress_block_attribute_html_mismatch", "css_lint.invalid_color"}
+    for item in items:
         if item.diagnostic_kind:
             assert translator.text(f"grammar_check.kind.{item.diagnostic_kind}") != f"grammar_check.kind.{item.diagnostic_kind}"
-            assert translator.text(item.message_key, **(item.values or {})) != item.message_key
+        assert translator.text(item.message_key, **(item.values or {})) != item.message_key
 
 
 def test_grammar_result_shows_diagnostic_kind(tmp_path: Path) -> None:
@@ -154,9 +144,9 @@ def test_grammar_result_shows_diagnostic_kind(tmp_path: Path) -> None:
         settings_path=tmp_path / "settings.json",
         unsaved_backup_path=tmp_path / "autosave" / "backup.json",
     )
-    source = paragraph("", '<p><u style="color:red">本文</u></p>')
+    source = paragraph('{"fontSize":"medium"}', '<p>本文</p>')
     finding = next(item for item in lint_html_typos(source) if item.diagnostic_kind)
     label = window._grammar_lint_message_text(finding)
     assert "[警告]" in label
-    assert "[VS Code拡張機能の互換性]" in label
-    assert "color:red" in label
+    assert "fontSize" in label
+    assert "medium" in label

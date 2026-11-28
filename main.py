@@ -2290,6 +2290,7 @@ class MainWindow(QMainWindow):
         repair_core_blocks(
             self.editor, lambda: self._editor_at(self.tab_widget.currentIndex()),
             str(self.current_save_file_path or self._draft_title(self.editor)), self.translator, self,
+            self.tab_widget,
         )
 
     def run_grammar_check(self) -> None:

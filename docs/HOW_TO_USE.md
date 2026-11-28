@@ -269,11 +269,17 @@ text and lint markers currently do not provide hover explanations.
 For supported WordPress repair suggestions in the current source build, use
 **Search > Core Block Check / Repair**. Select a row to see why it was proposed
 and compare before and after. Check only the candidates you want, then choose
-**Apply selected repairs**. One Undo restores the selected edits together. If
-the document changes while reviewing, reopen the repair window. Candidates
-cover missing heading `level`, recognized root classes, and missing CSS
-declarations with matching comment attributes. Check the saved result in the
-target Gutenberg environment.
+**Apply selected repairs**. One Undo restores the selected edits together.
+The window can stay open while you edit. When the document changes or you
+switch tabs, the previous selection cannot be applied. Return to the original
+tab and choose **Recheck** to refresh the list. Applying repairs recomputes
+the candidates and clears their checks.
+
+Verified examples cover missing heading `level`, selected Group spacing and
+borders and Paragraph border widths, empty Group `style=""`, Button link
+classes and border width, and the Accordion toggle's `type="button"`.
+Conflicting values remain available for manual review. Check the saved result
+in the target Gutenberg environment.
 
 1. Activate the document's tab and choose **Search > Grammar Check** (`F7`).
 2. Review findings in severity order. Click a result to jump to its source line.
@@ -287,14 +293,15 @@ target Gutenberg environment.
 | Warning | Suspicious spelling, placement, or compatibility that needs review |
 | Info | Supplementary guidance; Info alone does not trigger the pre-save confirmation |
 
-In the current source build, paragraph `fontSize` and the matching `<p>` class
-on only one side are reported as a static consistency concern. A styled `<u>`
-inside a paragraph receives an extension-specific warning: an observed VS Code
-WordPress extension action removed its formatting while preserving text and
-`<br>`. Plain `<u>` remains allowed. An inner `<strong>` font size alongside a
-paragraph font size receives an editing note. These findings do not reproduce
-WordPress core block validation; confirm the result by saving and re-editing in
-your Gutenberg environment.
+The consistency check runs from the block type and its explicit JSON attributes
+to the corresponding HTML. For example, `"level":3` expects an `<h3>` and
+paragraph `"fontSize":"medium"` expects `has-medium-font-size`.
+Additional HTML formatting, color choices, and styled underlines are allowed.
+Missing closing tags still count as structural errors.
+
+CSS warnings include empty `color:` or `background-color:`, malformed hex
+colors such as `#1234567`, and missing units such as `font-size:20`.
+Hex colors accept 3, 4, 6, or 8 hexadecimal digits after `#`.
 
 Checks include HTML tag/attribute typos and nesting, incomplete tags, misplaced
 attributes after an opener, CSS structure/properties/values, Gutenberg comment
