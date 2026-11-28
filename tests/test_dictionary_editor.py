@@ -10,7 +10,7 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMenu
 
 from dialogs.dictionary_editor_dialog import DictionaryEditorDialog
 from dialogs.macro_editor_window import MacroEditorWindow
@@ -37,14 +37,14 @@ def app() -> QApplication:
     return application
 
 
-def test_only_insertion_dictionaries_are_editable(tmp_path: Path) -> None:
+def test_only_supported_dictionaries_are_editable(tmp_path: Path) -> None:
     """だけの挿入の辞書が編集可能なであることを確認する。"""
     service = DictionaryEditService(tmp_path)
     assert set(EDITABLE_DICTIONARIES) == {
         "html_dict.json", "markdown_dict.json", "wordpress_html_dict.json",
-        "paragraph_insert_dict.json",
+        "paragraph_insert_dict.json", "css_insert_dict.json", "css_reference_extension.json",
     }
-    for name in ("lint_reference.json", "standards/core_blocks.json", "../html_dict.json"):
+    for name in ("lint_reference.json", "standards/standard_css.json", "standards/core_blocks.json", "../html_dict.json"):
         with pytest.raises(DictionaryEditError, match="not editable"):
             service.load(name)
         with pytest.raises(DictionaryEditError, match="not editable"):
@@ -182,3 +182,54 @@ def test_relative_user_dictionary_folder_resolves_beside_app(
     assert MainWindow._resolve_user_dictionary_folder("user_dictionaries") == (
         tmp_path / "user_dictionaries"
     )
+
+
+def test_css_user_dictionaries_extend_menu_and_lint(app: QApplication, tmp_path: Path) -> None:
+    """ユーザーCSS辞書の保存後にメニューと文法チェックへ反映する。"""
+    window = MainWindow(settings_path=tmp_path / "config.json", restore_unsaved_backup=False)
+    service = DictionaryEditService(tmp_path / "user_dictionaries")
+    declarations = service.load("css_insert_dict.json")
+    assert isinstance(declarations, list)
+    for item in declarations:
+        item.pop("category")  # Simulate a user dictionary saved before categorization.
+    declarations.append({"label": "注釈用の宣言", "template": 'content: "{cursor}注釈";'})
+    window._dictionary_saved(service.save("css_insert_dict.json", declarations))
+    menu = window._create_editor_context_menu()
+    css_menu = next(
+        action.menu() for action in menu.actions()
+        if action.text() == window.translator.text("action.css_insert")
+    )
+    assert isinstance(css_menu, QMenu)
+    user_menu = next(
+        action.menu() for action in css_menu.actions()
+        if action.text() == window.translator.text("action.css_insert.category.user")
+    )
+    assert isinstance(user_menu, QMenu)
+    menu_item, = user_menu.actions()
+    assert menu_item.text() == "注釈用の宣言"
+    layout_menu = next(
+        action.menu() for action in css_menu.actions()
+        if action.text() == window.translator.text("action.css_insert.category.layout")
+    )
+    assert isinstance(layout_menu, QMenu)
+    assert "grid-template-columns:" in [action.text() for action in layout_menu.actions()]
+    window.editor.setPlainText('<p style="color:red">本文</p>')
+    cursor = window.editor.textCursor()
+    cursor.setPosition(3)
+    window.editor.setTextCursor(cursor)
+    menu_item.trigger()
+    assert window.editor.toPlainText() == '<p style="color:red; content: &quot;注釈&quot;;">本文</p>'
+    assert window.editor.textCursor().position() == len('<p style="color:red; content: &quot;')
+
+    example = '<p style="article-size:2px">本文</p><style>p { article-size: 2px; }</style>'
+    assert any(issue.message_key.startswith("css_lint.unknown_property") for issue in window._lint_document(example))
+    extra = {"properties": {"article-size": {"value_types": ["length"]}, "font-size": {"value_types": ["number"]}}}
+    window._dictionary_saved(service.save("css_reference_extension.json", extra))
+    assert not [issue for issue in window._lint_document(example) if issue.message_key.startswith("css_lint.")]
+    window.current_save_file_path = tmp_path / "article.css"
+    assert not window._lint_document("p { article-size: 2px; grid-area: feature; margin-inline: auto; }")
+    assert {item.values["property"] for item in window._lint_document("p { article-size: 2; font-size: 20; }")
+            if item.message_key == "css_lint.missing_unit" and item.values} == {"article-size", "font-size"}
+    with pytest.raises(DictionaryEditError, match="value_types"):
+        service.save("css_reference_extension.json", {"properties": {"article-size": {"value_types": ["made-up"]}}})
+    assert service.load("css_reference_extension.json") == extra

@@ -4,10 +4,38 @@ RegexPad keeps bundled snippet dictionaries in this folder. Bundled dictionaries
 
 From the Search/Replace Preset editor, **Edit insertion dictionaries** opens a
 field/JSON editor for `html_dict.json`, `markdown_dict.json`,
-`wordpress_html_dict.json`, and `paragraph_insert_dict.json`. Saving validates
+`wordpress_html_dict.json`, `paragraph_insert_dict.json`, `css_insert_dict.json`,
+and `css_reference_extension.json`. Saving validates
 the candidate and writes a user copy in `user_dictionaries/` beside the app,
 or in the user dictionary folder configured in Options. The bundled copy and
 Linter references (`lint_reference.json` and `standards/`) are not edited.
+
+## CSS dictionaries
+
+`css_insert_dict.json` is an array of declarations for **Insert CSS**. Use a
+literal `label` or a bundled bilingual `label_key`. Each `template` contains a
+single declaration ending in `;`. An optional `{cursor}` marks the caret position.
+To add an item, append an object such as:
+
+```json
+{"label": "Line height", "template": "line-height: {cursor}1.6;"}
+```
+
+New entries appear in **Insert CSS > User additions**. Entries that retain the
+label or translation key of a bundled item stay in that item's category.
+
+`css_reference_extension.json` adds properties to the Linter. Supply lowercase
+property names and existing `value_types` from `standards/standard_css.json`.
+You can also supply a `keywords` array for a new property. Built-in rules take
+priority when a name is present in both dictionaries.
+
+```json
+{
+  "properties": {
+    "scroll-snap-align": {"value_types": ["keyword", "css_variable"]}
+  }
+}
+```
 
 ## Tag Snippet Dictionaries
 

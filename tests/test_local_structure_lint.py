@@ -147,10 +147,10 @@ def test_html_lint_checks_only_changed_core_block(tmp_path: Path, monkeypatch) -
     scanned_lengths: list[int] = []
     original_lint = main_module.lint_html_typos
 
-    def record_lint(text: str):
+    def record_lint(text: str, **options):
         """文法チェックされた断片の長さを記録し、検査を続ける。"""
         scanned_lengths.append(len(text))
-        return original_lint(text)
+        return original_lint(text, **options)
 
     monkeypatch.setattr(main_module, "lint_html_typos", record_lint)
     start = source.index("</p>")

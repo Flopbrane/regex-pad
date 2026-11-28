@@ -3,10 +3,73 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-HelpTopic = tuple[str, str]
+
+@dataclass(frozen=True)
+class HelpSection:
+    """参考表の分類名と表示するMarkdown行を保持する。"""
+
+    title: str
+    lines: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class HelpTopic:
+    """一つの言語タブに表示する参考表と分類を保持する。"""
+
+    title: str
+    intro: tuple[str, ...]
+    sections: tuple[HelpSection, ...] = ()
+
+    def markdown(self, section_index: int = 0) -> str:
+        """全分類、または選択された一つの分類をMarkdownにする。"""
+        sections = self.sections if section_index == 0 else self.sections[section_index - 1:section_index]
+        lines = [f"# {self.title}", "", *self.intro]
+        for section in sections:
+            lines.extend(("", f"## {section.title}", "", *section.lines))
+        return "\n".join(lines)
+
+
+_CATEGORIES = {
+    "text": ("Text", "文字関連"),
+    "colors": ("Colors", "色関連"),
+    "spacing": ("Spacing", "余白・間隔"),
+    "decoration": ("Borders and decoration", "枠線・装飾"),
+    "layout": ("Layout and dimensions", "配置・サイズ"),
+    "media": ("Links, images and media", "リンク・画像・メディア"),
+    "lists": ("Lists", "リスト"),
+    "tables": ("Tables", "表"),
+    "interactive": ("Accordion", "アコーディオン"),
+    "code": ("Code and custom HTML", "コード・カスタムHTML"),
+    "other": ("Other", "その他"),
+}
+
+
+def _category_map(groups: dict[str, str]) -> dict[str, str]:
+    """項目名から分類を引ける対応表に変換する。"""
+    return {name: category for category, names in groups.items() for name in names.split()}
+
+
+_HTML_CATEGORIES = _category_map({
+    "text": "p h1 h2 h3 h4 h5 h6 span br blockquote code pre time",
+    "media": "a img figure figcaption audio video source",
+    "lists": "ol ul li",
+    "tables": "table thead tbody tfoot tr td th",
+    "layout": "div hr",
+})
+_WORDPRESS_CATEGORIES = _category_map({
+    "text": "paragraph heading quote pullquote",
+    "media": "button buttons image media-text",
+    "lists": "list list-item",
+    "tables": "table",
+    "layout": "column columns group separator spacer",
+    "interactive": "accordion accordion-heading accordion-item accordion-panel",
+    "code": "code preformatted html",
+})
+_WORDPRESS_COLOR_ATTRIBUTES = {"textColor", "backgroundColor", "gradient", "customTextColor", "customBackgroundColor", "customGradient"}
 
 _TEXT = {
     "en": {
@@ -16,7 +79,9 @@ _TEXT = {
             "Global attributes and `aria-` / `data-` attributes may be used in "
             "addition to the tag-specific attributes shown below."
         ),
-        "tag_attributes": "Tag-Specific Attributes",
+        "example": "Example",
+        "html_text_color": "Sets the text color in an inline style.",
+        "html_background_color": "Sets the background color in an inline style.",
         "global_attributes": "Global Attributes",
         "tag": "Tag",
         "attribute": "Attribute",
@@ -33,7 +98,6 @@ _TEXT = {
             "This table is generated from `standard_css.json` and is also used "
             "by CSS syntax checks for HTML style attributes and .css files."
         ),
-        "properties": "Properties",
         "property": "Property",
         "known_typos": "Known Typo Corrections",
         "incorrect": "Incorrect",
@@ -48,7 +112,6 @@ _TEXT = {
             "content attributes are read from saved HTML rather than written in "
             "the block-comment JSON, so also check the saved markup."
         ),
-        "block_attributes": "Block Attributes",
         "shared_attributes": "Shared Attribute Candidates",
         "block": "Block",
         "coverage": "Coverage",
@@ -60,7 +123,9 @@ _TEXT = {
             "この表は `html_tag_schema.json` から自動生成しています。"
             "タグ固有属性に加えて、グローバル属性と `aria-` / `data-` 属性を使用できます。"
         ),
-        "tag_attributes": "タグ固有属性",
+        "example": "記述例",
+        "html_text_color": "style属性で文字色を指定します。",
+        "html_background_color": "style属性で背景色を指定します。",
         "global_attributes": "グローバル属性",
         "tag": "タグ",
         "attribute": "属性",
@@ -77,7 +142,6 @@ _TEXT = {
             "この表は `standard_css.json` から自動生成しています。"
             "HTMLのstyle属性と.cssファイルのCSS文法チェックでも同じ辞書を使用します。"
         ),
-        "properties": "プロパティ",
         "property": "プロパティ",
         "known_typos": "既知のTypo修正候補",
         "incorrect": "誤りの候補",
@@ -91,7 +155,6 @@ _TEXT = {
             "既知のブロック属性と値の制約を確認できます。contentなど、ブロックコメントの"
             "JSONではなく保存HTMLから読み取られる属性もあるため、保存HTMLとの整合性も確認してください。"
         ),
-        "block_attributes": "ブロック固有属性",
         "shared_attributes": "共有属性候補",
         "block": "ブロック",
         "coverage": "収録範囲",
@@ -142,230 +205,166 @@ def _load_topic(
         if not isinstance(load_data, dict):
             raise TypeError("schema root must be an object")
         if schema_kind == "html":
-            return title, _build_html_topic(load_data, language)
+            return _build_html_topic(load_data, language)
         if schema_kind == "css":
-            return title, _build_css_topic(load_data, language)
-        return title, _build_wordpress_topic(load_data, language)
+            return _build_css_topic(load_data, language)
+        return _build_wordpress_topic(load_data, language)
     except (OSError, json.JSONDecodeError, KeyError, TypeError) as error:
-        return title, f"# {title}\n\n{text['load_error']}: `{error}`"
+        return HelpTopic(title, (f"{text['load_error']}: {_code(str(error))}",))
 
 
-def _build_html_topic(schema: dict[str, Any], language: str) -> str:
-    """HTMLタグと属性の参考表を組み立てる。"""
+def _grouped_sections(
+    rows: dict[str, list[str]], order: tuple[str, ...], language: str, *headers: str,
+) -> tuple[HelpSection, ...]:
+    """分類順に、項目のある表だけを組み立てる。"""
+    header = _table_header(*headers)
+    language_index = 0 if language == "en" else 1
+    return tuple(
+        HelpSection(_CATEGORIES[key][language_index], (header, *rows[key]))
+        for key in order if rows.get(key)
+    )
+
+
+def _build_html_topic(schema: dict[str, Any], language: str) -> HelpTopic:
+    """タグの役割で分け、色の指定例と共通属性を併記する。"""
     text = _TEXT[language]
-    lines = [
-        f"# {text['html_title']}",
-        "",
-        text["html_intro"],
-        "",
-        f"## {text['tag_attributes']}",
-        "",
-        _table_header(
-            text["tag"],
-            text["attribute"],
-            text["rule"],
-            text["description"],
-            text["required"],
-        ),
-    ]
+    rows: dict[str, list[str]] = {}
     tags = _require_dict(schema, "tags")
-    for tag_name in sorted(tags):
-        tag_data = _as_dict(tags[tag_name])
+    for tag_name, tag_data in sorted(tags.items()):
+        tag_data = _as_dict(tag_data)
         attributes = _as_dict(tag_data.get("attributes", {}))
-        required_attributes = set(_as_list(tag_data.get("required_attributes", [])))
+        required = set(_as_list(tag_data.get("required_attributes", [])))
+        category = _HTML_CATEGORIES.get(tag_name, "other")
+        category_rows = rows.setdefault(category, [])
         if not attributes:
-            lines.append(
-                _table_row(
-                    _code(f"<{tag_name}>"),
-                    text["none"],
-                    "-",
-                    _format_html_tag_description(tag_name, tag_data, language),
-                    text["no"],
-                )
-            )
-            continue
-        for attribute_name in sorted(attributes):
-            attribute_data = _as_dict(attributes[attribute_name])
-            lines.append(
-                _table_row(
-                    _code(f"<{tag_name}>"),
-                    _code(attribute_name),
-                    _format_rule(attribute_data),
-                    _format_html_attribute_description(
-                        tag_name,
-                        attribute_name,
-                        attribute_data,
-                        language,
-                    ),
-                    text["yes"] if attribute_name in required_attributes else text["no"],
-                )
-            )
-
-    lines.extend(
-        [
-            "",
-            f"## {text['global_attributes']}",
-            "",
-            _table_header(text["attribute"], text["rule"], text["description"]),
-        ]
-    )
-    global_attributes = _require_dict(schema, "global_attributes")
-    for attribute_name in sorted(global_attributes):
-        attribute_data = _as_dict(global_attributes[attribute_name])
-        lines.append(
-            _table_row(
-                _code(attribute_name),
-                _format_rule(attribute_data),
-                _format_html_attribute_description(
-                    None,
-                    attribute_name,
-                    attribute_data,
-                    language,
-                ),
-            )
-        )
-
+            category_rows.append(_table_row(
+                _code(f"<{tag_name}>"), text["none"], "-",
+                _format_html_tag_description(tag_name, tag_data, language), text["no"],
+            ))
+        for attribute_name, attribute_data in sorted(attributes.items()):
+            attribute_data = _as_dict(attribute_data)
+            category_rows.append(_table_row(
+                _code(f"<{tag_name}>"), _code(attribute_name), _format_rule(attribute_data),
+                _format_html_attribute_description(tag_name, attribute_name, attribute_data, language),
+                text["yes"] if attribute_name in required else text["no"],
+            ))
+    headers = (text["tag"], text["attribute"], text["rule"], text["description"], text["required"])
+    sections = _grouped_sections(rows, ("text",), language, *headers)
+    colors = HelpSection(_CATEGORIES["colors"][0 if language == "en" else 1], (
+        _table_header(text["attribute"], text["example"], text["description"]),
+        _table_row(_code("style"), _code('<span style="color:#2A4B65">…</span>'), text["html_text_color"]),
+        _table_row(_code("style"), _code('<span style="background-color:#D7FEF8">…</span>'), text["html_background_color"]),
+    ))
+    sections += (colors, *_grouped_sections(rows, ("media", "lists", "tables", "layout", "other"), language, *headers))
+    global_rows = []
+    for attribute_name, attribute_data in sorted(_require_dict(schema, "global_attributes").items()):
+        attribute_data = _as_dict(attribute_data)
+        global_rows.append(_table_row(
+            _code(attribute_name), _format_rule(attribute_data),
+            _format_html_attribute_description(None, attribute_name, attribute_data, language),
+        ))
     void_tags = ", ".join(_code(tag) for tag in _as_list(schema.get("void_tags", [])))
-    prefixes = ", ".join(
-        _code(prefix) for prefix in _as_list(schema.get("allowed_attribute_prefixes", []))
-    )
-    lines.extend(
-        [
-            "",
-            f"- {text['void_tags']}: {void_tags or '-'}",
-            f"- {text['prefixes']}: {prefixes or '-'}",
-        ]
-    )
-    return "\n".join(lines)
+    prefixes = ", ".join(_code(prefix) for prefix in _as_list(schema.get("allowed_attribute_prefixes", [])))
+    shared = HelpSection(text["global_attributes"], (
+        _table_header(text["attribute"], text["rule"], text["description"]),
+        *global_rows, "", f"- {text['void_tags']}: {void_tags or '-'}",
+        f"- {text['prefixes']}: {prefixes or '-'}",
+    ))
+    return HelpTopic(text["html_title"], (text["html_intro"],), (*sections, shared))
 
 
-def _build_css_topic(schema: dict[str, Any], language: str) -> str:
-    """CSSプロパティの参考表を組み立てる。"""
+def _css_category(property_name: str) -> str:
+    """CSSプロパティを参照表の用途に分類する。"""
+    if property_name == "color" or property_name.startswith("background") or property_name.endswith("-color"):
+        return "colors"
+    if property_name.startswith(("font-", "text-", "word-", "list-style")) or property_name in {
+        "hyphens", "letter-spacing", "line-height", "overflow-wrap", "white-space",
+    }:
+        return "text"
+    if property_name.startswith(("margin", "padding")) or property_name in {"gap", "column-gap", "row-gap", "border-spacing"}:
+        return "spacing"
+    if property_name.startswith("border") or property_name in {"box-shadow", "opacity"}:
+        return "decoration"
+    if property_name.startswith("object-"):
+        return "media"
+    if property_name in {"content", "cursor"}:
+        return "other"
+    return "layout"
+
+
+def _build_css_topic(schema: dict[str, Any], language: str) -> HelpTopic:
+    """CSSプロパティを用途別に整理し、単位表と誤記表を添える。"""
     text = _TEXT[language]
-    lines = [
-        f"# {text['css_title']}",
-        "",
-        text["css_intro"],
-        "",
-        f"## {text['properties']}",
-        "",
-        _table_header(text["property"], text["rule"], text["description"]),
-    ]
-    properties = _require_dict(schema, "properties")
-    for property_name in sorted(properties):
-        property_data = _as_dict(properties[property_name])
-        lines.append(
-            _table_row(
-                _code(property_name),
-                _format_rule(property_data),
-                _format_css_property_description(property_name, property_data, language),
-            )
-        )
+    rows: dict[str, list[str]] = {}
+    for name, rule in sorted(_require_dict(schema, "properties").items()):
+        rule = _as_dict(rule)
+        rows.setdefault(_css_category(name), []).append(_table_row(
+            _code(name), _format_rule(rule), _format_css_property_description(name, rule, language),
+        ))
+    sections = _grouped_sections(
+        rows, ("text", "colors", "spacing", "decoration", "layout", "media", "other"),
+        language, text["property"], text["rule"], text["description"],
+    )
 
     known_typos = _require_dict(schema, "known_typos")
-    lines.extend(
-        [
-            "",
-            f"## {text['known_typos']}",
-            "",
-            _table_header(text["category"], text["incorrect"], text["correction"]),
-        ]
-    )
-    for typo_category in ("property_names", "units"):
-        typo_items = _as_dict(known_typos.get(typo_category, {}))
-        for incorrect, correction in sorted(typo_items.items()):
-            lines.append(
-                _table_row(
-                    _code(typo_category),
-                    _code(str(incorrect)),
-                    _code(str(correction)),
-                )
-            )
-
-    lines.extend(
-        [
-            "",
-            f"## {text['units']}",
-            "",
-            _table_header(text["category"], text["values"]),
-        ]
+    typo_rows = tuple(
+        _table_row(_code(category), _code(str(incorrect)), _code(str(correction)))
+        for category in ("property_names", "units")
+        for incorrect, correction in sorted(_as_dict(known_typos.get(category, {})).items())
     )
     units = _require_dict(schema, "units")
-    for unit_category in sorted(units):
-        unit_values = ", ".join(_code(str(value)) for value in _as_list(units[unit_category]))
-        lines.append(_table_row(_code(unit_category), unit_values))
-    return "\n".join(lines)
-
-
-def _build_wordpress_topic(schema: dict[str, Any], language: str) -> str:
-    """WordPressブロックと属性の参考表を組み立てる。"""
-    text = _TEXT[language]
-    coverage = str(schema.get("coverage", "-"))
-    lines = [
-        f"# {text['wp_title']}",
-        "",
-        text["wp_intro"],
-        "",
-        f"- {text['coverage']}: `{_escape_cell(coverage)}`",
-        "",
-        f"## {text['block_attributes']}",
-        "",
-        _table_header(text["block"], text["attribute"], text["rule"], text["description"]),
-    ]
-    blocks = _require_dict(schema, "blocks")
-    for block_name in sorted(blocks):
-        block_data = _as_dict(blocks[block_name])
-        attributes = _as_dict(block_data.get("attributes", {}))
-        if not attributes:
-            lines.append(
-                _table_row(
-                    _code(f"wp:{block_name}"),
-                    text["none"],
-                    "-",
-                    _format_wordpress_block_description(block_name, block_data, language),
-                )
-            )
-            continue
-        for attribute_name in sorted(attributes):
-            attribute_data = _as_dict(attributes[attribute_name])
-            lines.append(
-                _table_row(
-                    _code(f"wp:{block_name}"),
-                    _code(attribute_name),
-                    _format_rule(attribute_data),
-                    _format_wordpress_attribute_description(
-                        block_name,
-                        attribute_name,
-                        attribute_data,
-                        language,
-                    ),
-                )
-            )
-
-    lines.extend(
-        [
-            "",
-            f"## {text['shared_attributes']}",
-            "",
-            _table_header(text["attribute"], text["rule"], text["description"]),
-        ]
+    unit_rows = tuple(
+        _table_row(_code(category), ", ".join(_code(str(value)) for value in _as_list(values)))
+        for category, values in sorted(units.items())
     )
-    shared_attributes = _require_dict(schema, "shared_attributes")
-    for attribute_name in sorted(shared_attributes):
-        attribute_data = _as_dict(shared_attributes[attribute_name])
-        lines.append(
-            _table_row(
-                _code(attribute_name),
-                _format_rule(attribute_data),
-                _format_wordpress_attribute_description(
-                    None,
-                    attribute_name,
-                    attribute_data,
-                    language,
-                ),
-            )
-        )
-    return "\n".join(lines)
+    return HelpTopic(text["css_title"], (text["css_intro"],), (
+        *sections,
+        HelpSection(text["known_typos"], (_table_header(text["category"], text["incorrect"], text["correction"]), *typo_rows)),
+        HelpSection(text["units"], (_table_header(text["category"], text["values"]), *unit_rows)),
+    ))
+
+
+def _build_wordpress_topic(schema: dict[str, Any], language: str) -> HelpTopic:
+    """ブロックの用途で分け、色と共通属性を独立して表示する。"""
+    text = _TEXT[language]
+    rows: dict[str, list[str]] = {}
+    blocks = _require_dict(schema, "blocks")
+    for block_name, block_data in sorted(blocks.items()):
+        block_data = _as_dict(block_data)
+        attributes = _as_dict(block_data.get("attributes", {}))
+        category = _WORDPRESS_CATEGORIES.get(block_name, "other")
+        if not attributes:
+            rows.setdefault(category, []).append(_table_row(
+                _code(f"wp:{block_name}"), text["none"], "-",
+                _format_wordpress_block_description(block_name, block_data, language),
+            ))
+        for name, rule in sorted(attributes.items()):
+            rule = _as_dict(rule)
+            target = "colors" if name in _WORDPRESS_COLOR_ATTRIBUTES else category
+            rows.setdefault(target, []).append(_table_row(
+                _code(f"wp:{block_name}"), _code(name), _format_rule(rule),
+                _format_wordpress_attribute_description(block_name, name, rule, language),
+            ))
+
+    shared_rows: list[str] = []
+    for name, rule in sorted(_require_dict(schema, "shared_attributes").items()):
+        rule = _as_dict(rule)
+        cells = (_code(name), _format_rule(rule), _format_wordpress_attribute_description(None, name, rule, language))
+        if name in _WORDPRESS_COLOR_ATTRIBUTES:
+            rows.setdefault("colors", []).append(_table_row(text["shared_attributes"], *cells))
+        elif name == "fontSize":
+            rows.setdefault("text", []).append(_table_row(text["shared_attributes"], *cells))
+        else:
+            shared_rows.append(_table_row(*cells))
+    sections = _grouped_sections(
+        rows, ("text", "colors", "media", "lists", "tables", "layout", "interactive", "code", "other"),
+        language, text["block"], text["attribute"], text["rule"], text["description"],
+    )
+    coverage = _code(str(schema.get("coverage", "-")))
+    return HelpTopic(text["wp_title"], (text["wp_intro"], "", f"- {text['coverage']}: {coverage}"), (
+        *sections,
+        HelpSection(text["shared_attributes"], (_table_header(text["attribute"], text["rule"], text["description"]), *shared_rows)),
+    ))
 
 
 def _format_rule(rule: dict[str, Any]) -> str:

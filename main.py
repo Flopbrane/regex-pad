@@ -85,6 +85,7 @@ from dialogs.shortcut_settings_dialog import (
 from dialogs.tag_insert_dialog import TagInsertDialog
 from dialogs.unicode_character_info_dialog import UnicodeCharacterInfoDialog
 from dialogs.user_help_dialog import UserHelpDialog
+from editor.css_insert import CSS_INSERT_CATEGORIES, load_css_insert_snippets
 from editor.dictionary_edit_service import DictionaryEditService
 from editor.document_character_count import DocumentCharacterCount
 from editor.editor_tab import EditorTab
@@ -142,7 +143,7 @@ from macro.json_paths import configured_macro_folder, default_macro_folder
 from normalise import apply_normalise_operation
 from preview.wordpress_preview import WordPressPreview
 from preview.wordpress_runtime import default_runtime_root
-from search.css_lint import CssLintIssue, lint_stylesheet
+from search.css_lint import CssLintIssue, lint_stylesheet, load_css_reference_extension
 from search.html_typo_lint import HtmlTypoLintMessage, lint_html_typos
 from search.incremental_markers import IndexedSource
 from search.local_structure_lint import CoreBlockIndex
@@ -204,39 +205,11 @@ FRAME_STYLE_PREFIXES_REPLACED_BY_SETTINGS = (
     "background-color:",
     "color:",
 )
-CSS_PARAMETER_INSERT_ACTIONS: tuple[tuple[str, str, str, int], ...] = (
-    ("style_attribute", "action.css_insert_style_attribute", 'style=""', len('style="')),
-    ("color", "action.css_insert_color", "color: ;", len("color: ")),
-    (
-        "background_color",
-        "action.css_insert_background_color",
-        "background-color: ;",
-        len("background-color: "),
-    ),
-    ("font_size", "action.css_insert_font_size", "font-size: ;", len("font-size: ")),
-    (
-        "font_weight",
-        "action.css_insert_font_weight",
-        "font-weight: bold;",
-        len("font-weight: "),
-    ),
-    ("text_align", "action.css_insert_text_align", "text-align: ;", len("text-align: ")),
-    ("margin", "action.css_insert_margin", "margin: ;", len("margin: ")),
-    ("padding", "action.css_insert_padding", "padding: ;", len("padding: ")),
-    ("border", "action.css_insert_border", "border: 1px solid #999;", len("border: ")),
-    (
-        "border_radius",
-        "action.css_insert_border_radius",
-        "border-radius: ;",
-        len("border-radius: "),
-    ),
-    (
-        "display_inline_block",
-        "action.css_insert_display_inline_block",
-        "display: inline-block;",
-        len("display: "),
-    ),
-)
+CSS_SPECIAL_INSERT_LABELS = {
+    "style_attribute": "action.css_insert_style_attribute",
+    "color": "action.css_insert_color",
+    "background_color": "action.css_insert_background_color",
+}
 
 BASE_DIR = Path(__file__).resolve().parent
 ICON_PATH = BASE_DIR / "assets" / "icons" / "regex_pad_icon.png"
@@ -330,6 +303,7 @@ class MainWindow(QMainWindow):
         self.wordpress_mode_label_key = settings.wordpress_mode_label_key
         self.hover_hints_enabled = settings.hover_hints_enabled
         self.user_dictionary_folder = settings.user_dictionary_folder
+        self._reload_css_dictionaries()
         self.dictionary_check_enabled = settings.dictionary_check_enabled
         self.backup_folder = settings.backup_folder
         self.backup_retention_count = settings.backup_retention_count
@@ -590,23 +564,13 @@ class MainWindow(QMainWindow):
         )
 
         self.css_parameter_actions: dict[str, QAction] = {}
-        for action_id, _text_key, insert_text, cursor_offset in CSS_PARAMETER_INSERT_ACTIONS:
+        for action_id, callback in (
+            ("style_attribute", self.insert_style_attribute_at_cursor),
+            ("color", self.insert_text_color_at_cursor),
+            ("background_color", self.insert_background_color_at_cursor),
+        ):
             action = QAction(self)
-            if action_id == "style_attribute":
-                action.triggered.connect(self.insert_style_attribute_at_cursor)
-            elif action_id == "color":
-                action.triggered.connect(self.insert_text_color_at_cursor)
-            elif action_id == "background_color":
-                action.triggered.connect(self.insert_background_color_at_cursor)
-            else:
-                action.triggered.connect(
-                    lambda checked=False,
-                    text=insert_text,
-                    offset=cursor_offset: self.insert_css_declaration_at_cursor(
-                        text,
-                        offset,
-                    ),
-                )
+            action.triggered.connect(callback)
             self.css_parameter_actions[action_id] = action
         self.background_color_preset_menu: QMenu | None = None
         self.text_color_preset_menu: QMenu | None = None
@@ -1434,7 +1398,7 @@ class MainWindow(QMainWindow):
         self.wordpress_list_frame_transform_action.setText(
             self.translator.text("action.wordpress_list_frame_transform")
         )
-        for action_id, text_key, _insert_text, _cursor_offset in CSS_PARAMETER_INSERT_ACTIONS:
+        for action_id, text_key in CSS_SPECIAL_INSERT_LABELS.items():
             self.css_parameter_actions[action_id].setText(self.translator.text(text_key))
         self.paragraph_split_spacer_action.setText(
             self.translator.text("paragraph_split.insert_spacer")
@@ -1616,8 +1580,7 @@ class MainWindow(QMainWindow):
             self.translator.text("action.css_insert"),
             context_menu,
         )
-        for action_id, _text_key, _insert_text, _cursor_offset in CSS_PARAMETER_INSERT_ACTIONS:
-            css_insert_menu.addAction(self.css_parameter_actions[action_id])
+        self._populate_css_insert_menu(css_insert_menu)
         context_menu.addMenu(css_insert_menu)
         context_menu.addAction(self.insert_tag_picker_action)
         html_transform_menu = QMenu(
@@ -1630,6 +1593,26 @@ class MainWindow(QMainWindow):
         html_transform_menu.addAction(self.wordpress_code_block_action)
         context_menu.addMenu(html_transform_menu)
         return context_menu
+
+    def _populate_css_insert_menu(self, menu: QMenu) -> None:
+        """CSSの挿入項目を用途ごとのサブメニューに表示する。"""
+        menu.addAction(self.css_parameter_actions["style_attribute"])
+        for category in CSS_INSERT_CATEGORIES:
+            snippets = [item for item in self.css_insert_snippets if item.category == category]
+            if not snippets and category != "color":
+                continue
+            submenu = menu.addMenu(self.translator.text(f"action.css_insert.category.{category}"))
+            if category == "color":
+                submenu.addAction(self.css_parameter_actions["color"])
+                submenu.addAction(self.css_parameter_actions["background_color"])
+            for snippet in snippets:
+                label = self.translator.text(snippet.label_key) if snippet.label_key else snippet.label
+                action = submenu.addAction(label)
+                action.triggered.connect(
+                    lambda _checked=False, item=snippet: self.insert_css_declaration_at_cursor(
+                        item.declaration, item.cursor_offset,
+                    )
+                )
 
     def show_macro_editor(self) -> None:
         """独立したマクロエディターを開く。開いていれば前面に出す。"""
@@ -1682,6 +1665,7 @@ class MainWindow(QMainWindow):
             if save_file_path.parent.resolve() == default_user_folder.resolve()
             else str(save_file_path.parent)
         )
+        self._reload_css_dictionaries()
         self._rebuild_insert_tag_menu()
         self._save_settings()
 
@@ -1917,6 +1901,7 @@ class MainWindow(QMainWindow):
         self.wordpress_mode_label_key = values.wordpress_mode_label_key
         self.hover_hints_enabled = values.hover_hints_enabled
         self.user_dictionary_folder = values.user_dictionary_folder
+        self._reload_css_dictionaries()
         self.dictionary_check_enabled = values.dictionary_check_enabled
         self.backup_folder = values.backup_folder
         self.backup_retention_count = values.backup_retention_count
@@ -1981,6 +1966,8 @@ class MainWindow(QMainWindow):
             dictionaries_path = self._resolve_user_dictionary_folder(user_dictionary_folder)
             tag_snippet_groups(dictionaries_path)
             load_paragraph_insert_rule_book(dictionaries_path)
+            load_css_insert_snippets(dictionaries_path)
+            load_css_reference_extension(dictionaries_path)
         except (OSError, TypeError, ValueError) as error:
             LOGGER(
                 error,
@@ -1996,6 +1983,20 @@ class MainWindow(QMainWindow):
             )
             return False
         return True
+
+    def _reload_css_dictionaries(self) -> None:
+        """有効なCSS辞書を読み込み、壊れたユーザー辞書は同梱の内容で補う。"""
+        folder = self._tag_dictionaries_path()
+        try:
+            self.css_insert_snippets = load_css_insert_snippets(folder)
+        except (OSError, TypeError, ValueError) as error:
+            LOGGER(error, "CSS insertion dictionary could not be loaded", level=LogLevel.WARNING)
+            self.css_insert_snippets = load_css_insert_snippets()
+        try:
+            self.css_reference = load_css_reference_extension(folder)
+        except (OSError, TypeError, ValueError) as error:
+            LOGGER(error, "CSS reference extension could not be loaded", level=LogLevel.WARNING)
+            self.css_reference = None
 
     def _tag_dictionaries_path(self) -> Path | None:
         """タグ挿入に使う辞書の場所を返す。"""
@@ -2358,9 +2359,9 @@ class MainWindow(QMainWindow):
             self.current_save_file_path is not None
             and self.current_save_file_path.suffix.lower() == ".css"
         ):
-            messages.extend(lint_stylesheet(source_text))
+            messages.extend(lint_stylesheet(source_text, css_reference=self.css_reference))
         else:
-            messages.extend(lint_html_typos(source_text))
+            messages.extend(lint_html_typos(source_text, css_reference=self.css_reference))
         return messages
 
     def _sort_grammar_messages(
@@ -2941,47 +2942,42 @@ class MainWindow(QMainWindow):
         declaration_text: str,
         cursor_offset: int,
     ) -> None:
-        """可能な場合、最寄りのstyle属性にCSS宣言を挿入する。"""
+        """CSS宣言を既存のstyle属性かカーソル位置へ挿入する。"""
+        if self.current_save_file_path is not None and self.current_save_file_path.suffix.lower() == ".css":
+            offset = len(declaration_text[:cursor_offset].encode("utf-16-le")) // 2
+            self.insert_text_at_cursor(declaration_text, offset)
+            return
         source_text = self.editor.toPlainText()
-        cursor = self.editor.textCursor()
-        cursor_position = cursor.position()
-        style_bounds = self._style_attribute_value_bounds_near_cursor(
-            source_text,
-            cursor_position,
-        )
+        position_map = IndexedSource(source_text)
+        cursor_position = position_map.python_position(self.editor.textCursor().position())
+        style_bounds = self._style_attribute_value_bounds_near_cursor(source_text, cursor_position)
+        encoded_head = escape(declaration_text[:cursor_offset])
+        encoded = encoded_head + escape(declaration_text[cursor_offset:])
         if style_bounds is not None:
             value_start, value_end = style_bounds
-            insert_position = (
-                cursor_position
-                if value_start <= cursor_position <= value_end
-                else value_end
-            )
-            insert_text = self._css_declaration_insert_text(
-                source_text,
-                insert_position,
-                value_start,
-                value_end,
-                declaration_text,
-            )
+            previous_value = source_text[value_start:value_end].rstrip()
+            separator = (" " if previous_value.endswith(";") else "; ") if previous_value else ""
+            if value_end > value_start and source_text[value_end - 1].isspace():
+                separator = ";" if previous_value and not previous_value.endswith(";") else ""
             self._insert_text_at_position(
-                insert_position,
-                insert_text,
-                insert_text.find(";") if ";" in insert_text else cursor_offset,
+                position_map.qt_position(value_end),
+                separator + encoded,
+                len((separator + encoded_head).encode("utf-16-le")) // 2,
             )
             return
 
         tag_bounds = self._opening_tag_bounds_near_cursor(source_text, cursor_position)
         if tag_bounds is not None:
             _tag_start, tag_end = tag_bounds
-            insert_text = f' style="{declaration_text}"'
+            prefix = ' style="'
             self._insert_text_at_position(
-                tag_end - 1,
-                insert_text,
-                insert_text.find(";") if ";" in insert_text else cursor_offset,
+                position_map.qt_position(tag_end - 1),
+                prefix + encoded + '"',
+                len((prefix + encoded_head).encode("utf-16-le")) // 2,
             )
             return
 
-        self.insert_text_at_cursor(declaration_text, cursor_offset)
+        self.insert_text_at_cursor(declaration_text, len(declaration_text[:cursor_offset].encode("utf-16-le")) // 2)
 
     def insert_background_color_at_cursor(self) -> None:
         """編集可能な背景色宣言を挿入し、推奨の色を表示する。"""
@@ -3131,31 +3127,6 @@ class MainWindow(QMainWindow):
         value_start = tag_start + style_match.start(2)
         value_end = tag_start + style_match.end(2)
         return value_start, value_end
-
-    def _css_declaration_insert_text(
-        self,
-        source_text: str,
-        insert_position: int,
-        value_start: int,
-        value_end: int,
-        declaration_text: str,
-    ) -> str:
-        """挿入先のstyle値に合う空白を付けたCSS宣言を返す。"""
-        if value_start == value_end:
-            return declaration_text
-        needs_leading_space = (
-            insert_position > value_start
-            and source_text[insert_position - 1] not in {" ", "\t", ";", "\n"}
-        )
-        needs_trailing_space = (
-            insert_position < value_end
-            and source_text[insert_position] not in {" ", "\t", ";", "\n"}
-        )
-        return (
-            (" " if needs_leading_space else "")
-            + declaration_text
-            + (" " if needs_trailing_space else "")
-        )
 
     def escape_selected_html(self) -> None:
         """引用符を保持したまま、選択した文字列だけをHTMLエスケープする。"""
@@ -4659,7 +4630,7 @@ class MainWindow(QMainWindow):
             block_text = source.text[pair.open_start:pair.close_end]
             issues[id(pair)] = [
                 message.line_number
-                for message in lint_html_typos(block_text)
+                for message in lint_html_typos(block_text, css_reference=self.css_reference)
                 if message.severity != "info"
                 # 色メニューで値を選ぶ間の空欄は一時的。手動・保存時の全文チェックでは検出する。
                 and message.message_key != "css_lint.empty_value"

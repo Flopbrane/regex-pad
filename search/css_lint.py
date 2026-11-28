@@ -16,6 +16,7 @@ CSS_REFERENCE_PATH: Path = (
     / "standards"
     / "standard_css.json"
 )
+CSS_REFERENCE_EXTENSION = "css_reference_extension.json"
 PROPERTY_NAME_PATTERN: re.Pattern[str] = re.compile(r"^(?:--|-?[A-Za-z])[A-Za-z0-9_-]*$")
 SIMPLE_KEYWORD_PATTERN: re.Pattern[str] = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
 SIMPLE_NUMBER_PATTERN: re.Pattern[str] = re.compile(r"^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$")
@@ -59,14 +60,53 @@ def _load_css_reference() -> dict[str, Any]:
     return load_data
 
 
+def extend_css_reference(data: object) -> dict[str, Any]:
+    """同梱の基準を保ち、追記辞書で新しいプロパティの規則を補う。"""
+    if not isinstance(data, dict) or set(data) != {"properties"} or not isinstance(data["properties"], dict):
+        raise ValueError("CSS reference extension must contain a properties object.")
+    base = _load_css_reference()
+    known_types = set(base["value_types"])
+    extra = data["properties"]
+    for name, rule in extra.items():
+        if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", name):
+            raise ValueError(f"Invalid CSS property name: {name!r}")
+        if not isinstance(rule, dict) or set(rule) - {"value_types", "keywords"}:
+            raise ValueError(f"Invalid CSS property rule: {name}")
+        value_types = rule.get("value_types")
+        if (
+            not isinstance(value_types, list) or not value_types
+            or any(not isinstance(item, str) or item not in known_types for item in value_types)
+        ):
+            raise ValueError(f"Provide known CSS value_types for {name}.")
+        keywords = rule.get("keywords", [])
+        if (
+            not isinstance(keywords, list)
+            or any(not isinstance(item, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", item) for item in keywords)
+        ):
+            raise ValueError(f"Invalid CSS keywords for {name}.")
+    return {**base, "properties": {**extra, **base["properties"]}}
+
+
+def load_css_reference_extension(user_folder: Path | None) -> dict[str, Any] | None:
+    """ユーザーの追記辞書があれば検証し、基準と結合する。"""
+    if user_folder is None:
+        return None
+    load_file_path = user_folder / CSS_REFERENCE_EXTENSION
+    if not load_file_path.is_file():
+        return None
+    return extend_css_reference(json.loads(load_file_path.read_text(encoding="utf-8")))
+
+
 def lint_inline_style(
     style_text: str,
     start_line_number: int = 1,
+    *,
+    css_reference: dict[str, Any] | None = None,
 ) -> list[CssLintIssue]:
     """HTMLのstyle属性に含まれる宣言をLintする。"""
 
     try:
-        reference: dict[str, Any] = _load_css_reference()
+        reference = _load_css_reference() if css_reference is None else css_reference
     except (OSError, json.JSONDecodeError, TypeError) as error:
         return [
             CssLintIssue(
@@ -84,7 +124,7 @@ def lint_inline_style(
     return sorted(messages, key=lambda issue: issue.line_number)
 
 
-def parse_inline_style_values(style_text: str) -> dict[str, str] | None:
+def parse_inline_style_values(style_text: str, *, reject_duplicates: bool = False) -> dict[str, str] | None:
     """Lintと同様のコメント・引用・括弧に関するルールを適用して、宣言を読み取る。"""
 
     style_text = _mask_cursor_placeholder(style_text)
@@ -99,15 +139,18 @@ def parse_inline_style_values(style_text: str) -> dict[str, str] | None:
         property_name, separator, value = declaration.partition(":")
         if not separator or not PROPERTY_NAME_PATTERN.fullmatch(property_name.strip()):
             return None
-        values[property_name.strip().lower()] = value.strip()
+        key = property_name.strip().lower()
+        if reject_duplicates and key in values:
+            return None
+        values[key] = value.strip()
     return values
 
 
-def lint_stylesheet(css_text: str) -> list[CssLintIssue]:
+def lint_stylesheet(css_text: str, *, css_reference: dict[str, Any] | None = None) -> list[CssLintIssue]:
     """スタンドアロンのスタイルシート内の宣言ブロックをLintする。"""
 
     try:
-        reference: dict[str, Any] = _load_css_reference()
+        reference = _load_css_reference() if css_reference is None else css_reference
     except (OSError, json.JSONDecodeError, TypeError) as error:
         return [
             CssLintIssue(
@@ -481,7 +524,7 @@ def _lint_property_value(
         if opacity_issue is not None:
             return [opacity_issue]
     if (
-        value_types == {"integer", "keyword", "css_variable"}
+        (property_name == "z-index" or ("integer" in value_types and value_types <= {"integer", "css_variable"}))
         and lower_value != "auto"
         and not re.fullmatch(r"[-+]?\d+", clean_value)
     ):

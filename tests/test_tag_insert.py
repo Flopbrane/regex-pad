@@ -363,19 +363,18 @@ def test_editor_context_menu_has_tag_insert_actions(app: QApplication) -> None:
         window.translator.text("action.html_transform"),
     ]
     assert inline_color_menu.actions() == list(window.inline_color_actions.values())
-    assert [action.text() for action in css_insert_menu.actions()] == [
-        window.translator.text("action.css_insert_style_attribute"),
-        window.translator.text("action.css_insert_color"),
-        window.translator.text("action.css_insert_background_color"),
-        window.translator.text("action.css_insert_font_size"),
-        window.translator.text("action.css_insert_font_weight"),
-        window.translator.text("action.css_insert_text_align"),
-        window.translator.text("action.css_insert_margin"),
-        window.translator.text("action.css_insert_padding"),
-        window.translator.text("action.css_insert_border"),
-        window.translator.text("action.css_insert_border_radius"),
-        window.translator.text("action.css_insert_display_inline_block"),
+    assert css_insert_menu.actions()[0] is window.css_parameter_actions["style_attribute"]
+    css_categories = child_menus(css_insert_menu)
+    assert [menu.title() for menu in css_categories] == [
+        window.translator.text(f"action.css_insert.category.{category}")
+        for category in ("text", "color", "spacing", "decoration", "layout")
     ]
+    text_items, colors, spacing, decoration, layout = css_categories
+    assert window.translator.text("action.css_insert_font_size") in [item.text() for item in text_items.actions()]
+    assert colors.actions() == [window.css_parameter_actions["color"], window.css_parameter_actions["background_color"]]
+    assert "gap:" in [item.text() for item in spacing.actions()]
+    assert "box-shadow:" in [item.text() for item in decoration.actions()]
+    assert "grid-template-columns:" in [item.text() for item in layout.actions()]
     paragraph_split_menu = next(
         (
             child_menu

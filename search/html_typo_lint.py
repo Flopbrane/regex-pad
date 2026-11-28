@@ -524,7 +524,7 @@ class _WordPressBlockStackItem:
 _ParsedWordPressBlockAttributes = tuple[dict[str, Any], bool, int | None]
 
 
-def lint_html_typos(load_data: str) -> list[HtmlTypoLintMessage]:
+def lint_html_typos(load_data: str, *, css_reference: dict[str, Any] | None = None) -> list[HtmlTypoLintMessage]:
     """HTMLタグのタイプミスや構造上の問題を検出する。"""
     suppressed_ranges: list[tuple[int, int]] = _contaminated_wordpress_separator_body_ranges(load_data)
     html_lint_data: str = _mask_ranges(
@@ -541,8 +541,8 @@ def lint_html_typos(load_data: str) -> list[HtmlTypoLintMessage]:
     messages.extend(_lint_wordpress_block_structure(load_data, html_tokens))
     messages.extend(_lint_known_fragile_typos(load_data))
     messages.extend(_lint_full_width_html_syntax(load_data))
-    messages.extend(_lint_embedded_stylesheets(load_data))
-    parser = HtmlTypoLintParser(load_data, suppressed_ranges)
+    messages.extend(_lint_embedded_stylesheets(load_data, css_reference))
+    parser = HtmlTypoLintParser(load_data, suppressed_ranges, css_reference=css_reference)
     parser.feed(load_data)
     parser.close()
     messages.extend(parser.messages)
@@ -1065,7 +1065,7 @@ def _position_in_ranges(position: int, ranges: list[tuple[int, int]]) -> bool:
     return any(start <= position < end for start, end in ranges)
 
 
-def _lint_embedded_stylesheets(load_data: str) -> list[HtmlTypoLintMessage]:
+def _lint_embedded_stylesheets(load_data: str, css_reference: dict[str, Any] | None) -> list[HtmlTypoLintMessage]:
     """HTMLに埋め込まれたスタイルシートを検査する。"""
     messages: list[HtmlTypoLintMessage] = []
     pattern: re.Pattern[str] = re.compile(r"<style\b[^>]*>(.*?)</style\s*>", re.IGNORECASE | re.DOTALL)
@@ -1074,7 +1074,7 @@ def _lint_embedded_stylesheets(load_data: str) -> list[HtmlTypoLintMessage]:
         line_offset: int = load_data.count("\n", 0, match.start(1))
         messages.extend(
             _css_issue_to_html(issue, line_offset)
-            for issue in lint_stylesheet(css_text)
+            for issue in lint_stylesheet(css_text, css_reference=css_reference)
         )
     return messages
 
@@ -2661,6 +2661,8 @@ class HtmlTypoLintParser(HTMLParser):
         self,
         load_data: str = "",
         suppressed_ranges: list[tuple[int, int]] | None = None,
+        *,
+        css_reference: dict[str, Any] | None = None,
     ) -> None:
         """原文、診断一覧、タグと属性の解析状態を初期化する。"""
         super().__init__(convert_charrefs=False)
@@ -2669,6 +2671,7 @@ class HtmlTypoLintParser(HTMLParser):
         self.inline_boundaries: list[str] = []
         self.line_starts: list[int] = _line_start_positions(load_data)
         self.suppressed_ranges: list[tuple[int, int]] = suppressed_ranges or []
+        self.css_reference = css_reference
         self.reported_unknown_html_tags: set[tuple[int, str]] = set()
         self.load_data: str = load_data
         self.attribute_opening: tuple[str, int] | None = None
@@ -2786,7 +2789,7 @@ class HtmlTypoLintParser(HTMLParser):
         if "style" in attrs_dict:
             self.messages.extend(
                 _css_issue_to_html(issue)
-                for issue in lint_inline_style(attrs_dict["style"], line_number)
+                for issue in lint_inline_style(attrs_dict["style"], line_number, css_reference=self.css_reference)
             )
 
     def _lint_wordpress_class_tags(

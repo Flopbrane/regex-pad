@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QDialogButtonBox,
+    QHBoxLayout,
+    QLabel,
     QTabWidget,
     QTextBrowser,
     QVBoxLayout,
@@ -44,6 +47,14 @@ class SchemaReferenceDialog(QDialog):
         self.tab_widget.addTab(self.html_browser, "")
         self.tab_widget.addTab(self.css_browser, "")
         self.tab_widget.addTab(self.wordpress_browser, "")
+        self.browsers = (self.html_browser, self.css_browser, self.wordpress_browser)
+        self.selected_sections = [0] * self.tab_widget.count()
+        self.section_label = QLabel(self)
+        self.section_selector = QComboBox(self)
+        self.section_label.setBuddy(self.section_selector)
+        section_layout = QHBoxLayout()
+        section_layout.addWidget(self.section_label)
+        section_layout.addWidget(self.section_selector, 1)
 
         self.button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Close,
@@ -52,33 +63,53 @@ class SchemaReferenceDialog(QDialog):
         self.button_box.rejected.connect(self.close)
 
         layout = QVBoxLayout()
+        layout.addLayout(section_layout)
         layout.addWidget(self.tab_widget, 1)
         layout.addWidget(self.button_box)
         self.setLayout(layout)
 
         self.apply_language()
+        self.tab_widget.currentChanged.connect(self._show_tab_sections)
+        self.section_selector.currentIndexChanged.connect(self._select_section)
 
     def apply_language(self) -> None:
         """現在のアプリ言語で、生成したすべての表を読み直す。"""
         language_code = "en" if self.translator.language_code == "en" else "ja"
-        html_topic, css_topic, wordpress_topic = load_schema_help_topics(
+        self.topics = load_schema_help_topics(
             self.standards_path,
             language_code,
         )
-        html_title, html_body = html_topic
-        css_title, css_body = css_topic
-        wordpress_title, wordpress_body = wordpress_topic
-
         self.setWindowTitle(self.translator.text("schema_reference.title"))
-        self.tab_widget.setTabText(0, html_title)
-        self.tab_widget.setTabText(1, css_title)
-        self.tab_widget.setTabText(2, wordpress_title)
-        self.html_browser.setMarkdown(html_body)
-        self.css_browser.setMarkdown(css_body)
-        self.wordpress_browser.setMarkdown(wordpress_body)
+        self.section_label.setText(self.translator.text("schema_reference.category"))
+        for index, (browser, topic) in enumerate(zip(self.browsers, self.topics, strict=True)):
+            self.tab_widget.setTabText(index, topic.title)
+            if self.selected_sections[index] > len(topic.sections):
+                self.selected_sections[index] = 0
+            browser.setMarkdown(topic.markdown(self.selected_sections[index]))
+        self._show_tab_sections(self.tab_widget.currentIndex())
         self.button_box.button(QDialogButtonBox.StandardButton.Close).setText(
             self.translator.text("schema_reference.close")
         )
+
+    def _show_tab_sections(self, tab_index: int) -> None:
+        """現在のタブの分類を一覧し、前に選んだ分類を表示する。"""
+        if tab_index < 0:
+            return
+        sections = self.topics[tab_index].sections
+        with QSignalBlocker(self.section_selector):
+            self.section_selector.clear()
+            self.section_selector.addItem(self.translator.text("schema_reference.all_categories"))
+            self.section_selector.addItems([section.title for section in sections])
+            self.section_selector.setCurrentIndex(self.selected_sections[tab_index])
+        self.section_selector.setEnabled(bool(sections))
+
+    def _select_section(self, section_index: int) -> None:
+        """選択された分類だけで参考表を描き直す。"""
+        tab_index = self.tab_widget.currentIndex()
+        if tab_index < 0 or section_index < 0:
+            return
+        self.selected_sections[tab_index] = section_index
+        self.browsers[tab_index].setMarkdown(self.topics[tab_index].markdown(section_index))
 
     def place_next_to(self, target: QWidget) -> None:
         """画面に余裕があれば、参考表のウインドウをエディターの横へ置く。"""

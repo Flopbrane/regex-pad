@@ -96,3 +96,37 @@ def test_main_window_opens_reference_without_disabling_editor(
     )
 
     window.close()
+
+
+def test_category_selection_filters_each_tab_and_survives_language_change(app: QApplication) -> None:
+    """各タブで目的の表だけを表示し、タブ移動と言語切替で選択を保持する。"""
+    translator = Translator(PROJECT_ROOT / "resources", "ja")
+    dialog = SchemaReferenceDialog(STANDARDS_PATH, translator)
+    selection = dialog.section_selector
+
+    selection.setCurrentText("色関連")
+    assert '<span style="color:#2A4B65">…</span>' in dialog.html_browser.toPlainText()
+    assert "<img>" not in dialog.html_browser.toPlainText()
+
+    dialog.tab_widget.setCurrentIndex(1)
+    assert selection.currentText() == "すべての分類"
+    selection.setCurrentText("余白・間隔")
+    assert "margin-inline" in dialog.css_browser.toPlainText()
+    assert "font-size" not in dialog.css_browser.toPlainText()
+
+    dialog.tab_widget.setCurrentIndex(2)
+    selection.setCurrentText("色関連")
+    assert "backgroundColor" in dialog.wordpress_browser.toPlainText()
+    assert "wp:accordion" not in dialog.wordpress_browser.toPlainText()
+    selection.setCurrentText("文字関連")
+    assert "fontSize" in dialog.wordpress_browser.toPlainText()
+    assert "wp:heading" in dialog.wordpress_browser.toPlainText()
+    assert "backgroundColor" not in dialog.wordpress_browser.toPlainText()
+
+    dialog.tab_widget.setCurrentIndex(1)
+    assert selection.currentText() == "余白・間隔"
+    translator.set_language("en")
+    dialog.apply_language()
+    assert selection.currentText() == "Spacing"
+    selection.setCurrentText("All categories")
+    assert "font-size" in dialog.css_browser.toPlainText()

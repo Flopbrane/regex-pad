@@ -8,12 +8,14 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from editor.css_insert import CSS_INSERT_DICTIONARY, parse_css_insert_snippets
 from editor.paragraph_insert_rules import load_paragraph_insert_rule_book
 from editor.tag_insert import tag_snippet_groups
 from portable_runtime import app_base_dir, bundled_base_dir
+from search.css_lint import CSS_REFERENCE_EXTENSION, extend_css_reference
 
 TAG_DICTIONARIES = ("html_dict.json", "markdown_dict.json", "wordpress_html_dict.json")
-EDITABLE_DICTIONARIES = (*TAG_DICTIONARIES, "paragraph_insert_dict.json")
+EDITABLE_DICTIONARIES = (*TAG_DICTIONARIES, "paragraph_insert_dict.json", CSS_INSERT_DICTIONARY, CSS_REFERENCE_EXTENSION)
 
 
 class DictionaryEditError(ValueError):
@@ -52,6 +54,12 @@ class DictionaryEditService:
         if name == "paragraph_insert_dict.json" and not isinstance(data, dict):
             raise DictionaryEditError("Paragraph dictionary root must be an object.")
         try:
+            if name == CSS_INSERT_DICTIONARY:
+                parse_css_insert_snippets(data)
+                return
+            if name == CSS_REFERENCE_EXTENSION:
+                extend_css_reference(data)
+                return
             with tempfile.TemporaryDirectory(prefix="regexpad-dict-check-") as folder:
                 temporary_folder = Path(folder)
                 if name in TAG_DICTIONARIES:

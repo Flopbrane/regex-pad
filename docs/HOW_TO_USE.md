@@ -214,10 +214,20 @@ on document type. Review the explanation and inserted parameters.
 
 ![English context menu showing CSS insertion choices](images/css-insertion-en.png)
 
+In the preset editor, open **Edit insertion dictionaries** and choose
+`css_insert_dict.json`. In the JSON tab, append an item with a `label` and a
+single-line `template`, for example
+`{"label":"Line height","template":"line-height: {cursor}1.6;"}`.
+Save the file to see the entry under **Insert CSS > User additions**.
+The built-in sections are **Text**, **Colors**, **Spacing**,
+**Borders and decoration**, and **Layout and dimensions**.
+Use `css_reference_extension.json` to register additional properties for
+`.css` files, HTML `style` attributes, and `<style>` elements.
+
 - Select text and press `Ctrl+B` for a `<strong>` wrapper or `Ctrl+U` for `<u style="">`.
 - **Text Color** and the default `Ctrl+Alt+1` through `Ctrl+Alt+7` shortcuts
   wrap selected text with colored spans. `Ctrl+Alt+R` is the default red alias.
-- **Insert CSS > color: ;** and **background-color: ;** offer swatches. Press
+- **Insert CSS > Colors** offers swatches for **color: ;** and **background-color: ;**. Press
   `Esc` to dismiss the palette and enter a custom CSS color.
 - `F8` inserts `<br>`; `F9` inserts `<br><br>`. These shortcuts also work in
   the Find/Replace input where supported.
@@ -417,9 +427,11 @@ end). The unit is one Unicode code point, so a combining mark can be inspected
 separately. The document is not changed.
 
 `F1` opens the built-in help. **Help > HTML / CSS / WordPress Reference Tables**
-opens a modeless reference you can keep beside the editable document. The
-reference tables are generated from the bundled lint schemas. The standalone
-guide you are reading is also available in Japanese.
+opens a modeless reference you can keep beside the editable document. Choose
+**Category** to show only the topic you need, such as **Text**, **Colors**,
+or **Spacing** on the CSS tab. **All categories** displays the complete tables.
+The tables are generated from the bundled lint schemas. The standalone guide
+you are reading is also available in Japanese.
 
 ## Backups and recovery
 

@@ -121,9 +121,11 @@ preview the matches and use Undo if the selected form is not appropriate.
 ## Search/Replace Presets (current source build)
 
 The preset editor also has **Edit insertion dictionaries** for HTML, Markdown,
-WordPress, and paragraph/shortcut templates. It validates changes and saves
-user copies under `user_dictionaries/` (or the configured user dictionary
-folder); Linter reference dictionaries are excluded.
+WordPress, CSS, and paragraph/shortcut templates. Edit `css_insert_dict.json`
+to add items under **Insert CSS > User additions**, or `css_reference_extension.json` to teach the
+checker additional CSS properties. The editor validates and saves both under
+`user_dictionaries/` or the configured user dictionary folder. Bundled
+standards stay read-only.
 
 Use **Search > Search/Replace Presets** to create, open and run, edit, or delete
 saved presets. In **Search > Find / Replace**, **Save Current Search/Replace
@@ -161,6 +163,7 @@ stale results. Applying repairs refreshes the remaining candidates automatically
 Choose **Search > Grammar Check** (`F7`) to see **Error**, **Warning**, and **Info**
 findings for the active tab. Click a result to visit its line, edit the source,
 then refresh the check. A pre-save check is available in Options.
+Use **Help > HTML / CSS / WordPress Reference Tables** to look up syntax by category.
 
 The checker covers common HTML/CSS mistakes, WordPress block boundaries and
 parent/child relationships, and JSON syntax and selected attributes inside block
