@@ -90,6 +90,31 @@ def test_unsaved_backup_manager_saves_history_snapshot(tmp_path: Path) -> None:
     assert "history draft" in load_data
 
 
+def test_unsaved_backup_manager_keeps_latest_ten_history_files(tmp_path: Path) -> None:
+    """次の履歴保存で旧上限の履歴を整理し、最新の復元データと別ファイルを保持する。"""
+    manager = UnsavedBackupManager(tmp_path / "autosave" / "unsaved_backup.json")
+    session = UnsavedBackupSession(tabs=[UnsavedBackup(text="draft", encoding="utf-8")])
+    assert manager.save_session(session)
+    history_folder = manager.backup_path.parent / "history"
+    history_folder.mkdir()
+    old_snapshots = [
+        history_folder / f"unsaved_backup-20000101-000000-{index:06d}.json"
+        for index in range(50)
+    ]
+    for path in old_snapshots:
+        path.write_bytes(manager.backup_path.read_bytes())
+    unrelated = history_folder / "manual-backup.json"
+    unrelated.write_text("keep", encoding="utf-8")
+
+    new_snapshot = manager.save_history_snapshot(session)
+
+    assert new_snapshot is not None
+    assert manager.history_snapshots() == [new_snapshot, *reversed(old_snapshots[-9:])]
+    assert set(history_folder.iterdir()) == {new_snapshot, unrelated, *old_snapshots[-9:]}
+    assert unrelated.read_text(encoding="utf-8") == "keep"
+    assert manager.load_session() == session
+
+
 def test_unsaved_backup_manager_loads_history_snapshot_session(tmp_path: Path) -> None:
     """未保存バックアップの管理処理が履歴のスナップショットのセッションを読み込むことを確認する。"""
     manager = UnsavedBackupManager(tmp_path / "autosave" / "unsaved_backup.json")

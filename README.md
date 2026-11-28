@@ -264,4 +264,4 @@ Replacement clears all markers until the next explicit search.
 WordPress comment-pair damage and HTML errors in the changed core block are
 marked during editing. **Grammar Check** and save still perform the full
 document check. Preview starts when requested, and the configured periodic
-backup timer remains dedicated to recovery snapshots.
+backup timer keeps the 10 most recent unsaved-session history snapshots.

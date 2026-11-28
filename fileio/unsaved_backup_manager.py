@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -29,7 +30,7 @@ class UnsavedBackupSession:
 
 class UnsavedBackupManager:
     """復元用データと履歴スナップショットを読み書きする。"""
-    HISTORY_RETENTION_COUNT = 50
+    HISTORY_RETENTION_COUNT = 10
 
     def __init__(self, backup_path: Path) -> None:
         """復元用データと履歴の保存先を設定する。"""
@@ -121,7 +122,7 @@ class UnsavedBackupManager:
         snapshot_path = history_folder / f"unsaved_backup-{timestamp}.json"
         if not self._write_session(snapshot_path, session):
             return None
-        self._prune_history(history_folder)
+        self._prune_history()
         return snapshot_path
 
     def history_snapshots(self) -> list[Path]:
@@ -130,7 +131,13 @@ class UnsavedBackupManager:
         if not history_folder.exists():
             return []
         return sorted(
-            (item for item in history_folder.iterdir() if item.is_file()),
+            (
+                item
+                for item in history_folder.iterdir()
+                if re.fullmatch(r"unsaved_backup-[0-9]{8}-[0-9]{6}-[0-9]{6}\.json", item.name)
+                and item.is_file()
+                and not item.is_symlink()
+            ),
             key=lambda item: item.name,
             reverse=True,
         )
@@ -197,7 +204,7 @@ class UnsavedBackupManager:
             return False
         return True
 
-    def _prune_history(self, history_folder: Path) -> None:
+    def _prune_history(self) -> None:
         """保持条件を超えた履歴スナップショットを整理する。"""
         snapshots = self.history_snapshots()
         for snapshot_path in snapshots[self.HISTORY_RETENTION_COUNT :]:

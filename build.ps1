@@ -41,6 +41,23 @@ $ExistingRecoveryFolders = @("_internal\autosave", "_internal\backup")
 $PreservedPortableDataPath = $null
 $BuildCompleted = $false
 
+function Assert-DistributionNotRunning {
+    param([Parameter(Mandatory = $true)][string] $AppDirectory)
+
+    $running = @(Get-Process -Name "regex-pad", "module_cleaner" -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Path -and [string]::Equals(
+                [System.IO.Path]::GetDirectoryName($_.Path),
+                $AppDirectory,
+                [System.StringComparison]::OrdinalIgnoreCase
+            )
+        })
+    if ($running.Count -gt 0) {
+        $processList = ($running | ForEach-Object { "$($_.ProcessName).exe (PID $($_.Id))" }) -join ", "
+        throw "Build output is in use: $AppDirectory ($processList). Save your edits, close these processes, and rerun the build, or use -DistSubdirectory."
+    }
+}
+
 function Copy-DirectoryFresh {
     param(
         [Parameter(Mandatory = $true)]
@@ -272,6 +289,8 @@ print("Bundled Qt DLL load: OK")
     }
 }
 
+Assert-DistributionNotRunning -AppDirectory $ExistingDistAppPath
+
 if (-not (Test-Path -LiteralPath $PythonExe)) {
     throw "Python interpreter was not found: $PythonExe"
 }
@@ -329,6 +348,7 @@ try {
         }
     }
 
+    Assert-DistributionNotRunning -AppDirectory $ExistingDistAppPath
     & $PythonExe -m PyInstaller --noconfirm --clean --distpath $DistRoot $SpecPath
     if ($LASTEXITCODE -ne 0) {
         throw "PyInstaller failed with exit code $LASTEXITCODE"

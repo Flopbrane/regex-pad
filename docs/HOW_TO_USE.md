@@ -425,8 +425,9 @@ Two kinds of backup serve different purposes:
 
 In **Options**, set the saved-file backup folder, retention count/days,
 automatic backup interval, and startup restore. Defaults are 20 saved-file
-generations, 30 days, and a 3-minute automatic snapshot interval. Latest recovery
-data is also updated during editing and before operations that may discard it.
+generations, 30 days, and a 3-minute automatic snapshot interval. Each successful
+snapshot keeps the 10 most recent unsaved-session history files. The separate latest
+recovery data is updated during editing and before operations that may discard it.
 These copies supplement explicit saving; they do not update the original file.
 
 To recover, activate the relevant file tab and choose **File > Restore from
