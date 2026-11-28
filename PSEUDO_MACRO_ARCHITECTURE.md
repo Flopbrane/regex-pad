@@ -470,7 +470,7 @@ This section supersedes the previous deferred Manager/Runner/Preview and executi
 - Approval applies the exact reviewed output without rerunning the macro, using one QTextCursor edit block. Existing Undo/Redo and normal article saving remain in charge afterward. Cancelling a preview changes neither text nor Undo state.
 - Logger records unexpected execution exceptions at the GUI boundary; ordinary validation and dry-run diagnostics stay in the diagnostic UI.
 
-Source implementation and canonical verification are recorded in SCRIPT_STEP.md Step15-section74. XML import/export, drag-and-drop ordering and document-wide macro-definition Undo remain outside this Version 1 implementation. Packaged EXE rebuilding and physical Windows GUI acceptance are separate checks.
+This stage implemented preview and application. Drag ordering and definition-wide Undo/Redo were added in the following stage.
 
 
 ## 17. Macro definition history and drag ordering (2026-11-21)
@@ -481,7 +481,7 @@ MacroEditorHistory uses QUndoStack with detached before/after documents and sele
 
 Saving records the exact saved definition for dirty-state comparisons while retaining history. Returning to that definition clears the unsaved marker; undoing past a save marks it dirty again. New/successful Open resets history. Cancelled or failed operations preserve it. Discard-on-close restores the saved definition and clears discarded history so reopening the reused window cannot revive edits. Restored definitions are revalidated before Save or Run preview becomes available.
 
-The original XML-like editor's Version 1 planned macro functionality is implemented. XML import/export, a branch language with IF/ELSE, and execution-format extensions remain separate specifications, not stubs in the current runtime. Focused and canonical validation is recorded under SCRIPT_STEP.md Step15-section75.
+The planned Version 1 macro editor functionality is implemented. XML import/export, IF/ELSE branching, and further execution-format extensions remain separate specifications. See [the current development record](SCRIPT_STEPS.md#検索置換プリセット) for the preset workflow.
 
 ## 18. Search/Replace Presets presentation and format 2 (2026-11-21)
 

@@ -229,7 +229,7 @@ JSONの記録も保存します。共有される可能性のある参照先は�
 
 ビルド時に`readme.txt`・`readme_jp.txt`と既存の`LICENSE.txt`も、
 `regex-pad.exe`の横へコピーします。画像・リンクを保持するため、Markdown版README、
-`docs/`・`docs_jp/`・`SCRIPT_STEP.md`も同じ配布フォルダーへ含めます。
+`docs/`・`docs_jp/`・`SCRIPT_STEPS.md`も同じ配布フォルダーへ含めます。
 `LICENSE`・`SOURCE_CODE.md`・`THIRD_PARTY_NOTICES.md`と`LICENSES/`も同梱します。
 ビルド処理はZIPを作成しないため、出力を確認してからフォルダー全体をZIP化してください。
 
@@ -237,7 +237,7 @@ JSONの記録も保存します。共有される可能性のある参照先は�
 `settings/`、`preview/`に分離しています。
 辞書と表示資材は`dictionaries/`、`resources/`にあります。
 
-[作業記録](SCRIPT_STEP.md)に検証内容と未確認の範囲を記録しています。
+[作業記録](SCRIPT_STEPS.md)に検証内容と未確認の範囲を記録しています。
 構造チェックを強化する背景となったGutenberg復旧処理の観察についても、
 作業記録を参照してください。
 

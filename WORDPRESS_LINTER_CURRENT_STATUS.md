@@ -463,4 +463,4 @@ RegexPadには、簡易表示とTwenty Twenty-Five表示のローカルWordPress
 - `CORE_BLOCK_CHECK_IMPLEMENTATION_PLAN.md`: 未実装の候補ウインド・自動挿入計画
 - `tests/test_html_typo_lint.py`: Linter回帰テスト
 - `tests/test_gutenberg_content_loss_lint.py`: Gutenberg本文消失リスクの回帰テスト
-- `SCRIPT_STEP.md`: 実装・検証・受入境界の記録
+- `SCRIPT_STEPS.md`: 実装・検証・受入境界の記録

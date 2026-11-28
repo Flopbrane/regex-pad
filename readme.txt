@@ -49,7 +49,7 @@ The following files are beside this EXE:
 - docs/HOW_TO_USE.md: English user guide.
 - docs_jp/HOW_TO_USE_jp.md: Japanese user guide.
 - docs/images/: Screenshots used by the guides.
-- SCRIPT_STEP.md: Development and verification record.
+- SCRIPT_STEPS.md: Development and verification record.
 
 Markdown documents are readable as text; use a Markdown viewer for formatted
 tables, links, and images. The complete distribution keeps their relative

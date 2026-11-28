@@ -241,7 +241,7 @@ for direct-spec builds and optional real-engine checks.
 
 The build also copies `readme.txt`, `readme_jp.txt`, and the existing
 `LICENSE.txt` beside `regex-pad.exe`. Markdown READMEs, `docs/`, `docs_jp/`,
-`SCRIPT_STEP.md`, `THIRD_PARTY_NOTICES.md`, and `LICENSES/` are included there
+`SCRIPT_STEPS.md`, `THIRD_PARTY_NOTICES.md`, and `LICENSES/` are included there
 to keep guides and licensing information together.
 The build does not create a ZIP; archive the complete output folder after
 checking it.
@@ -250,7 +250,7 @@ The source is split across `editor/`, `dialogs/`, `search/`, `fileio/`,
 `settings/`, and `preview/`. Dictionaries and UI resources live in
 `dictionaries/` and `resources/`.
 
-[Development record](SCRIPT_STEP.md) records validation and acceptance boundaries.
+[Development record](SCRIPT_STEPS.md) records validation and acceptance boundaries.
 The record also covers the Gutenberg recovery observations that motivated
 the structural checks.
 

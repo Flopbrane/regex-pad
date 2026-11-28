@@ -53,7 +53,7 @@ Windows 11向けのポータブルテキストエディターです。
 - docs/HOW_TO_USE.md：英語の詳しい使い方
 - docs_jp/HOW_TO_USE_jp.md：日本語の詳しい使い方
 - docs/images/：ガイドに掲載する画像
-- SCRIPT_STEP.md：開発・検証の記録
+- SCRIPT_STEPS.md：開発・検証の記録
 
 Markdown文書はテキストでも読めます。
 表・リンク・画像を整えて表示する場合は、Markdown対応のビューアーを使います。

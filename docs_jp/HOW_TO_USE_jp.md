@@ -290,7 +290,7 @@ CSSの構造・プロパティー・値、Gutenbergコメントの対応、主�
 実サイトへ渡す際は、元原稿を残し、コードエディターと表示結果を確認してから保存してください。
 WordPress側の**「復旧を試みる」**はWordPress自身の処理であり、
 復旧後の再保存で元のソース表現が変わることがあります。
-ローカルで観察した事例と解析の範囲は、[作業記録](../SCRIPT_STEP.md)を参照してください。
+ローカルで観察した事例と解析の範囲は、[作業記録](../SCRIPT_STEPS.md)を参照してください。
 
 ## WordPressプレビュー
 
@@ -552,7 +552,7 @@ Publicであることだけで、すべてのソース提供義務を満たし�
 
 ビルド時に`readme.txt`・`readme_jp.txt`・既存の`LICENSE.txt`を、
 `regex-pad.exe`と同じ階層へコピーします。
-Markdown版READMEの両言語版、画像を含む`docs/`、`docs_jp/`、`SCRIPT_STEP.md`もコピーし、
+Markdown版READMEの両言語版、画像を含む`docs/`、`docs_jp/`、`SCRIPT_STEPS.md`もコピーし、
 文書間の相対リンクを保持します。必要な配布文書がなければ、コピー処理はエラーにします。
 管理している通知と原文をコピーし、上流のライセンス条件は書き換えません。
 `LICENSE`・`SOURCE_CODE.md`・`THIRD_PARTY_NOTICES.md`と`LICENSES/`もコピーし、必要なQt・PySideの原文がなければエラーにします。
@@ -589,7 +589,7 @@ node --test tests/wordpress_preview_theme.test.mjs tests/wordpress_preview_boot_
 初回起動時に`config.json`へ移行します。新版で追加された設定項目が
 旧ファイルにない場合は、その項目だけ既定値が使われます。
 
-リリース時の検証は[作業記録](../SCRIPT_STEP.md)へ記載し、
+リリース時の検証は[作業記録](../SCRIPT_STEPS.md)へ記載し、
 自動テスト・EXE版・実画面・実サイトでの確認を区別します。
 既存の解析資料とbroken/fixedテスト素材は回帰確認の基準に使えます。
 WordPressの復旧出力は観察資料であり、そのまま正しい原稿の基準にはしません。

@@ -649,7 +649,7 @@ resources/app_text_en.json
 settings/settings_manager.py
 regex-pad.spec
 PSEUDO_MACRO_ARCHITECTURE.md
-SCRIPT_STEP.md
+SCRIPT_STEPS.md
 ```
 
 ## 19. 実装STEP
@@ -741,7 +741,7 @@ The initial editor described above is implemented. Open it through the main wind
 
 The minimum window size is 640 x 480, with scrollable step fields. Add/Duplicate/Delete and Up/Down occupy separate rows so the outline can remain narrow. The JSON view is a read-only dialog. Macro execution and article changes are intentionally outside this editor implementation.
 
-Validation and canonical propagation results are recorded in SCRIPT_STEP.md, Step15-section72. Packaged EXE and physical GUI acceptance have not been performed.
+See [the current development record](SCRIPT_STEPS.md#検索置換プリセット) for the implemented preset workflow and its verification scope.
 
 
 ## 23. Completed macro editing operations (2026-11-21)

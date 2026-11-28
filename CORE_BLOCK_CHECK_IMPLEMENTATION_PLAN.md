@@ -491,7 +491,7 @@ UIより先に、候補を表すGUI非依存のモデルを作る。
 - `dictionaries/README.md`
 - `README.md`
 - `README_jp.md`
-- `SCRIPT_STEP.md`
+- `SCRIPT_STEPS.md`
 - PyInstaller収集テスト
 
 作業:

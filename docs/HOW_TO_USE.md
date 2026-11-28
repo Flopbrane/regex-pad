@@ -317,8 +317,8 @@ replace the structural findings: a page can render despite damaged markup.
 When transferring an article to a real site, keep your source copy and inspect
 the code editor and visual result before saving. Gutenberg's **Attempt
 Recovery** belongs to WordPress; its recovered serialization can differ from
-the original text. See the [development record](../SCRIPT_STEP.md)
-for the locally observed cases and analysis scope.
+the original text. See the [development record](../SCRIPT_STEPS.md)
+for the current diagnostic and repair scope.
 
 ## WordPress previews
 
@@ -579,7 +579,7 @@ the bundle. Keep the complete onedir folder when distributing it.
 
 The build places `readme.txt`, `readme_jp.txt`, and the supplied `LICENSE.txt`
 at the same level as `regex-pad.exe`. It also copies both Markdown READMEs,
-`docs/` (including images), `docs_jp/`, and `SCRIPT_STEP.md`, preserving relative
+`docs/` (including images), `docs_jp/`, and `SCRIPT_STEPS.md`, preserving relative
 links. Missing required release documents fail the copy step. Existing license
 text is copied from the maintained notice without changing upstream terms.
 `LICENSE`, `SOURCE_CODE.md`, `THIRD_PARTY_NOTICES.md`, and `LICENSES/` are also copied; missing required
@@ -602,7 +602,7 @@ and startup cache contracts:
 node --test tests/wordpress_preview_theme.test.mjs tests/wordpress_preview_boot_cache.test.mjs
 ```
 
-Keep release validation records in [SCRIPT_STEP.md](../SCRIPT_STEP.md), with
+Keep release validation records in [SCRIPT_STEPS.md](../SCRIPT_STEPS.md), with
 automated, packaged, physical GUI, and real-site checks distinguished. Existing
 behavior reports and broken/fixed test materials are useful regression baselines;
 recovery output is observation data, not automatically a correct-source fixture.

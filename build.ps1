@@ -82,7 +82,7 @@ function Copy-ReleaseDocumentation {
 
     $DocumentFiles = @(
         "readme.txt", "readme_jp.txt", "LICENSE", "LICENSE.txt", "SOURCE_CODE.md",
-        "README.md", "README_jp.md", "SCRIPT_STEP.md", "THIRD_PARTY_NOTICES.md"
+        "README.md", "README_jp.md", "SCRIPT_STEPS.md", "THIRD_PARTY_NOTICES.md"
     )
     $DocumentFolders = @("docs", "docs_jp", "LICENSES")
 

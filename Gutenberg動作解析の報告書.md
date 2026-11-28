@@ -279,7 +279,7 @@ case_008は別経路で、余分な終了コメント以降が1個のClassicと�
 - Core / Gutenberg / 既存Preview runtime / RegexPad本体のソースは変更していない。既存runtime全ファイルの前後SHA-256と、参照コピーとZIP内原本の一致は別途検証した。
 - EXEの再ビルド・配布は行っていない。本番WordPressでの操作・投稿変更も行っていない。
 
-再現手順、各ケースの実施操作、スクリプトの使い方、最終検証結果は `analysis_cases/README.md`、`note.md`、検証JSON、および `SCRIPT_STEP.md` を参照。
+再現手順、各ケースの実施操作、スクリプトの使い方、検証結果は `analysis_cases/README.md`、`note.md`、検証JSONを参照。現行の診断・修復の実装範囲は [開発計画・作業記録](SCRIPT_STEPS.md) に記載する。
 
 最終検証結果:
 
